@@ -5,9 +5,17 @@ find_package(catkin REQUIRED genmsg std_msgs # essential dependency
     geometry_msgs sensor_msgs
 )
 
-# add_message_files(DIRECTORY msg FILES
-#     Placeholder.msg
-# )
+add_message_files(DIRECTORY msg FILES
+    BoundingBox.msg
+    BoundingBox2D.msg
+    DetectionBox.msg
+    DetectionBox2D.msg
+    DetectionBoxArray.msg
+    Dimension.msg
+    Dimension2D.msg
+    DimensionWithCovariance.msg
+    ObjectClass.msg
+)
 
-generate_messages(DEPENDENCIES vision_msgs geometry_msgs sensor_msgs std_msgs)
-catkin_package(CATKIN_DEPENDS vision_msgs geometry_msgs sensor_msgs std_msgs)
+generate_messages(DEPENDENCIES geometry_msgs sensor_msgs std_msgs)
+catkin_package(CATKIN_DEPENDS geometry_msgs sensor_msgs std_msgs)
