@@ -1,0 +1,4 @@
+- [ ] Add support
+- [ ] Add support for odometry, object, tracking datasets
+- [ ] Add support for labels
+- [ ] Add support for direct publishing

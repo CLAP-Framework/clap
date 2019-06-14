@@ -1,5 +1,5 @@
 <package>
-  <name>zzz_driver_dataset_kitti</name>
+  <name>zzz_driver_datasets_kitti</name>
   <version>0.0.1</version>
   <description>
     Driver for dataset input from kitti
@@ -13,4 +13,5 @@
   <url type="bugtracker">https://github.com/cmpute/zzz/issues</url>
 
   <buildtool_depend>catkin</buildtool_depend>
+  <run_depend>python-tqdm</run_depend>
 </package>
