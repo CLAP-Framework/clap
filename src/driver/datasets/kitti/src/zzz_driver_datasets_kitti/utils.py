@@ -1,6 +1,7 @@
 """Provides helper methods for loading and parsing KITTI data."""
 
 import os
+import datetime
 from collections import namedtuple
 
 import numpy as np
@@ -20,6 +21,7 @@ _OxtsPacket = namedtuple('OxtsPacket',
 # Bundle into an easy-to-access structure
 _OxtsData = namedtuple('OxtsData', 'packet, T_w_imu')
 
+# TODO: simplify multiplication
 def rotx(t):
     """Rotation about the x-axis."""
     c = np.cos(t)
@@ -117,7 +119,7 @@ def load_oxts_packets(basepath, oxts_files):
 
 # ========== File Loaders ========== #
 
-def load_timestamps(basepath, file):
+def load_timestamps(basepath, file, formatted=False):
     """
     Read in timestamp file and parse to a list
     """
@@ -128,8 +130,11 @@ def load_timestamps(basepath, file):
         fin = basepath.open(file)
 
     with fin:
-        for line in fin.readlines():
-            timestamps.append(np.datetime64(line))
+        if formatted:
+            for line in fin.readlines():
+                timestamps.append(np.datetime64(line))
+        else:
+            timestamps = (np.loadtxt(fin) * 1e9).astype("M8[ns]")
 
     return timestamps
 
@@ -167,17 +172,23 @@ def yield_images(basepath, filelist, gray=False):
     for file in filelist:
         yield load_image(basepath, file, gray)
 
-def load_velo_scan(basepath, file):
-    """Load and parse a velodyne binary file. Accept path or file object as basepath"""
-    if isinstance(basepath, str):
-        scan = np.fromfile(os.path.join(basepath, file), dtype=np.float32)
+def load_velo_scan(basepath, file, binary=True):
+    """Load and parse a kitti file. Accept path or file object as basepath"""
+    if binary:
+        if isinstance(basepath, str):
+            scan = np.fromfile(os.path.join(basepath, file), dtype=np.float32)
+        else:
+            with basepath.open(file) as fin:
+                buffer = fin.read()
+            scan = np.frombuffer(buffer, dtype=np.float32)
     else:
-        with basepath.open(file) as fin:
-            buffer = fin.read()
-        scan = np.frombuffer(buffer, dtype=np.float32)
+        if isinstance(basepath, str):
+            scan = np.loadtxt(os.path.join(basepath, file), dtype=np.float32)
+        else:
+            scan = np.loadtxt(basepath.open(file), dtype=np.float32)
     return scan.reshape((-1, 4))
 
-def yield_velo_scans(basepath, filelist):
-    """Generator to parse velodyne binary files into arrays."""
+def yield_velo_scans(basepath, filelist, binary=True):
+    """Generator to parse velodyne files into arrays."""
     for file in filelist:
-        yield load_velo_scan(basepath, file)
+        yield load_velo_scan(basepath, file, binary=binary)

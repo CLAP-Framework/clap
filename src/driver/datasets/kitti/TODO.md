@@ -1,4 +1,5 @@
-- [ ] Add support
-- [ ] Add support for odometry, object, tracking datasets
-- [ ] Add support for labels
+- [ ] Add support for odometry dataset
+- [ ] Add support for object dataset
+- [ ] Add support for tracking dataset
+- [ ] Add support for labels and raw tracklets (New ros message may be needed)
 - [ ] Add support for direct publishing

@@ -1,4 +1,4 @@
-"""Provides 'raw', which loads and parses raw KITTI data."""
+"""This module which loads and parses raw KITTI data."""
 
 from zipfile import ZipFile
 import os
@@ -8,7 +8,43 @@ import numpy as np
 import zzz_driver_datasets_kitti.utils as utils
 
 class raw:
-    """Load and parse raw data into a usable format."""
+    """
+    Load and parse raw data into a usable format.
+
+    # Zip Files
+    - 2011_09_26_calib.zip [required]
+    - 2011_09_26_drive_0001_extract.zip
+    - ...
+    - 2011_09_26_drive_0001_sync.zip
+    - ...
+    - 2011_09_26_drive_0001_tracklets.zip
+    - ...
+
+    # Unzipped Structure
+    - <base_path directory>
+        - 2011_09_26
+            - calib_cam_to_cam.txt
+            - calib_imu_to_velo.txt
+            - calib_velo_to_cam.txt
+            - 2011_09_26_drive_0001_extract
+                - image_00
+                - image_01
+                - image_02
+                - image_03
+                - oxts
+                - velodyne_points
+            - ...
+            - 2011_09_26_drive_0001_sync
+                - image_00
+                - image_01
+                - image_02
+                - image_03
+                - oxts
+                - velodyne_points
+                - tracklet_labels.xml
+            - ...
+            - 
+    """
     def __init__(self, base_path, drive, datatype='sync', frames=None, inzip=False):
         """
         Set the path and pre-load calibration data and timestamps.
@@ -18,6 +54,7 @@ class raw:
         - drive: drive sequence number
         """
         drive = "%04d" % int(drive)
+        self.data_type = datatype
         self.seqname = '2011_09_26_drive_' + drive + '_' + datatype
         self.base_path = base_path
         self.frames = frames
@@ -35,8 +72,9 @@ class raw:
 
         # Preopen data files
         if self.inzip:
-            # self.calib_file = ZipFile(osp.join(base_path, "2011_09_26_calib.zip"))
             self.data_file = ZipFile(osp.join(base_path, self.seqname + ".zip"))
+        else:
+            self.data_path = osp.join(base_path, "2011_09_26", self.seqname)
 
         # Find all the data files
         self._get_file_lists()
@@ -46,9 +84,14 @@ class raw:
         self._load_timestamps()
         self._load_oxts()
 
+    def __len__(self):
+        """Return the number of frames loaded."""
+        if self.data_type != "sync":
+            raise ValueError("The length of unsynced data is ambiguous!")
+        return len(self.oxts_timestamps)
+
     def close(self):
         if self.inzip:
-            # self.calib_file.close()
             self.data_file.close()
 
     # ========== Generators ==========
@@ -56,31 +99,31 @@ class raw:
     @property
     def cam0(self):
         """Generator to read image files for cam0 (monochrome left)."""
-        return utils.yield_images(self.data_file if self.inzip else self.base_path, self.cam0_files, gray=True)
+        return utils.yield_images(self.data_file if self.inzip else self.data_path, self.cam0_files, gray=True)
     @property
     def cam1(self):
         """Generator to read image files for cam1 (monochrome right)."""
-        return utils.yield_images(self.data_file if self.inzip else self.base_path, self.cam1_files, gray=True)
+        return utils.yield_images(self.data_file if self.inzip else self.data_path, self.cam1_files, gray=True)
     @property
     def cam2(self):
         """Generator to read image files for cam2 (RGB left)."""
-        return utils.yield_images(self.data_file if self.inzip else self.base_path, self.cam2_files, gray=False)
+        return utils.yield_images(self.data_file if self.inzip else self.data_path, self.cam2_files, gray=False)
     @property
     def cam3(self):
-        """Generator to read image files for cam0 (RGB right)."""
-        return utils.yield_images(self.data_file if self.inzip else self.base_path, self.cam3_files, gray=False)
+        """Generator to read image files for cam3 (RGB right)."""
+        return utils.yield_images(self.data_file if self.inzip else self.data_path, self.cam3_files, gray=False)
     @property
     def velo(self):
-        """Generator to read velodyne [x,y,z,intensity/reflectance] scan data from binary files."""
-        return utils.yield_velo_scans(self.data_file if self.inzip else self.base_path, self.velo_files)
+        """Generator to read velodyne [x,y,z,intensity/reflectance] scan data from files."""
+        return utils.yield_velo_scans(self.data_file if self.inzip else self.data_path, self.velo_files, binary=(self.data_type == "sync"))
 
     # ========== Implementations ==========
 
     def _get_file_lists(self):
         """Find and list data files for each sensor."""
         # Read file names from zip file
+        root_folder = "2011_09_26/"
         if self.inzip:
-            root_folder = "2011_09_26/"
             start_offset = len(root_folder) + len(self.seqname) + 1
 
             self.oxts_files = []
@@ -123,24 +166,24 @@ class raw:
         # Read file names from directory
         else:
             self.oxts_files = sorted(osp.join('oxts', 'data', fname) for fname
-                in os.listdir(osp.join(self.base_path, 'oxts', 'data'))) # if fname.endswith(".txt"))
+                in os.listdir(osp.join(self.data_path, 'oxts', 'data'))) # if fname.endswith(".txt"))
             self.cam0_files = sorted(osp.join('image_00', 'data', fname) for fname
-                in os.listdir(osp.join(self.base_path, 'image_00', 'data'))) # if fname.endswith(".png"))
+                in os.listdir(osp.join(self.data_path, 'image_00', 'data'))) # if fname.endswith(".png"))
             self.cam1_files = sorted(osp.join('image_01', 'data', fname) for fname
-                in os.listdir(osp.join(self.base_path, 'image_01', 'data'))) # if fname.endswith(".png"))
+                in os.listdir(osp.join(self.data_path, 'image_01', 'data'))) # if fname.endswith(".png"))
             self.cam2_files = sorted(osp.join('image_02', 'data', fname) for fname
-                in os.listdir(osp.join(self.base_path, 'image_02', 'data'))) # if fname.endswith(".png"))
+                in os.listdir(osp.join(self.data_path, 'image_02', 'data'))) # if fname.endswith(".png"))
             self.cam3_files = sorted(osp.join('image_03', 'data', fname) for fname
-                in os.listdir(osp.join(self.base_path, 'image_03', 'data'))) # if fname.endswith(".png"))
+                in os.listdir(osp.join(self.data_path, 'image_03', 'data'))) # if fname.endswith(".png"))
             self.velo_files = sorted(osp.join('velodyne_points', 'data', fname) for fname
-                in os.listdir(osp.join(self.base_path, 'velodyne_points', 'data'))) # if fname.endswith(".bin"))
+                in os.listdir(osp.join(self.data_path, 'velodyne_points', 'data'))) # if fname.endswith(".bin"))
 
             self.oxts_time_file = osp.join('oxts', 'timestamps.txt')
             self.cam0_time_file = osp.join('image_00', 'timestamps.txt')
             self.cam1_time_file = osp.join('image_01', 'timestamps.txt')
             self.cam2_time_file = osp.join('image_02', 'timestamps.txt')
             self.cam3_time_file = osp.join('image_03', 'timestamps.txt')
-            self.velo_time_file = osp.join('velo', 'timestamps.txt')
+            self.velo_time_file = osp.join('velodyne_points', 'timestamps.txt')
 
         # Subselect the chosen range of frames, if any
         if self.frames is not None:
@@ -236,18 +279,21 @@ class raw:
         data['T_cam3_imu'] = data['T_cam3_velo'].dot(data['T_velo_imu'])
 
         self.calib = data
+        # Close calib file if needed
+        if self.inzip:
+            calib_path.close()
 
     def _load_timestamps(self):
         """Load timestamps from file."""
-        data_path = self.data_file if self.inzip else self.base_path
+        data_path = self.data_file if self.inzip else self.data_path
 
         # Read and parse the timestamps
-        self.oxts_timestamps = utils.load_timestamps(data_path, self.oxts_time_file)
-        self.cam0_timestamps = utils.load_timestamps(data_path, self.cam0_time_file)
-        self.cam1_timestamps = utils.load_timestamps(data_path, self.cam1_time_file)
-        self.cam2_timestamps = utils.load_timestamps(data_path, self.cam2_time_file)
-        self.cam3_timestamps = utils.load_timestamps(data_path, self.cam3_time_file)
-        self.velo_timestamps = utils.load_timestamps(data_path, self.velo_time_file)
+        self.oxts_timestamps = utils.load_timestamps(data_path, self.oxts_time_file, formatted=True)
+        self.cam0_timestamps = utils.load_timestamps(data_path, self.cam0_time_file, formatted=True)
+        self.cam1_timestamps = utils.load_timestamps(data_path, self.cam1_time_file, formatted=True)
+        self.cam2_timestamps = utils.load_timestamps(data_path, self.cam2_time_file, formatted=True)
+        self.cam3_timestamps = utils.load_timestamps(data_path, self.cam3_time_file, formatted=True)
+        self.velo_timestamps = utils.load_timestamps(data_path, self.velo_time_file, formatted=True)
 
         # Subselect the chosen range of frames, if any
         if self.frames is not None:
@@ -260,5 +306,5 @@ class raw:
 
     def _load_oxts(self):
         """Load OXTS data from file."""
-        data_path = self.data_file if self.inzip else self.base_path
+        data_path = self.data_file if self.inzip else self.data_path
         self.oxts = utils.load_oxts_packets(data_path, self.oxts_files)
