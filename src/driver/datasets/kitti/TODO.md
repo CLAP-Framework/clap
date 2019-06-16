@@ -3,3 +3,4 @@
 - [ ] Add support for tracking dataset
 - [ ] Add support for labels and raw tracklets (New ros message may be needed)
 - [ ] Add support for direct publishing
+- [ ] Move functionality from `autoware/ros/src/util/packages/kitti_pkg`

@@ -1,0 +1,3 @@
+[submodule "src/driver/simluators/carla/carla-bridge"]
+	path = src/driver/simluators/carla/carla-bridge
+	url = https://github.com/carla-simulator/ros-bridge.git
