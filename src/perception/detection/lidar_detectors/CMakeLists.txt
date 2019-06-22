@@ -7,27 +7,46 @@ find_package(catkin REQUIRED COMPONENTS
   zzz_perception_msgs
   sensor_msgs
   pcl_ros
-  pcl_conversions
 )
 
-catkin_package()
+catkin_package(
+  CATKIN_DEPENDS std_msgs zzz_perception_msgs sensor_msgs pcl_ros
+  # DEPENDS Boost
+  INCLUDE_DIRS include
+  LIBRARIES zzz_perception_detection_lidar_detectors
+)
 
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(regiongrow_detector nodes/regiongrow_detector.cpp)
-set_target_properties(regiongrow_detector PROPERTIES OUTPUT_NAME regiongrow PREFIX "")
+# Add library target
+add_library(zzz_perception_detection_lidar_detectors
+  src/LidarDetector.cpp
+  src/EuclideanClusterDetector.cpp
+)
 
-add_dependencies(regiongrow_detector ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# Add node targets
+add_executable(euclidean_cluster_detector nodes/euclidean_cluster_detector.cpp)
+set_target_properties(euclidean_cluster_detector PROPERTIES OUTPUT_NAME euclidean_cluster PREFIX "")
+add_dependencies(euclidean_cluster_detector
+  zzz_perception_detection_lidar_detectors
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
 
-target_link_libraries(regiongrow_detector
+target_link_libraries(euclidean_cluster_detector
+  zzz_perception_detection_lidar_detectors
   ${catkin_LIBRARIES}
 )
 
-install(TARGETS regiongrow_detector
+# Install files
+install(TARGETS euclidean_cluster_detector
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
+install(DIRECTORY include/${PROJECT_NAME}/
+        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})

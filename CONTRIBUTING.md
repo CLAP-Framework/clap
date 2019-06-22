@@ -23,6 +23,10 @@ In order for easier use, we will try to offer non-ROS mode. The existence of env
 - A separate file provide ros wrapper for the code to work as a node
 - The main implementation (includes python binding) is put into `src` and the wrapper codes should be included in sources under `nodes`
 
+# Readme Contents
+- For message definition packages: Usually related comments are contained in `.msg` files and no readme is needed.
+- For algorithm implementation packages: One needs `Module IO`(input topic, output topic, parameters), etc.
+
 # Protocol strategy
 Protocal is defined in its source module. Protocal are defined based on [common_msgs](https://github.com/ros/common_msgs) of ROS and zzz protocals. Please try to prevent depend external dependencies. The protocal should contain as much information as needed. If certain module doesn't need or provide part of the data, then it should directly ignore it.
 
