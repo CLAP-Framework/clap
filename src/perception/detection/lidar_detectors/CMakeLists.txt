@@ -3,14 +3,13 @@ project(zzz_perception_detection_lidar_detectors)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  std_msgs
-  zzz_perception_msgs
   sensor_msgs
+  zzz_perception_msgs
   pcl_ros
 )
 
 catkin_package(
-  CATKIN_DEPENDS std_msgs zzz_perception_msgs sensor_msgs pcl_ros
+  CATKIN_DEPENDS sensor_msgs zzz_perception_msgs pcl_ros
   # DEPENDS Boost
   INCLUDE_DIRS include
   LIBRARIES zzz_perception_detection_lidar_detectors

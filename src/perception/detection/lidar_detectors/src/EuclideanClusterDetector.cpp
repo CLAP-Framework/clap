@@ -246,6 +246,8 @@ namespace zzz { namespace perception {
         #endif
 
         // Publish detections
+        array.header.frame_id = _frame_id;
+        array.header.stamp = _timestamp;
         _output_publisher.publish(array);
     }
 }} // namespace zzz::perception

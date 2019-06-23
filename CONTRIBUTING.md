@@ -25,7 +25,7 @@ In order for easier use, we will try to offer non-ROS mode. The existence of env
 
 # Readme Contents
 - For message definition packages: Usually related comments are contained in `.msg` files and no readme is needed.
-- For algorithm implementation packages: One needs `Module IO`(input topic, output topic, parameters), etc.
+- For algorithm implementation packages: One needs `Module IO`(input topic, output topic, parameters), `Reference`, etc.
 
 # Protocol strategy
 Protocal is defined in its source module. Protocal are defined based on [common_msgs](https://github.com/ros/common_msgs) of ROS and zzz protocals. Please try to prevent depend external dependencies. The protocal should contain as much information as needed. If certain module doesn't need or provide part of the data, then it should directly ignore it.

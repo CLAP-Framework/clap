@@ -1,8 +1,8 @@
 <package format="2">
-  <name>zzz_perception_detection_lidar_detectors</name>
+  <name>zzz_visualization_rviz_detection_visualizer</name>
   <version>0.0.1</version>
   <description>
-    Trivial implementation of object detectors
+    Visualize detection result in rviz
   </description>
   <license>BSD</license>
   <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>
@@ -14,16 +14,13 @@
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
-  <build_depend>sensor_msgs</build_depend>
   <build_depend>zzz_perception_msgs</build_depend>
-  <build_depend>pcl_ros</build_depend>
+  <build_depend>visualization_msgs</build_depend>
   <build_export_depend>roscpp</build_export_depend>
-  <build_export_depend>sensor_msgs</build_export_depend>
   <build_export_depend>zzz_perception_msgs</build_export_depend>
-  <build_export_depend>pcl_ros</build_export_depend>
+  <build_export_depend>visualization_msgs</build_export_depend>
   <exec_depend>roscpp</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>zzz_perception_msgs</exec_depend>
-  <exec_depend>pcl_ros</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
   <export></export>
 </package>

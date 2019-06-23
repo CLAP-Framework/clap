@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="zzz_perception_detection_lidar_detectors" type="euclidean_cluster"
+          name="euclidean_detector" output="screen"/>
+    <node pkg="zzz_visualization_rviz_detection_visualizer" type="bbox"
+          name="euclidean_visualize" output="screen"/>
+</launch>
