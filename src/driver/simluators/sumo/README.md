@@ -1,0 +1,1 @@
+This package provides interface to [SUMO](http://sumo.sourceforge.net/).

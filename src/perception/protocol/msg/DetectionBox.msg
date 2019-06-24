@@ -4,7 +4,7 @@
 # This field is required to be sorted in descending order of scores
 ObjectClass[] classes
 
-# 2D bounding box surrounding the object.
+# 3D bounding box surrounding the object.
 BoundingBox bbox
 
 # The 3D data that generated these results (i.e. object region cropped out of

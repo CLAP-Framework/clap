@@ -10,11 +10,14 @@ add_message_files(DIRECTORY msg FILES
     BoundingBox2D.msg
     DetectionBox.msg
     DetectionBox2D.msg
+    DetectionBox2DArray.msg
     DetectionBoxArray.msg
     Dimension.msg
     Dimension2D.msg
     DimensionWithCovariance.msg
     ObjectClass.msg
+    TrackingBox.msg
+    TrackingBoxArray.msg
 )
 
 generate_messages(DEPENDENCIES geometry_msgs sensor_msgs std_msgs)
