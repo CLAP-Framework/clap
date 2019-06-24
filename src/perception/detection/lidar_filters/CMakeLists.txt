@@ -22,6 +22,7 @@ include_directories(
 
 # Add library target
 add_library(zzz_perception_detection_lidar_filters
+  src/CriteriaFilter.cpp
   src/LShapeFilter.cpp
 )
 
@@ -33,14 +34,25 @@ add_dependencies(lshape_filter
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
-
 target_link_libraries(lshape_filter
   zzz_perception_detection_lidar_filters
   ${catkin_LIBRARIES}
 )
 
+add_executable(criteria_filter nodes/criteria_filter.cpp)
+set_target_properties(criteria_filter PROPERTIES OUTPUT_NAME criteria PREFIX "")
+add_dependencies(criteria_filter
+  zzz_perception_detection_lidar_filters
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(criteria_filter
+  zzz_perception_detection_lidar_filters
+  ${catkin_LIBRARIES}
+)
+
 # Install files
-install(TARGETS lshape_filter
+install(TARGETS lshape_filter criteria_filter
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
