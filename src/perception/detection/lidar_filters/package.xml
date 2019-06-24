@@ -1,8 +1,8 @@
 <package format="2">
-  <name>zzz_perception_detection_lidar_detectors</name>
+  <name>zzz_perception_detection_lidar_filters</name>
   <version>0.0.1</version>
   <description>
-    Implementation of object detectors
+    Implementation of object filters
   </description>
   <license>BSD</license>
   <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>

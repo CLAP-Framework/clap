@@ -7,6 +7,7 @@
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/common/centroid.h>
+#include <pcl/common/common.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
@@ -151,19 +152,12 @@ namespace zzz { namespace perception {
         bbox.pose.pose.position.y = centroid(1);
         bbox.pose.pose.position.z = centroid(2);
         
-        // Estimate size
-        Eigen::MatrixXf mat = input->getMatrixXfMap();
-        Eigen::MatrixXf xy = mat.leftCols(2);
-        xy.col(0).array() -= centroid(0);
-        xy.col(1).array() -= centroid(1);
-        Eigen::JacobiSVD<Eigen::MatrixXf> svd(xy, Eigen::ComputeFullV);
-        Eigen::Matrix2f v = svd.matrixV().transpose();
-        float l = (xy*v.col(0)).maxCoeff() - (xy*v.col(0)).minCoeff();
-        float w = (xy*v.col(1)).maxCoeff() - (xy*v.col(1)).minCoeff();
-        float h = mat.col(2).maxCoeff() - mat.col(2).minCoeff();
-        bbox.dimension.dimension.length = l;
-        bbox.dimension.dimension.width = w;
-        bbox.dimension.dimension.height = h;
+        // Naive size estimation
+        PointXYZ min_pt, max_pt;
+        getMinMax3D(*input, min_pt, max_pt);
+        bbox.dimension.dimension.length = max_pt.x - min_pt.x;
+        bbox.dimension.dimension.width  = max_pt.y - min_pt.y;
+        bbox.dimension.dimension.height = max_pt.z - min_pt.z;
     }
 
     void EuclideanClusterDetector::detect(sensor_msgs::PointCloud2ConstPtr input)

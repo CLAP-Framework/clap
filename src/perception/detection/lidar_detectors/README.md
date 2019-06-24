@@ -1,4 +1,9 @@
-# Module IO
+# Package Summary
+This package provides object detection algorithm using lidar point cloud
+
+# Node `euclidean_cluster`
+This node using ground removal and Euclidean Clustring to generate point cloud detections
+
 ## Input Topic
 |Topic|Condition|Type|Description|
 |---|---|---|---|
@@ -21,3 +26,26 @@
 |`cluster_dist_thres`|float|Euclidean Clustering distance threshold|`0.5`|
 |`cluster_count_min`|integer|Minimum point count of valid cluster|`100`|
 |`cluster_count_max`|integer|Maximum point count of valid cluster|`1000000`|
+## Reference
+1. Point Cloud Library:
+  ```tex
+  @InProceedings{Rusu_ICRA2011_PCL,
+    author = {Radu Bogdan Rusu and Steve Cousins},
+    title = {{3D is here: Point Cloud Library (PCL)}},
+    booktitle = {{IEEE International Conference on Robotics and Automation (ICRA)}},
+    month = {May 9-13},
+    year = {2011},
+    address = {Shanghai, China}
+  }
+  ```
+
+1. Euclidean Clustering:
+  ```tex
+  @PhDThesis{RusuDoctoralDissertation,
+    author = {Radu Bogdan Rusu},
+    title = {Semantic 3D Object Maps for Everyday Manipulation in Human Living Environments},
+    school = {Computer Science department, Technische Universitaet Muenchen, Germany},
+    year = {2009},
+    month = {October}
+  }
+  ```

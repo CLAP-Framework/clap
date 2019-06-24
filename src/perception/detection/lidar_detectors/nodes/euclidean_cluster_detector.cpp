@@ -1,5 +1,4 @@
 #include <ros/ros.h>
-#include <sensor_msgs/PointCloud2.h>
 #include <zzz_perception_detection_lidar_detectors/EuclideanClusterDetector.h>
 
 int main(int argc, char **argv)
