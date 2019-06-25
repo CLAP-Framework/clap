@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+
+import threading
+__module_name__ = "map_provider"
+
+import rospy
+import actionlib
+from zzz_driver_msgs.msg import LoadMapAction, MapState
+from geometry_msgs.msg import Pose
+from nav_msgs.msg import Path
+from zzz_driver_simulators_sumo_adapter import StaticLocalMap
+
+class MapNode(object):
+    def __init__(self,
+        load_action_name="/carla/load_map",
+        pose_topic="/carla/environment_perception/ego_vehicle_pose",
+        reference_path_topic="/carla/ego_vehicle/waypoints",
+        map_topic="/carla/local_static_map"):
+
+        self._action_server = actionlib.SimpleActionServer(
+            load_action_name, LoadMapAction, execute_cb=self.load_map_callback, auto_start = False)
+        self._pose_subscriber = rospy.Subscriber(pose_topic, Pose, self.pose_callback)
+        self._reference_path_subscriber = rospy.Subscriber(reference_path_topic, Path, self.reference_callback)
+        self._static_map_publisher = rospy.Publisher(map_topic, MapState, queue_size=1)
+
+        self._map_trigger = threading.Event()
+        self._reference_path_trigger = threading.Event()
+
+        self._map_instance = StaticLocalMap()
+
+    def reset():
+        self._map_instance = StaticLocalMap()
+        self._map_trigger.clear()
+        self._reference_path_trigger.clear()
+
+    def load_map_callback(self, goal):
+        assert type(goal) == str
+        self._map_instance.setup_hdmap(goal)
+        self._map_trigger.set()
+
+    def reference_callback(self, msg):
+        self._map_trigger.wait() # wait for map to be set up
+        self._map_instance.setup_reference_lane_list(msg)
+        self._reference_path_trigger.set()
+        rospy.loginfo("[%s] Received reference path" % __module_name__)
+
+    def pose_callback(self, msg):
+        new_static_map = self._map_instance.receive_new_pose(msg.position.x, msg.position.y)
+        if new_static_map is not None:
+            self._static_map_publisher.publish(new_static_map)
+
+if __name__ == "__main__":
+
+    rospy.init_node("map_provider")
+    node = MapNode()
+    node.load_map_callback('/home/carla/Carla/SUMO/map04.net.xml') # TODO: Remove this
+    rospy.spin()

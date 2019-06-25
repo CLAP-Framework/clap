@@ -1,5 +1,5 @@
 <package format="2">
-  <name>zzz_driver_simulators_carla_adaptor</name>
+  <name>zzz_driver_simulators_carla_adapter</name>
   <version>0.0.1</version>
   <description>
     Adapt ZZZ input and output to CARLA
