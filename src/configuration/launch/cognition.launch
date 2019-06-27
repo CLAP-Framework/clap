@@ -1,0 +1,8 @@
+<launch>
+    <node pkg="zzz_driver_simulators_sumo_adapter" type="map_provider"
+          name="static_map_builder" output="screen">
+    </node>
+    <node pkg="zzz_cognition_dynamic_local_map" type="dynamic_map_builder"
+          name="dynamic_map_builder" output="screen">
+    </node>
+</launch>

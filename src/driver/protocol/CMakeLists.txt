@@ -16,6 +16,7 @@ add_message_files(DIRECTORY msg FILES
     LaneState.msg
     MapState.msg
     ObstacleData.msg
+    ObstacleDataArray.msg
     ResourceReport.msg
 )
 

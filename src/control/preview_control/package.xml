@@ -1,5 +1,5 @@
 <package format="2">
-  <name>zzz_cognition_dynamic_local_map</name>
+  <name>zzz_control_preview_control</name>
   <version>0.0.1</version>
   <description>
     Get dynamic local map
@@ -19,6 +19,5 @@
   <build_export_depend>std_msgs</build_export_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>std_msgs</exec_depend>
-  <exec_depend>zzz_library</exec_depend>
   <export></export>
 </package>

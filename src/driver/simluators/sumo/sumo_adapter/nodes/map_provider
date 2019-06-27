@@ -45,13 +45,15 @@ class MapNode(object):
         rospy.loginfo("[%s] Received reference path" % __module_name__)
 
     def pose_callback(self, msg):
+        self._map_trigger.wait()
+        self._reference_path_trigger.wait()
         new_static_map = self._map_instance.receive_new_pose(msg.position.x, msg.position.y)
         if new_static_map is not None:
             self._static_map_publisher.publish(new_static_map)
 
 if __name__ == "__main__":
 
-    rospy.init_node("map_provider")
+    rospy.init_node("map_provider", log_level=rospy.INFO)
     node = MapNode()
-    node.load_map_callback('/home/carla/Carla/SUMO/map04.net.xml') # TODO: Remove this
+    node.load_map_callback('/home/carla/Carla/SUMO/map03_t.net.xml') # TODO: Remove this
     rospy.spin()

@@ -1,0 +1,2 @@
+class MotionModel():
+    pass
