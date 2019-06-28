@@ -37,6 +37,8 @@ class MapNode(object):
         assert type(goal) == str
         self._map_instance.setup_hdmap(goal)
         self._map_trigger.set()
+        rospy.loginfo("[%s] Map loaded" % __module_name__)
+        
 
     def reference_callback(self, msg):
         self._map_trigger.wait() # wait for map to be set up

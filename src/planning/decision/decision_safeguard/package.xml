@@ -1,8 +1,8 @@
 <package format="2">
-  <name>zzz_cognition_dynamic_local_map</name>
+  <name>zzz_planning_decision_safeguard</name>
   <version>0.0.1</version>
   <description>
-    Get dynamic local map
+    The main decision part
   </description>
   <license>BSD</license>
   <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>
@@ -19,7 +19,6 @@
   <build_export_depend>std_msgs</build_export_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>std_msgs</exec_depend>
-  <exec_depend>nav_msgs</exec_depend>
-  <exec_depend>zzz_common</exec_depend>
+  <exec_depend>zzz_planning_msgs</exec_depend>
   <export></export>
 </package>

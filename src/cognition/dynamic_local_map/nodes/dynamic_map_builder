@@ -3,29 +3,53 @@
 __module_name__ = "map_provider"
 
 import rospy
-import actionlib
-from zzz_driver_msgs.msg import MapState, ObstacleDataArray
+import threading
+
+from zzz_driver_msgs.msg import MapState, ObstacleDataArray, ChassisReport
 from geometry_msgs.msg import Pose
 from zzz_cognition_dynamic_local_map import DynamicMap
+from nav_msgs.msg import Path
+
 
 class BuilderNode(object):
     def __init__(self,
         load_action_name="/carla/load_map",
         pose_topic="/carla/environment_perception/ego_vehicle_pose",
         surrounding_vehicle_topic="/carla/environment_perception/vehicle_list",
-        map_topic="/carla/local_static_map"):
+        chassis_topic="/carla/ego_vehicle/chassis",
+        map_topic="/carla/local_static_map",
+        dynamic_map_topic="carla/dynamic_map",
+        reference_path_topic="/carla/ego_vehicle/waypoints"):
 
         self._pose_subscriber = rospy.Subscriber(pose_topic, Pose, self.pose_callback)
         self._surrounding_vehicle_subscriber = rospy.Subscriber(surrounding_vehicle_topic, ObstacleDataArray, self.surrounding_vehicle_callback)
         self._static_map_subscriber = rospy.Subscriber(map_topic, MapState, self.static_map_callback)
-
+        self._chassis_subscriber = rospy.Subscriber(chassis_topic, ChassisReport, self.chassis_callback)
+        self._dynamic_map_publisher = rospy.Publisher(dynamic_map_topic,MapState, queue_size=1)
+        self._reference_path_subscriber = rospy.Subscriber(reference_path_topic, Path, self.reference_callback)
         self._map_instance = DynamicMap()
+
+
+        self._reference_path_trigger = threading.Event()
+
+    def reference_callback(self, msg):
+
+        self._map_instance.setup_reference_path(msg)
+        self._reference_path_trigger.set()
+        rospy.loginfo("[%s] Received reference path" % __module_name__)
+
 
     def static_map_callback(self, msg):
         self._map_instance.update_static_map(msg)
 
+    def chassis_callback(self, msg):
+        self._map_instance.update_ego_speed(msg.speed)
+
     def pose_callback(self, msg):
-        self._map_instance.update_dynamic_map(msg.position.x, msg.position.y)
+        # TODO: add vehicle yaw
+        self._reference_path_trigger.wait()
+        self._map_instance.update_dynamic_map(msg)
+        self._dynamic_map_publisher.publish(self._map_instance.dynamic_map)
 
     def surrounding_vehicle_callback(self, msg):
         self._map_instance.update_vehicle_list(msg.obstacles)

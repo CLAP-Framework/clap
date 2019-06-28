@@ -1,5 +1,5 @@
 <package format="2">
-  <name>zzz_library</name>
+  <name>zzz_common</name>
   <version>0.0.1</version>
   <description>
     Common used libraries.

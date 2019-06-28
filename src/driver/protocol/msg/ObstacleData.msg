@@ -1,4 +1,4 @@
-# TODO: Move to another module and rename?
+# TODO: Move to another module and rename? create custom message
 Header header
 
 uint16 obstacle_id

@@ -5,4 +5,10 @@
     <node pkg="zzz_cognition_dynamic_local_map" type="dynamic_map_builder"
           name="dynamic_map_builder" output="screen">
     </node>
+    <node pkg="zzz_planning_decision_decision_main" type="decision_main_node"
+          name="decision_main_node" output="screen">
+    </node>
+    <node pkg="zzz_control_pure_persuit_control" type="pure_persuit_controller_node"
+          name="pure_persuit_controller_node" output="screen">
+    </node> 
 </launch>

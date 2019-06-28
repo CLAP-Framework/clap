@@ -48,6 +48,7 @@ class StaticLocalMap(object):
                 if len(self.reference_lane_list) != 0 and closestLane.getID() == self.reference_lane_list[-1].getID():
                     continue
                 self.reference_lane_list.append(closestLane)
+                # print(closestLane.getID())
 
     def convert_to_map_XY(self,x,y):
 
@@ -76,7 +77,7 @@ class StaticLocalMap(object):
 
         map_x, map_y = self.convert_to_map_XY(self.ego_vehicle_location_x,self.ego_vehicle_location_y)
 
-        lanes = self.hdmap.getNeighboringLanes(map_x, map_y, self.radius_lane)
+        lanes = self.hdmap.getNeighboringLanes(map_x, map_y, self.radius_lane,includeJunctions=False)
         rospy.logdebug("ego_map_location = %f , %f, ego_location = %f, %f",map_x,map_y,self.ego_vehicle_location_x,self.ego_vehicle_location_y)
         if len(lanes) > 0:
             distancesAndLanes = sorted([(dist, lane) for lane, dist in lanes])
@@ -91,26 +92,36 @@ class StaticLocalMap(object):
         rospy.logdebug("Shouldn't update static map, current edge id %s", self.current_edge_id)
         return False
 
+    def init_static_map(self):
+        init_static_map = MapState()
+        init_static_map.in_junction = True
+        init_static_map.target_lane_index = -1
+
+        return init_static_map
+
     def update_static_map(self):
 
         rospy.logdebug("Updating static map")
-        self.static_local_map = MapState() ## Return this one
+        self.static_local_map = self.init_static_map() ## Return this one
         self.update_lane_list()
         self.update_target_lane()
 
-        self.calibrate_lane_index() # make the righest lane index is 0
-        # rospy.loginfo("Updated static map")
-        rospy.loginfo("Updated static map info: lane_number=%d, in_junction=%d, current_edge_id=%s",
+        if not self.static_local_map.in_junction:
+            self.calibrate_lane_index() # make the righest lane index is 0
+
+        rospy.loginfo("Updated static map info: lane_number=%d, in_junction=%d, current_edge_id=%s, target_lane_index = %s",
                                                                             len(self.static_local_map.lanes),
                                                                             int(self.static_local_map.in_junction),
-                                                                            self.current_edge_id)
+                                                                            self.current_edge_id,
+                                                                            self.static_local_map.target_lane_index)
 
     def update_lane_list(self):
         
         map_x, map_y = self.convert_to_map_XY(self.ego_vehicle_location_x, self.ego_vehicle_location_y)
 
-        lanes = self.hdmap.getNeighboringLanes(map_x, map_y, self.radius_lane)
+        lanes = self.hdmap.getNeighboringLanes(map_x, map_y, self.radius_lane,includeJunctions=False)
         if len(lanes) > 0:
+            self.static_local_map.in_junction = False
             distancesAndLanes = sorted([(dist, lane) for lane, dist in lanes])
             dist, closestLane = distancesAndLanes[0]
             self.new_lane = closestLane
@@ -120,10 +131,13 @@ class StaticLocalMap(object):
             lanes_in_edge = self.new_edge.getLanes()
             for lane in lanes_in_edge:
                 connections_outgoing = lane.getOutgoing()
+                # Remove fake lane
                 if len(connections_outgoing) < 1:
                     continue
                 add_lane = self.wrap_lane(lane)
                 self.static_local_map.lanes.append(add_lane)
+
+        
 
     def wrap_lane(self,lane):
         
@@ -164,6 +178,8 @@ class StaticLocalMap(object):
                         rospy.logdebug("Finded next target lane id = %s", self.static_local_map.target_lane_index)
                         return
         
+        # TODO: reference path match target lane
+
         rospy.logdebug("cannot find next target lane")
 
     def calibrate_lane_index(self):
@@ -173,4 +189,5 @@ class StaticLocalMap(object):
         for lane in self.static_local_map.lanes:
             lane.index = lane.index - first_index
 
-        self.static_local_map.target_lane_index = self.static_local_map.target_lane_index - first_index
+        if self.static_local_map.target_lane_index >= 0:
+            self.static_local_map.target_lane_index = self.static_local_map.target_lane_index - first_index

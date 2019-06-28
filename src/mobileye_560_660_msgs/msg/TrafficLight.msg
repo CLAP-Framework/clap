@@ -1,4 +1,0 @@
-uint16 traffic_light_id
-float64 distance_before_traffic_light
-int16 state
-bool traffic_light_on_the_path

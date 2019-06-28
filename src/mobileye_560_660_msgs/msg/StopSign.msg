@@ -1,3 +1,0 @@
-uint16 stop_sign_id
-float64 distance_before_stop_sign
-bool stop_sign_on_the_path

@@ -1,105 +1,84 @@
 #!/usr/bin/env python
 
+import rospy
 import numpy as np
+from LonIDM import LonIDM
+from LatLaneUtility import LatLaneUtility
+from zzz_common.geometry import *
+from zzz_planning_msgs.msg import DecisionTrajectory
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
 
 class MainDecision(object):
     def __init__(self):
 
-        self.reference_path = deque(maxlen=20000)
-        self.reference_path_buffer = deque(maxlen=200)
-        self.trajectory = deque()
-        self.ego_vehicle_location = np.array([0,0])
-        self.judge_LC_thr = 3
-
-    def setup(self):
-
-        pass
-
-    def setup_reference_path(self,reference_path):
-        self.reference_path.clear()
-        for i, wp in enumerate(reference_path.poses):
-            self.reference_path.append(np.array([wp.pose.position.x,-wp.pose.position.y]))
-
-    """
-    Main
-    """
-
-    def update_trajectory(self,ego_x,ego_y):
-        """
-        The trajectory is used for control (main)
-        """
-        self.ego_vehicle_location = np.array([ego_x,ego_y])
-
-        # update reference path
-        self.update_reference_path_buffer()
-
-        # in junction (or near) -> follow the reference path
-        if self.should_follow_the_reference_path():
-            trajectory = self.get_trajectory_from_reference_path()
-        else:
-            # in multi-lane scenarios -> follow the central path / lane change
-            trajectory = self.get_trajectory_from_decision_module()
-
-        # Publish the generate trajectory
-        return trajectory
-
-    """
-    Reference Path
-    """
-
-    def update_reference_path_buffer(self):
-
-        # find the nearest point
-        min_distance = 50
-        min_index = 0
-        index = 0
-
-        while index < 40 and index < len(self.reference_path_buffer) and self.reference_path_buffer[index]:
-            d = np.linalg.norm(self.reference_path_buffer[index]-self.ego_vehicle_location)
-            if d < min_distance:
-                min_distance = d
-                min_index = index
-            index += 1
-
-        for index in range(0, min_index):
-            self.reference_path_buffer.popleft()
-
-        while self.reference_path and len(self.reference_path_buffer) < self._buffer_size:
-            wp = self.reference_path.popleft()
-            self.lane_change_smoothen(wp)
-            self.reference_path_buffer.append(wp)
+        self.dynamic_map = None
+        self.longitudinal_model_instance = LonIDM()
+        self.lateral_model_instance = LatLaneUtility(self.longitudinal_model_instance)
 
 
-    def lane_change_smoothen(self,wp):
+    def generate_trajectory_with_speed(self,dynamic_map):
 
-        if self.reference_path_buffer:
-            last_wp = self.reference_path_buffer[-1]
-        else:
-            return
-        if np.linalg.norm(last_wp-wp) < self.judge_lc_thr:
-            return
-
-        ## Start smoothen the reference path
-        rospy.logdebug("Reference Path Smoothing")
-        lane_change_distance = min(20,len(self.reference_path_buffer)) # TODO
-        last_wp = wp
-        first_wp = self.reference_path_buffer[-lane_change_distance]
-        loc_xs = np.linspace(last_wp[0], first_wp[0],num = lane_change_distance+1)
-        loc_ys = np.linspace(last_wp[1], first_wp[1],num = lane_change_distance+1)
-        for i in range(1,lane_change_distance):
-            self.reference_path_buffer[-1] = np.array([loc_xs[i],loc_ys[i]])  
-
-    def get_trajectory_from_reference_path(self):
+        # update_dynamic_local_map
+        self.dynamic_map = dynamic_map
         
-        self.trajectory.clear
-        for i in range(0,min(50,len(self.reference_path_buffer))):
-            self.trajectory.append(self.reference_path_buffer[i])
 
-    """
-    Decision Module
-    """
-    
-    
+        changing_lane_index, desired_speed = self.lateral_model_instance.lateral_decision(dynamic_map)
+
+        changing_lane_index = -1
+        desired_speed = 30/3.6
+
+        rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
+
+        # get trajectory by target lane and desired speed
+        trajectory = self.get_trajectory(changing_lane_index,desired_speed)
+
+        msg = DecisionTrajectory()
+        msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory) # TODO: move to library
+        msg.desired_speed = desired_speed
+
+        return msg
 
 
+    def get_trajectory(self,changing_lane_index,desired_speed,resolution=0.5, time_ahead=5, distance_ahead=10):
+
+        ego_x = self.dynamic_map.ego_vehicle_pose.position.x
+        ego_y = self.dynamic_map.ego_vehicle_pose.position.y
+        lane = self.get_lane_by_index(changing_lane_index)
+        central_path = self.convert_path_to_ndarray(lane.central_path.poses)
+        
+        dense_centrol_path = dense_polyline(central_path,resolution)
+        nearest_dis, nearest_idx = nearest_point_to_polyline(ego_x,ego_y,dense_centrol_path)
+
+        front_path = dense_centrol_path[nearest_idx:]
+        trajectory = front_path[:np.searchsorted(np.cumsum(front_path),desired_speed*time_ahead + distance_ahead)]
+
+        return trajectory
     
+    def get_lane_by_index(self,lane_index):
+
+        if lane_index == -1:
+            return self.dynamic_map.reference_path
+
+        for lane in self.dynamic_map.lanes:
+            if lane.index == lane_index:
+                return lane
+
+        return None
+
+    def convert_path_to_ndarray(self,path):
+
+        point_list = [(pose.pose.position.x, pose.pose.position.y) for pose in path]
+        return np.array(point_list)
+
+    def convert_ndarray_to_pathmsg(self,path):
+        msg = Path()
+        for wp in path:
+            pose = PoseStamped()
+            pose.pose.position.x = wp[0]
+            pose.pose.position.y = wp[1]
+            msg.poses.append(pose)
+
+        return msg
+
+
