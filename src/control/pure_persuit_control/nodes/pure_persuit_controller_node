@@ -43,6 +43,8 @@ class PurePersuitControllerNode(object):
         self._chassis_trigger.wait()
         control_msg = self._control_instance.run_step(msg)
         self._control_signal_publisher.publish(control_msg)
+    
+    # pose triggered
 
 if __name__ == "__main__":
 
