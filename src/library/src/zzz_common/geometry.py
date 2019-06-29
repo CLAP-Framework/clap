@@ -61,7 +61,7 @@ def dist_from_point_to_polyline(x0, y0, line):
 def dense_polyline(line, resolution):
     """
     return the dense line 
-    The gap between each point < resolution 
+    The gap between each point < resolution /m
     """
     if line is None or len(line) == 0:
         raise ValueError("Line input is null")

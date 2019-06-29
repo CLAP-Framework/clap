@@ -23,22 +23,46 @@ class PurePersuitController():
         self._lat_controller = PurePersuitLateralController()
         self.ego_vehicle_pose = None
         self.ego_vehicle_speed = 0
+        self.desired_trajectory = None
+        self.desired_speed = 30.0
 
-    def update_ego_vehicle_pose(self,pose):
-        self.ego_vehicle_pose = pose
+    def update_decision(self,decision):
+        self.desired_trajectory = decision.trajectory
+        self.desired_speed = decision.desired_speed
 
     def update_ego_vehicle_speed(self,speed):
         self.ego_vehicle_speed = speed
 
-    def run_step(self, decision):
+    def ready_for_control(self, short_distance_thres = 5):
+        if self.desired_trajectory is None:
+            return False
+
+        last_loc = np.array([self.desired_trajectory.poses[-1].pose.position.x,self.desired_trajectory.poses[-1].pose.position.y]) 
+        ego_loc = np.array([self.ego_vehicle_pose.position.x,self.ego_vehicle_pose.position.y])
+        d = np.linalg.norm(ego_loc-last_loc)
+        if d < short_distance_thres:
+            return False
+        
+        return True
+
+    def run_step(self, pose):
         """
         Execute one step of control invoking both lateral and longitudinal PID controllers to track a trajectory
         at a given target_speed.
         return: control
         """
+        self.ego_vehicle_pose = pose
 
-        target_speed = decision.desired_speed
-        trajectory = decision.trajectory
+        if not ready_for_control:
+            control_msg = ControlCommand()
+            control_msg.throttle = 0
+            control_msg.brake = 1
+            control_msg.steer = 0
+            
+            return control_msg
+
+        target_speed = self.desired_speed
+        trajectory = self.desired_trajectory
         current_speed = self.ego_vehicle_speed
         ego_pose = self.ego_vehicle_pose
 
@@ -153,7 +177,7 @@ class PurePersuitLateralController():
 
         return self._purepersuit_control(control_point, ego_pose)
 
-    def _control_point(self,ego_pose,trajectory,current_speed):
+    def _control_point(self,ego_pose,trajectory,current_speed,resolution = 0.1):
 
         if current_speed > 10:        
             control_target_dt = 0.5 - (current_speed-10)*0.01
@@ -170,6 +194,12 @@ class PurePersuitLateralController():
 
         nearest_i = -1
         nearest_d = 100
+        
+        trajectory_array = self.convert_path_to_ndarray(trajectory)
+        trajectory_dense = dense_polyline(trajectory_array,resolution)
+
+        np.linalg.norm(trajectory_dense-ego_loc,axis = 1)
+
         for i, wp in enumerate(trajectory.poses):
             wp_loc = np.array([wp.pose.position.x,wp.pose.position.y])
             d = np.linalg.norm(wp_loc-ego_loc)

@@ -1,0 +1,7 @@
+*.egg-info/
+dist/
+ssd_inception_v2_coco_2018_01_28/
+frozen_models
+*.pb
+real_data.record
+sim_data.record
