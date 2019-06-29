@@ -18,7 +18,7 @@ class LonIDM(object):
     def update_dynamic_map(self,dynamic_map):
         self.dynamic_map = dynamic_map
 
-    def IDM_speed(self,target_lane_index):
+    def IDM_speed(self,target_lane_index,traffic_light = False):
 
         target_lane = None
 
@@ -32,7 +32,11 @@ class LonIDM(object):
         if target_lane is None:
             return 0
         else:
-            return self.IDM_speed_in_lane(target_lane)
+            idm_speed = self.IDM_speed_in_lane(target_lane)
+            traffic_light_speed = float("inf")
+            if traffic_light:
+                traffic_light_speed = self.traffic_light_speed(target_lane)
+            return min(idm_speed,traffic_light_speed)
 
     def IDM_speed_in_lane(self,lane):
 
@@ -66,6 +70,15 @@ class LonIDM(object):
 
         return v+acc*self.decision_dt
 
-        
+    
+    def traffic_light_speed(self,lane):
 
-   
+        ego_vehicle_speed = self.dynamic_map.ego_vehicle_speed
+        if lane.traffic_light_state != 1:
+            return float("inf")
+        else:
+            d = lane.distance_to_traffic_light_line
+            if d < 10 + ego_vehicle_speed*ego_vehicle_speed/2/2:
+                return 0 
+
+        return float("inf")

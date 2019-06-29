@@ -8,10 +8,13 @@ from zzz_planning_msgs.msg import DecisionTrajectory
 
 class DecisionNode(object):
     def __init__(self,
-        pose_topic="/carla/environment_perception/ego_vehicle_pose",
+        vehicle_list_topic="/carla/environment_perception/vehicle_list",
+        pedestrian_list_topic="/carla/environment_perception/pedestrian_list",
         decision_trajectory_topic="carla/decision_trajectory",
         dynamic_map_topic="carla/dynamic_map"):
 
+        self._vehicle_list_subscriber = rospy.Subscriber("/carla/environment_perception/vehicle_list", ObstacleDataArray, self.surrounding_vehicle_callback)
+        self._pedestrian_list_subscriber = rospy.Subscriber("/carla/environment_perception/pedestrian_list", ObstacleDataArray, self.surrounding_pedestrian_callback)
         self._dynamic_map_subscriber = rospy.Subscriber(dynamic_map_topic,MapState,self.dynamic_map_callback)
         self._decision_trajectory_subscriber = rospy.Subscriber(decision_trajectory_topic, DecisionTrajectory, self.decision_trajectory_callback)
         self._safeguard_instance = Safeguard()
@@ -19,9 +22,17 @@ class DecisionNode(object):
         rospy.Subscriber("/carla/environment_perception/vehicle_list", ObstacleDataArray, self.surrounding_vehicle_callback)
         rospy.Subscriber("/carla/environment_perception/pedestrian_list", ObstacleDataArray, self.surrounding_pedestrian_callback)
 
-    def dynamic_map_callback(self, msg):
-        publish_msg = self._decision_instance.generate_trajectory_with_speed(msg)
+    def surrounding_vehicle_callback(self,vehicle_list):
+        self._safeguard_instance.update_vehicle_list(vehicle_list)
 
+    def surrounding_pedestrian_callback(self,pedestrian_list):
+        self._safeguard_instance.updage_pedestrian_list(pedestrian_list)
+
+    def dynamic_map_callback(self, dynamic_map):
+        self._decision_instance.update_dynamic_map(dynamic_map)
+
+    def decision_trajectory_callback(self,decision):
+        decision_msg = self._decision_instance.check_trajectory(decision)
 
 if __name__ == "__main__":
 

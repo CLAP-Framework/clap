@@ -13,37 +13,30 @@ class Safeguard(object):
         self.dynamic_map = None
         self.longitudinal_model_instance = LonIDM()
         self.lateral_model_instance = LatLaneUtility(self.longitudinal_model_instance)
+        self._safeguard_instance = ReachableSet()
 
-
-    def update_dynamic_map(self):
-        pass
-
-    def update_surrounding_vehicle_list(self):
-        pass
-
-    def update_surrounding_pedestrian_list(self):
-        pass
-
-    def check_trajectory(self):
-        
+    def update_dynamic_map(self,dynamic_map):
+        self._safeguard_instance.update_dynamic_map(dynamic_map)
         
 
+    def update_surrounding_vehicle_list(self,vehicle_list):
+        self._safeguard_instance.update_vehicle_list(vehicle_list)
+        
+
+    def update_surrounding_pedestrian_list(self,pedestrian_list):
+        self._safeguard_instance.update_pedestrian_list(pedestrian_list)
+        
+
+    def check_trajectory(self,decision):
+        
+        safeguard_triggered, safespeed = self._safeguard_instance.check_trajectory(decision.trajectory,decision.desired_speed)
 
         if safeguard_triggered:
             rospy.loginfo("safeguarded triggered")
 
-        return safeguard_triggered, trajectory_msg
+        msg = decision
+        msg.desired_speed = safespeed
 
-    def pred_trajectory(self,obstacle,pred_t = 5,resolution = 0.5):
-        # obstacle could be pedestrian or vehicle
+        return msg
 
-        loc = np.array([obstacle.obstacle_pos_x,obstacle.obstacle_pos_y])
-        speed = obstacle.obstacle_speed
-        t_space = np.linspace(0,pred_t,pred_t/resolution)
-        pred_tractory = t_space*speed + loc
-
-        return np.array(pred_tractory)
-
-    def intersection_between_trajectories(self,decision_trajectory,pred_trajectory,collision_thres):
-        # if two trajectory have interection:
-        # return the distance 
+    

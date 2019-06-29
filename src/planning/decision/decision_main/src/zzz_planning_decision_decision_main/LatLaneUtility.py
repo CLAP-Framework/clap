@@ -23,7 +23,7 @@ class LatLaneUtility(object):
             return -1, self.longitudinal_model_instance.IDM_speed(-1)
 
         target_index = self.generate_lane_change_index()
-        target_speed = self.longitudinal_model_instance.IDM_speed(dynamic_map.ego_lane_index)
+        target_speed = self.longitudinal_model_instance.IDM_speed(dynamic_map.ego_lane_index,traffic_light = True)
         # TODO: More accurate speed
         
         return target_index, target_speed

@@ -3,117 +3,105 @@ import rospy
 import numpy as np
 
 
-class LatLaneUtility(object):
+class ReachableSet(object):
 
     def __init__(self,longitudinal_model):
-        self.longitudinal_model_instance = longitudinal_model
         self.dynamic_map = None
+        self.vehicle_list = []
+        self.pedestrian_list = []
 
-    def lateral_decision(self,dynamic_map):
-
-        self.longitudinal_model_instance.update_dynamic_map(dynamic_map)
+    def update_dynamic_map(dynamic_map):
         self.dynamic_map = dynamic_map
 
-        ### Following reference path
-        if dynamic_map.in_junction or len(dynamic_map.lanes) < 2:
-            return -1, self.longitudinal_model_instance.IDM_speed(-1)
+    def update_vehicle_list(vehicle_list):
+        self.vehicle_list = vehicle_list
+    
+    def update_pedestrian_list(pedestrian_list):
+        self.pedestrian_list = pedestrian_list
+    
+    def check_trajectory(self,decision_trajectory,desired_speed):
 
-        ### Cannot locate ego vehicle rightly
-        if dynamic_map.ego_lane_index < 0 or dynamic_map.ego_lane_index > len(dynamic_map.lanes)-1:
-            return -1, self.longitudinal_model_instance.IDM_speed(-1)
+        decision_trajectory_array = self.convert_trajectory_to_ndarray(decision_trajectory)
+        ego_idx = self.get_ego_idx(decision_trajectory_array)
+        nearest_idx = len(decision_trajectory_array)
+        nearest_obstacle = None
 
-        target_index = self.generate_lane_change_index()
-        target_speed = self.longitudinal_model_instance.IDM_speed(dynamic_map.ego_lane_index)
-        # TODO: More accurate speed
+        for vehicle in self.vehicle_list:
+            pred_trajectory = self.pred_trajectory(vehicle)
+            collision_idx = self.intersection_between_trajectories(decision_trajectory_array,pred_trajectory)
+            #TODO:ignore a near distance
+            if collision_idx > ego_idx and collision_idx < nearest_idx:
+                nearest_idx = collision_idx
+                nearest_obstacle = vehicle
+
+        for pedestrian in self.pedestrian_list:
+            pred_trajectory = self.pred_trajectory(pedestrian)
+            collision_idx = self.intersection_between_trajectories(decision_trajectory_array,pred_trajectory)
+            if collision_idx > ego_idx and collision_idx < nearest_idx:
+                nearest_idx = collision_idx
+                nearest_obstacle = pedestrian
         
-        return target_index, target_speed
+        safeguard_speed = self.get_safeguard_speed(ego_idx,nearest_idx,decision_trajectory_array)
 
-    def generate_lane_change_index(self):
-
-        ego_lane_index = self.dynamic_map.ego_lane_index
-        current_lane_utility = self.lane_utility(ego_lane_index)
-
-        if not self.lane_change_safe(ego_lane_index,ego_lane_index + 1):
-            left_lane_utility = -1
+        if nearest_obstacle is None or safeguard_speed > desired_speed:
+            return False, desired_speed
         else:
-            left_lane_utility = self.lane_utility(self.dynamic_map.ego_lane_index + 1)
+            return True, safeguard_speed
 
-        if not self.lane_change_safe(ego_lane_index,ego_lane_index - 1):
-            right_lane_utility = -1
-        else:
-            right_lane_utility = self.lane_utility(self.dynamic_map.ego_lane_index - 1)
+    def pred_trajectory(self,obstacle,pred_t = 4,resolution = 0.5):
+        # obstacle could be pedestrian or vehicle
 
-        rospy.logdebug("left_utility = %f, ego_utility = %f, right_utility = %f",
-                                                                left_lane_utility,
-                                                                current_lane_utility,
-                                                                right_lane_utility)
+        loc = np.array([obstacle.obstacle_pos_x,obstacle.obstacle_pos_y])
+        speed = obstacle.obstacle_speed
+        yaw = obstacle.obstacle_yaw
+        speed_direction = np.array([math.cos(math.radians(yaw)),math.sin(math.radians(yaw))])
+        t_space = np.linspace(0,pred_t,pred_t/resolution)
 
+        pred_x = loc[0]+t_space*speed*speed_direction[0]
+        pred_y = loc[1]+t_space*speed*speed_direction[1]
 
-        if right_lane_utility > current_lane_utility and right_lane_utility >= left_lane_utility:
-            return self.dynamic_map.ego_lane_index -1
+        pred_trajectory = np.array([pred_x,pred_y]).T
 
-        if left_lane_utility > current_lane_utility and left_lane_utility > right_lane_utility:
-            return self.dynamic_map.ego_lane_index + 1
+        return pred_trajectory
 
-        return self.dynamic_map.ego_lane_index
-
+    def intersection_between_trajectories(self,decision_trajectory,pred_trajectory,collision_thres=4,stop_thres = 5):
+        # if two trajectory have interection:
+        # return the distance 
         
+        nearest_idx = len(decision_trajectory)
 
-    def lane_utility(self,lane_index):
+        # the object stops
+        if np.linalg.norm(pred_trajectory[0]-pred_trajectory[-1]) < stop_thres:
+            return nearest_idx
 
-        available_speed = self.longitudinal_model_instance.IDM_speed(lane_index)
-        exit_lane_index = self.dynamic_map.target_lane_index
-        distance_to_end = self.dynamic_map.distance_to_next_lane
-        utility = available_speed + abs(exit_lane_index - lane_index)*max(0,(260-distance_to_end))
-
-        return utility
-
-
-    def lane_change_safe(self,ego_lane_index,target_index):
-
-        if target_index < 0 or target_index > len(self.dynamic_map.lanes)-1:
-            return False
-
-        front_safe = False
-        rear_safe = False
-        front_vehicle = None
-        rear_vehicle = None
-        ego_vehicle_location = np.array([self.dynamic_map.ego_vehicle_pose.position.x,
-                                         self.dynamic_map.ego_vehicle_pose.position.y])
-
-        for lane in self.dynamic_map.lanes:
-            if lane.index == target_index:
-                if lane.have_front_vehicle:
-                    front_vehicle = lane.front_vehicle
-                if lane.have_rear_vehicle:
-                    rear_vehicle = lane.rear_vehicle
+        for i, wp in enumerate(pred_trajectory):
+            dist = np.linspace.norm(decision_trajectory-wp,axis=1)
+            min_d = np.min(dist)
+            if min_d  < collision_thres:
+                nearest_idx = np.argmin(dist)
                 break
-
-        if lane.front_vehicle is None:
-            front_safe = True
-        else:
-            front_vehicle_location = np.array([front_vehicle.obstacle_pos_x,front_vehicle.obstacle_pos_y])
-            d_front = np.linalg.norm(front_vehicle_location-ego_vehicle_location)
-            front_v = front_vehicle.obstacle_speed
-            ego_v = self.dynamic_map.ego_vehicle_speed
-            if d_front > max((10 + 3*(ego_v-front_v)),10):
-                front_safe = True
+            
+        return nearest_idx
         
 
-        if lane.rear_vehicle is None:
-            rear_safe = True
+    def convert_trajectory_to_ndarray(self,trajectory):
 
-        else:
-            rear_vehicle_location = np.array([rear_vehicle.obstacle_pos_x,rear_vehicle.obstacle_pos_y])
-            d_rear = np.linalg.norm(rear_vehicle_location-ego_vehicle_location)
-            rear_v = lane.rear_vehicle.speed
-            ego_v = EnvironmentInfo.ego_vehicle_speed
+        trajectory_array = [(pose.pose.position.x, pose.pose.position.y) for pose in trajectory.poses]
+        return np.array(trajectory)
 
-            if d_rear > max((10 + 3*(rear_v-ego_v)),10):
-                rear_safe = True
 
-        if front_safe and rear_safe:
-            return True
-            
-        return False
- 
+    def get_ego_idx(self,decision_trajectory):
+        
+        ego_pose = self.dynamic_map.ego_pose
+        ego_loc = np.array([ego_pose.position.x,ego_pose.position.y])
+        dist = np.linspace.norm(decision_trajectory-ego_loc,axis=1)
+        ego_idx = np.argmin(dist)
+        return ego_idx
+
+    def get_safeguard_speed(self,ego_idx,collision_idx,decision_trajectory,pred_t = 4):
+        dis_sum = np.cumsum(decision_trajectory)
+        dis = dis_sum[collision_idx] - dis_sum[ego_idx]
+        speed = dis/pred_t
+        return speed
+
+        
