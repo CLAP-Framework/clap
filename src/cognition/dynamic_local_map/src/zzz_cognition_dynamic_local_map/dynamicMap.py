@@ -33,6 +33,8 @@ class DynamicMap(object):
         self.trajectory = deque()
         self.judge_LC_thr = 3
 
+        self.traffic_light_info = None
+
         self.static_map_lane_path_array = None # list of point array of a lane
 
     def setup(self):
@@ -63,6 +65,10 @@ class DynamicMap(object):
 
     def update_ego_speed(self,speed):
         self.ego_vehicle_speed = speed
+
+    def update_traffic_light_info(self, traffic_light_info):
+        self.traffic_light_info = traffic_light_info
+
     """
     Main Update
     """
@@ -84,8 +90,8 @@ class DynamicMap(object):
             self.dynamic_map.in_junction = True
         if not self.dynamic_map.in_junction:
             self.update_ego_vehicle_index()
-        if not self.dynamic_map.in_junction:
             self.update_surrounding_vehicle_in_lanes()
+        self.update_traffic_light_in_lane()
         
         self.update_speed_limit()
 
@@ -154,7 +160,40 @@ class DynamicMap(object):
                 self.static_map.lanes[lane_id].rear_vehicle  = self.surrounding_vehicle_list[rear_vehicle_idx]
                 rospy.logdebug("Lane index: %d, Rear vehicle id: %d", lane_id, self.static_map.lanes[lane_id].rear_vehicle.obstacle_id) 
 
-    
+    def update_traffic_light_in_lane(self):
+        if self.traffic_light_info is None:
+            return
+        lights = self.traffic_light_info.detections
+
+        total_lane_num = len(self.dynamic_map.lanes)
+        if len(lights) == 1:
+            for i in range(total_lane_num):
+                if lights[0].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_RED:
+                    self.dynamic_map.lanes[i].traffic_light_state = 1
+                elif lights[0].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_YELLOW:
+                    self.dynamic_map.lanes[i].traffic_light_state = 2
+                elif lights[0].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_GREEN:
+                    self.dynamic_map.lanes[i].traffic_light_state = 3
+        elif len(lights) > 1 and len(lights) == total_lane_num:
+            for i in range(total_lane_num):
+                if lights[i].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_RED:
+                    self.dynamic_map.lanes[i].traffic_light_state = 1
+                elif lights[i].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_YELLOW:
+                    self.dynamic_map.lanes[i].traffic_light_state = 2
+                elif lights[i].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_GREEN:
+                    self.dynamic_map.lanes[i].traffic_light_state = 3
+        elif len(lights) > 1 and len(lights) != total_lane_num:
+            red = True
+            for i in range(len(lights)):
+                if lights[i].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_GREEN:
+                    red = False
+            for i in range(total_lane_num):
+                if red:
+                    self.dynamic_map.lanes[i].traffic_light_state = 1
+                else:
+                    self.dynamic_map.lanes[i].traffic_light_state = 3
+        
+
     """
     For reference path
     """

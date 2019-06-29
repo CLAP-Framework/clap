@@ -18,6 +18,8 @@ add_message_files(DIRECTORY msg FILES
     ObjectClass.msg
     TrackingBox.msg
     TrackingBoxArray.msg
+    TrafficLightDetection.msg
+    TrafficLightDetectionArray.msg
 )
 
 generate_messages(DEPENDENCIES geometry_msgs sensor_msgs std_msgs)

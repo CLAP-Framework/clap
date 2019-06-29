@@ -6,6 +6,7 @@ import rospy
 import threading
 
 from zzz_driver_msgs.msg import MapState, ObstacleDataArray, ChassisReport
+from zzz_perception_msgs.msg import TrafficLightDetectionArray
 from geometry_msgs.msg import Pose
 from zzz_cognition_dynamic_local_map import DynamicMap
 from nav_msgs.msg import Path
@@ -19,7 +20,8 @@ class BuilderNode(object):
         chassis_topic="/carla/ego_vehicle/chassis",
         map_topic="/carla/local_static_map",
         dynamic_map_topic="carla/dynamic_map",
-        reference_path_topic="/carla/ego_vehicle/waypoints"):
+        reference_path_topic="/carla/ego_vehicle/waypoints",
+        traffic_light_topic="/carla/traffic_lights_detection"):
 
         self._pose_subscriber = rospy.Subscriber(pose_topic, Pose, self.pose_callback)
         self._surrounding_vehicle_subscriber = rospy.Subscriber(surrounding_vehicle_topic, ObstacleDataArray, self.surrounding_vehicle_callback)
@@ -27,6 +29,7 @@ class BuilderNode(object):
         self._chassis_subscriber = rospy.Subscriber(chassis_topic, ChassisReport, self.chassis_callback)
         self._dynamic_map_publisher = rospy.Publisher(dynamic_map_topic,MapState, queue_size=1)
         self._reference_path_subscriber = rospy.Subscriber(reference_path_topic, Path, self.reference_callback)
+        self._traffic_light_subscriber = rospy.Subscriber(traffic_light_topic, TrafficLightDetectionArray, self.traffic_light_callback)
         self._map_instance = DynamicMap()
 
 
@@ -44,6 +47,9 @@ class BuilderNode(object):
 
     def chassis_callback(self, msg):
         self._map_instance.update_ego_speed(msg.speed)
+
+    def traffic_light_callback(self, msg):
+        self._map_instance.update_traffic_light_info(msg)
 
     def pose_callback(self, msg):
         # TODO: add vehicle yaw
