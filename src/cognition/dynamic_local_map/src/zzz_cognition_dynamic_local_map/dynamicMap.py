@@ -144,21 +144,33 @@ class DynamicMap(object):
             if dist_list[closest_lane, 0] > lane_dist_thres:
                 continue 
             if dist_list[closest_lane, 1] < self.ego_vehicle_distance_to_lane_head:
+                # The vehicle is behind if its distance to lane start is smaller
                 lane_rear_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,1]))
             if dist_list[closest_lane, 2] < self.ego_vehicle_distance_to_lane_tail:
+                # The vehicle is ahead if its distance to lane end is smaller
                 lane_front_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,2]))
         
         for lane_id in range(self.get_lane_count()):
             front_vehicles = np.array(lane_front_vehicle_list[lane_id])
             rear_vehicles = np.array(lane_rear_vehicle_list[lane_id])
             if len(front_vehicles) > 0:
-                front_vehicle_idx = int(front_vehicles[np.argmin(front_vehicles[:,1]), 0])
+                # Select vehicle ahead with maximum distance to lane start as front vehicle
+                front_vehicle_idx = int(front_vehicles[np.argmax(front_vehicles[:,1]), 0])
+                self.static_map.lanes[lane_id].have_front_vehicle = True
                 self.static_map.lanes[lane_id].front_vehicle = self.surrounding_vehicle_list[front_vehicle_idx]
                 rospy.logdebug("Lane index: %d, Front vehicle id: %d", lane_id, self.static_map.lanes[lane_id].front_vehicle.obstacle_id)                
+            else:
+                self.static_map.lanes[lane_id].have_front_vehicle = False
+
+
             if len(rear_vehicles) > 0:
-                rear_vehicle_idx  = int(rear_vehicles [np.argmin(rear_vehicles[:,1]), 0])
+                # Select vehicle behine with maximum distance to lane start as rear vehicle
+                rear_vehicle_idx  = int(rear_vehicles [np.argmax(rear_vehicles[:,1]), 0])
+                self.static_map.lanes[lane_id].have_rear_vehicle = True
                 self.static_map.lanes[lane_id].rear_vehicle  = self.surrounding_vehicle_list[rear_vehicle_idx]
                 rospy.logdebug("Lane index: %d, Rear vehicle id: %d", lane_id, self.static_map.lanes[lane_id].rear_vehicle.obstacle_id) 
+            else:
+                self.static_map.lanes[lane_id].have_rear_vehicle = False
 
     def update_traffic_light_in_lane(self):
         if self.traffic_light_info is None:
@@ -210,7 +222,7 @@ class DynamicMap(object):
         if self.reference_path_buffer:
             nearest_dis, nearest_idx = nearest_point_to_polyline(self.ego_vehicle_location[0],
                                                                  self.ego_vehicle_location[1],
-                                                                 np.array(self.reference_path_buffer))
+                                                                 np.array(self.reference_path_buffer))     
             for index in range(0, nearest_idx):
                 self.reference_path_buffer.popleft()
 
@@ -220,8 +232,6 @@ class DynamicMap(object):
             self.lane_change_smoothen(wp)
             self.reference_path_buffer.append(wp)
 
-        # TODO: find front vehicle?
-        
 
         Rpath = Path()
         for wp in self.reference_path_buffer:

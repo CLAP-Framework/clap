@@ -57,5 +57,5 @@ if __name__ == "__main__":
 
     rospy.init_node("map_provider", log_level=rospy.INFO)
     node = MapNode()
-    node.load_map_callback('/home/carla/Carla/SUMO/map03_t.net.xml') # TODO: Remove this
+    node.load_map_callback('/home/carla/Carla/SUMO/map04_t.net.xml') # TODO: Remove this
     rospy.spin()

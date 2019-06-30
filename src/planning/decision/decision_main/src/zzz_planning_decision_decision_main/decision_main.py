@@ -25,8 +25,8 @@ class MainDecision(object):
 
         changing_lane_index, desired_speed = self.lateral_model_instance.lateral_decision(dynamic_map)
 
-        changing_lane_index = -1
-        desired_speed = 30/3.6
+        # changing_lane_index = -1
+        # desired_speed = 30/3.6
 
         rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
 
@@ -40,19 +40,26 @@ class MainDecision(object):
         return msg
 
 
-    def get_trajectory(self,changing_lane_index,desired_speed,resolution=0.5, time_ahead=5, distance_ahead=10):
+    def get_trajectory(self,changing_lane_index,desired_speed,resolution=0.5, time_ahead=5, distance_ahead=10, rectify_thres = 4):
 
         ego_x = self.dynamic_map.ego_vehicle_pose.position.x
         ego_y = self.dynamic_map.ego_vehicle_pose.position.y
+        ego_loc = np.array([ego_x,ego_y])
         lane = self.get_lane_by_index(changing_lane_index)
         central_path = self.convert_path_to_ndarray(lane.central_path.poses)
         
+        
         dense_centrol_path = dense_polyline(central_path,resolution)
         nearest_dis, nearest_idx = nearest_point_to_polyline(ego_x,ego_y,dense_centrol_path)
-
+        
+        
         front_path = dense_centrol_path[nearest_idx:]
-        trajectory = front_path[:np.searchsorted(np.cumsum(front_path),desired_speed*time_ahead + distance_ahead)]
+        # correct if ego vehicle is away from target trajectory
+        # if nearest_dis > rectify_thres:
+            
 
+        dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path,axis=0),axis = 1))
+        trajectory = front_path[:np.searchsorted(dis_to_ego, desired_speed*time_ahead+distance_ahead)-1]
         return trajectory
     
     def get_lane_by_index(self,lane_index):

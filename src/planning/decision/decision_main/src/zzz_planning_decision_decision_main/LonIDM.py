@@ -42,6 +42,7 @@ class LonIDM(object):
 
         ego_vehicle_location = np.array([self.dynamic_map.ego_vehicle_pose.position.x,
                                             self.dynamic_map.ego_vehicle_pose.position.y])
+
         v = self.dynamic_map.ego_vehicle_speed
         v0 = 30/3.6 #lane.speed_limit/3.6 TODO
         if v<5:
@@ -54,8 +55,7 @@ class LonIDM(object):
         T = self.T
         delta = self.delta
 
-        if False:  #lane.have_front_vehicle:
-            # TODO: More accurate car-following distance
+        if lane.have_front_vehicle:
             f_v_location = np.array([lane.front_vehicle.obstacle_pos_x,lane.front_vehicle.obstacle_pos_y])
             v_f = lane.front_vehicle.obstacle_speed
             dv = v-v_f

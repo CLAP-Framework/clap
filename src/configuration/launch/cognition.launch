@@ -11,10 +11,10 @@
     <node pkg="zzz_control_pure_persuit_control" type="pure_persuit_controller_node"
           name="pure_persuit_controller_node" output="screen">
     </node>
-    <node pkg="zzz_perception_detection_yolo_detector" type="yolo"
+    <!-- <node pkg="zzz_perception_detection_yolo_detector" type="yolo"
           name="yolo_node" output="screen">
           <env name="PYTHONPATH" value="$(env PYTHONPATH):/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages"/>
-    </node> 
+    </node>  -->
     <node pkg="zzz_planning_decision_safeguard" type="decision_safeguard_node"
           name="safeguard_node" output="screen">
     </node> 

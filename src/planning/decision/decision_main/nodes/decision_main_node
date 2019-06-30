@@ -20,7 +20,12 @@ class DecisionNode(object):
 
     def dynamic_map_callback(self, msg):
         publish_msg = self._decision_instance.generate_trajectory_with_speed(msg)
+        rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
+                                                    len(publish_msg.trajectory.poses),
+                                                    publish_msg.desired_speed)
+
         self._decision_trajectory_publisher.publish(publish_msg)
+        # rospy.logwarn("decision_trajectory_send_out")
 
 
 if __name__ == "__main__":

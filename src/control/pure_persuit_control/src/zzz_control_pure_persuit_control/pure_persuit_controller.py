@@ -8,6 +8,7 @@ from zzz_control_msgs.msg import ControlCommand
 import numpy as np
 import tf
 from zzz_common.geometry import *
+import rospy
 
 class PurePersuitController():
     """
@@ -34,12 +35,14 @@ class PurePersuitController():
         self.ego_vehicle_speed = speed
 
     def ready_for_control(self, short_distance_thres = 5):
-        if self.desired_trajectory is None:
+        if self.desired_trajectory is None or len(self.desired_trajectory.poses) == 0:
+            rospy.logdebug("Haven't recevied trajectory")
             return False
 
         last_loc = np.array([self.desired_trajectory.poses[-1].pose.position.x,self.desired_trajectory.poses[-1].pose.position.y]) 
         ego_loc = np.array([self.ego_vehicle_pose.position.x,self.ego_vehicle_pose.position.y])
         d = np.linalg.norm(ego_loc-last_loc)
+
         if d < short_distance_thres:
             return False
         
@@ -51,16 +54,18 @@ class PurePersuitController():
         at a given target_speed.
         return: control
         """
+        rospy.logdebug("received target speed:%f, current_speed: %f",self.desired_speed,self.ego_vehicle_speed)
+
         self.ego_vehicle_pose = pose
 
-        if not ready_for_control:
+        if not self.ready_for_control():
             control_msg = ControlCommand()
             control_msg.throttle = 0
             control_msg.brake = 1
             control_msg.steer = 0
             
             return control_msg
-
+        
         target_speed = self.desired_speed
         trajectory = self.desired_trajectory
         current_speed = self.ego_vehicle_speed
@@ -190,30 +195,13 @@ class PurePersuitLateralController():
 
         ego_loc = np.array([ego_pose.position.x,ego_pose.position.y])
 
-        # TODO: dence trajectory
+        trajectory_array = self.convert_trajectory_to_ndarray(trajectory)
 
-        nearest_i = -1
-        nearest_d = 100
-        
-        trajectory_array = self.convert_path_to_ndarray(trajectory)
+        # rospy.logdebug("control trajectory: %s",str(trajectory_array))
         trajectory_dense = dense_polyline(trajectory_array,resolution)
 
-        np.linalg.norm(trajectory_dense-ego_loc,axis = 1)
-
-        for i, wp in enumerate(trajectory.poses):
-            wp_loc = np.array([wp.pose.position.x,wp.pose.position.y])
-            d = np.linalg.norm(wp_loc-ego_loc)
-            if d < nearest_d:
-                nearest_d = d
-                nearest_i = i
-        
-        length_to_ego = 0
-        for i in range(nearest_i,len(trajectory.poses)):
-            wp_loc = np.array([trajectory.poses[i].pose.position.x,trajectory.poses[i].pose.position.x])
-            d = np.linalg.norm(wp_loc-ego_loc)
-            length_to_ego = length_to_ego + d
-            if length_to_ego > control_target_distance:
-                break
+        end_idx = self.get_next_idx(ego_loc, trajectory_dense, control_target_distance)
+        wp_loc = trajectory_dense[end_idx]
 
         return wp_loc
 
@@ -276,11 +264,28 @@ class PurePersuitLateralController():
 
     # TODO: Move into library
 
-    def convert_trajectory_to_ndarray(self,lane):
-        point_list = [(pose.pose.position.x, pose.pose.position.y) for pose in lane.central_path.poses]
-        return numpy.array(point_list)
+    def convert_trajectory_to_ndarray(self,trajectory):
+        trajectory_array = [(pose.pose.position.x, pose.pose.position.y) for pose in trajectory.poses]
+        return np.array(trajectory_array)
 
-    def convert_ndarray_to_pathmsg(self,lane):
+    def get_idx(self,loc,trajectory):
 
-        return numpy.array(point_list)
+        
+        dist = np.linalg.norm(trajectory-loc,axis=1)
+        idx = np.argmin(dist)
+        return idx
 
+    def get_next_idx(self,start_loc,trajectory,distance):
+
+        start_idx = self.get_idx(start_loc,trajectory)
+        dist_list = np.cumsum(np.linalg.norm(np.diff(trajectory,axis = 0),axis = 1))
+        for end_idx in range(start_idx,len(trajectory)-1):
+            if dist_list[end_idx] > dist_list[start_idx] + distance:
+                return end_idx
+
+        rospy.logdebug("start_idx: %s, ego_loc: %s, trajectory: %s", 
+                                                    str(start_idx),
+                                                    str(start_loc),
+                                                    str(trajectory))
+                                                    
+    
