@@ -7,7 +7,7 @@ import os.path as osp
 import numpy as np
 import zzz_driver_datasets_kitti.utils as utils
 
-class odometry:
+class OdometryDataset:
     """
     Load and parse odometry benchmark data into a usable format.
     Please ensure that calibration and poses are downloaded

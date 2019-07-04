@@ -6,6 +6,7 @@ from collections import namedtuple
 
 import numpy as np
 from PIL import Image
+import xml.etree.ElementTree as ET
 
 # Per dataformat.txt
 _OxtsPacket = namedtuple('OxtsPacket',
@@ -21,7 +22,6 @@ _OxtsPacket = namedtuple('OxtsPacket',
 # Bundle into an easy-to-access structure
 _OxtsData = namedtuple('OxtsData', 'packet, T_w_imu')
 
-# TODO: simplify multiplication
 def rotx(t):
     """Rotation about the x-axis."""
     c = np.cos(t)
@@ -192,3 +192,30 @@ def yield_velo_scans(basepath, filelist, binary=True):
     """Generator to parse velodyne files into arrays."""
     for file in filelist:
         yield load_velo_scan(basepath, file, binary=binary)
+
+class _TrackletPose(object):
+    def __init__(self, xmlnode):
+        for prop in xmlnode:
+            setattr(self, prop.tag, float(prop.text))
+
+class _TrackletObject(object):
+    def __init__(self, xmlnode):
+        for prop in xmlnode:
+            if prop.tag == 'poses':
+                self.poses = [_TrackletPose(item) for item in prop if item.tag == 'item']
+            elif prop.tag == "objectType":
+                self.objectType = prop.text
+            else:
+                setattr(self, prop.tag, float(prop.text))
+
+def load_tracklets(basepath, file):
+    if isinstance(basepath, str):
+        fin = open(os.path.join(basepath, file))
+    else: # assume ZipFile object
+        fin = basepath.open(file)
+
+    with fin:
+        root = ET.fromstring(fin.read())
+        root_tracklet = next(iter(root))
+        tracklets = [_TrackletObject(item) for item in root_tracklet if item.tag == 'item']
+        return tracklets

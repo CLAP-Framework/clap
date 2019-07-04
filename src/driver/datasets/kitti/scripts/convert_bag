@@ -6,6 +6,7 @@ import sys
 import os
 import tqdm
 import argparse
+import json
 from itertools import izip
 
 import tf
@@ -154,6 +155,58 @@ def save_velo_data(bag, kitti, velo_frame_id, topic):
 
         bag.write(topic + '/pointcloud', pcl_msg, t=pcl_msg.header.stamp)
 
+def save_tracklet_data(bag, kitti, velo_frame_id, topic):
+    print("Exporting tracklet data...")
+    try:
+        from zzz_perception_msgs.msg import ObjectClass, TrackingBox, TrackingBoxArray
+    except ImportError:
+        print("!!! Cannot import zzz_perception_msgs! Tracklets are ignored !!!")
+        return
+
+    for timestamp, tracks in tqdm.tqdm(izip(kitti.velo_timestamps, kitti.tracklets), unit="Frame",
+        desc="Writing tracklets", leave=False, dynamic_ncols=True, total=len(kitti.velo_timestamps)):
+
+        array = TrackingBoxArray()
+        array.header.frame_id = velo_frame_id
+        array.header.stamp = rospy.Time.from_sec(timestamp.astype('O') / 1e9)
+        for track in tracks:
+            msg = TrackingBox()
+
+            msg.bbox.pose.pose.position.x = track.tx
+            msg.bbox.pose.pose.position.y = track.ty
+            msg.bbox.pose.pose.position.z = track.tz
+            q = tf.transformations.quaternion_from_euler(track.rx, track.ry, track.rz)
+            msg.bbox.pose.pose.orientation.x = q[0]
+            msg.bbox.pose.pose.orientation.y = q[1]
+            msg.bbox.pose.pose.orientation.z = q[2]
+            msg.bbox.pose.pose.orientation.w = q[3]
+            msg.bbox.pose.covariance = [0] * 36
+
+            msg.bbox.dimension.dimension.width = track.w
+            msg.bbox.dimension.dimension.length = track.l
+            msg.bbox.dimension.dimension.height = track.h
+            msg.bbox.dimension.covariance = [0] * 9
+            # Infinity covariance indicates that the twist is not provided
+            msg.twist.covariance = np.diag([np.inf] * 6).flatten().tolist()
+
+            cat = ObjectClass()
+            cat.classid = driver.LABELS_MAP[track.objectType]
+            # TODO: cat.classname = track.objectType
+            cat.score = 1
+            msg.classes.append(cat)
+            msg.uid = track.id
+
+            states = {
+                "pose_state": driver.POSE_STATES[int(track.state)],
+                "occlusion_state": driver.OCCLUSION_STATES[int(track.occlusion)],
+                "occlusion_keyframe": True if track.occlusion_kf > 0 else False,
+                "truncation_state": driver.TRUNCATION_STATES[int(track.truncation)]
+            }
+            msg.comments = json.dumps(states, separators=(',', ':'))
+            array.targets.append(msg)
+
+        bag.write(topic + '/tracklets', array, t=array.header.stamp)
+
 def get_static_transform(from_frame_id, to_frame_id, transform):
     t = transform[0:3, 3]
     q = tf.transformations.quaternion_from_matrix(transform)
@@ -214,12 +267,19 @@ def save_gps_vel_data(bag, kitti, gps_frame_id, topic):
         bag.write(topic, twist_msg, t=twist_msg.header.stamp)
 
 def main():
-    parser = argparse.ArgumentParser(description = "Convert KITTI dataset to ROS bag file the easy way!")
-    parser.add_argument("type", choices = ["sync", "extract", "odometry"], help = "KITTI dataset type")
-    parser.add_argument("dir", default = os.getcwd(), help = "base directory of the dataset, if no directory passed the default is current working directory")
-    parser.add_argument("-z", "--inzip", action='store_true', help = "load data directly from KITTI zip file")
-    parser.add_argument("-s", "--sequence", help = "sequence of the dataset. Option available in raw and odometry dataset")
-    parser.add_argument("-c", "--compression", default = "none", choices = ["none", "bz2", "lz4"], help = "Compression algorithm for the bag. No compression is performed by default")
+    parser = argparse.ArgumentParser(description="Convert KITTI dataset to ROS bag file the easy way!")
+    parser.add_argument("type", choices=["sync", "extract", "odometry"], help=\
+        "KITTI dataset type")
+    parser.add_argument("dir", default=os.getcwd(), help=\
+        "base directory of the dataset, if no directory passed the default is current working directory")
+    parser.add_argument("-z", "--inzip", action='store_true', help=\
+        "load data directly from KITTI zip file")
+    parser.add_argument("-s", "--sequence", type=int, help=\
+        "sequence of the dataset. Option available in raw and odometry dataset")
+    parser.add_argument("-c", "--compression", default="none", choices=["none", "bz2", "lz4"], help=\
+        "Compression algorithm for the bag. No compression is performed by default")
+    parser.add_argument("-l", "--labels", action='store_true', help=\
+        "Load tracklets into rosbag. This requires zzz_perception_msgs and only work for {raw sync, object} dataset")
     args = parser.parse_args()
 
     # Compression type
@@ -252,7 +312,7 @@ def main():
         if args.sequence == None:
             raise KeyError("Sequence option is not given. It is mandatory for raw dataset. Program will terminate!")
         
-        kitti = driver.raw(args.dir, args.sequence, args.type, inzip=args.inzip)
+        kitti = driver.RawDataset(args.dir, args.sequence, args.type, inzip=args.inzip)
 
         T_base_link_to_imu = np.eye(4, 4)
         T_base_link_to_imu[0:3, 3] = [-2.71/2.0-0.05, 0.32, 0.93]
@@ -273,6 +333,10 @@ def main():
         save_imu_data(bag, kitti, imu_frame_id, imu_topic)
         save_gps_fix_data(bag, kitti, imu_frame_id, gps_fix_topic)
         save_gps_vel_data(bag, kitti, imu_frame_id, gps_vel_topic)
+        if args.type == "sync" and args.labels:
+            save_tracklet_data(bag, kitti, velo_frame_id, '/kitti')
+        
+        # Export large data
         for camera in cameras:
             save_camera_data(bag, kitti, args.type, camera=camera[0], camera_frame_id=camera[1], topic=camera[2])
         save_velo_data(bag, kitti, velo_frame_id, velo_topic)
@@ -282,7 +346,7 @@ def main():
         if args.sequence == None:
             raise KeyError("Sequence option is not given. It is mandatory for odometry dataset. Program will terminate!")
                     
-        kitti = driver.odometry(args.dir, args.sequence, inzip=args.inzip)
+        kitti = driver.OdometryDataset(args.dir, args.sequence, inzip=args.inzip)
 
         # TODO: add support for lidar
         # TODO: add static transformations

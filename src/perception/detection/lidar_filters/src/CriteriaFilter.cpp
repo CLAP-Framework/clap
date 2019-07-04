@@ -5,7 +5,7 @@ using namespace std;
 
 namespace zzz { namespace perception {
 
-    // TODO(zyxin): move common definitions into a base class, including node handle and topic parameters.
+    // XXX(zyxin): move common definitions into a base class, including node handle and topic parameters. Could be combined with ros2:rclcpp?
     CriteriaFilter::CriteriaFilter(ros::NodeHandle &nh, ros::NodeHandle &pnh,
         string input_topic, string output_topic)
     {
