@@ -1,0 +1,14 @@
+#!/usr/bin/env python
+
+def calc_real_world_pos(self, x, labelclass):
+    u = int(x[0] + x[2])/2
+    v = int(x[3])
+    u = np.array([u])
+    v = np.array([v])
+    lo, la = self.cam.img2world(u, v)  #lo front, la right
+    pos = (lo[0], la[0], labelclass)
+    return pos
+
+# initialize camera geometry model
+    self.cam = CamIntrExtr(0, 10, 0, 2.2)
+    self.cam.setIntr(300, 150, fov=70)
