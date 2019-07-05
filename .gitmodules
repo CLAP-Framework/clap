@@ -1,6 +1,3 @@
 [submodule "src/driver/simluators/carla/carla-bridge"]
 	path = src/driver/simluators/carla/carla-bridge
 	url = https://github.com/carla-simulator/ros-bridge.git
-[submodule "src/perception/detection/yolo_detector/src/yolov3"]
-	path = src/perception/detection/yolo_detector/src/yolov3
-	url = https://github.com/cmpute/zzz_yolov3.git
