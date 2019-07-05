@@ -1,87 +1,137 @@
 #!/usr/bin/env python
 
+# General imports
+import os
+import os.path as osp
+import sys
+import math
+import random
+import numpy as np
+
+# ROS imports
 import rospy
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
+from zzz_perception_msgs.msg import DetectionBox2DArray, DetectionBox2D, ObjectClass
+
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
 
-import numpy as np
-import os
-import sys
+# YOLO imports
+import torch
+import yolov3
+from yolov3.models import Darknet, load_darknet_weights
+from yolov3.utils.datasets import letterbox
+from yolov3.utils.utils import non_max_suppression, scale_coords,\
+    load_classes, torch_utils
 
-import math
+class YoloDetect():
+    def __init__(self, cfg,
+        data_cfg,
+        weights,
+        names,
+        img_size=416, # TODO: Fix size problems
+        conf_thres=0.5,
+        nms_thres=0.5,
+        save_txt=False,
+        save_images=False,
+        webcam=False):
+        
+        self.device = torch_utils.select_device()
+        self.conf_thres = conf_thres
+        self.nms_thres = nms_thres
+        self.save_txt = save_txt
+        self.save_images = save_images
+        self.webcam = webcam
+        self.img_size = img_size
 
-import sys
-from yolov3.YoloDetect import YoloDetect
+        # Initialize model
+        self.model = Darknet(cfg, self.img_size)
 
-from yolov3.CameraProcess import CameraProcess #PercpVeh, ObjectList
+        # Load weights
+        if weights.endswith('.pt'):  # pytorch format
+            self.model.load_state_dict(torch.load(weights, map_location=self.device)['model'])
+        else:  # darknet format
+            load_darknet_weights(self.model, weights)
+        self.model.to(self.device).eval()
 
-from zzz_perception_msgs.msg import DetectionBox2DArray, DetectionBox2D, ObjectClass
+        # Get classes and colors
+        self.classes = load_classes(names)
 
-USE_ROS = True
-ROS_PUB = True
+    def run(self, im0):
+        img, _, _, _, _ = letterbox(im0, new_shape=self.img_size)
 
-class CameraProcessRos:
-    def __init__(self):
+        # Normalize RGB
+        img = img.transpose(2, 0, 1)  # RGB, channel first
+        # img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, channel first
+        img = np.ascontiguousarray(img, dtype=np.float32)  # uint8 to float32
+        img /= 255.0  # 0 - 255 to 0.0 - 1.0
 
+        # Get detections
+        img = torch.from_numpy(img).unsqueeze(0).to(self.device)
+        pred, _ = self.model(img)
+        detections = non_max_suppression(pred, self.conf_thres, self.nms_thres)[0]
 
-        self.initNetwork()
-        self.initRos()
-    
-    def initNetwork(self):
-        self.YoloCam = CameraProcess()
-        self.class_dict =	{
-            "person": 1,
-            "bicycle": 2,
-            "car": 3, 
-            "motorcycle": 4,
-            "airplane": 5,
-            "bus": 6, 
-            "train": 7, 
-            "truck": 8
-            }
-    
-    def initRos(self):
-        rospy.init_node('object_detc') # , anonymous=True
+        if detections is not None and len(detections) > 0:
+            # Rescale boxes from 416 to true image size
+            scale_coords([self.img_size, self.img_size], detections[:, :4], im0.shape).round()
+
+        return detections
+
+class CameraProcessNode:
+    def __init__(self,
+        input_topic="/kitti/camera_color_left/image_raw",
+        output_topic="/image/object_detection"):
+
+        # Get Params
+        cfg_file = rospy.get_param('/%s/cfg_file' % rospy.get_name(), "yolov3-spp.cfg")
+        data_file = rospy.get_param('/%s/data_file' % rospy.get_name(), "coco.data")
+        weights_file = rospy.get_param('/%s/weights_file' % rospy.get_name(), "yolov3-spp.weights")
+        names_file = rospy.get_param('/%s/names_file' % rospy.get_name(), "coco.names")
+
+        # Initialize network
+        self.yolo = YoloDetect(cfg=cfg_file, data_cfg=data_file, weights=weights_file, names=names_file)
+
+        # Initialize ros topics
+        rospy.Subscriber(input_topic, Image, self.callbackImg)
+        self.pub = rospy.Publisher(output_topic, DetectionBox2DArray, queue_size=1)
         self.bridge = CvBridge()
-        rospy.Subscriber("/carla/ego_vehicle/camera/rgb/Wideangle/image_color", Image, self.callbackImg)
-        if ROS_PUB:
-            self.pub = rospy.Publisher("/carla/object_detection", DetectionBox2DArray, queue_size=10)
-        rospy.spin()
+        rospy.loginfo("Yolo detector Standby!")
 
     def callbackImg(self, data):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, "rgb8")
         except CvBridgeError as e:
-            print(e)
-
-        cv2.imshow("result", cv_image[:,:,::-1])
-        cv2.waitKey(1)
+            rospy.logerror("Failed to convert image (%s)" % str(e))
         
         self.inferenceImg(cv_image)
 
     def inferenceImg(self, img):
-        detections = self.YoloCam.process_input_data(img)
-        if USE_ROS and ROS_PUB:
-            self.rosSend(detections)
+        array = np.ascontiguousarray(img[:, :, :3])
+        detections = self.yolo.run(array)
 
-    def rosSend(self, detections):
         msg_to_send = DetectionBox2DArray()
         if detections is not None and len(detections) > 0:
-            for detection in detections:
+            for x1, y1, x2, y2, obj_conf, cls_conf, cls_id in detections:
+
                 msg_single = DetectionBox2D()
-                msg_single.projection_type = DetectionBox2D.PROJECTION_BEV
-                msg_single.bbox.pose.x = detection[0]
-                msg_single.bbox.pose.y = detection[1]
+                msg_single.projection_type = DetectionBox2D.PROJECTION_HEV
+                msg_single.bbox.pose.x = (x1 + x2) / 2
+                msg_single.bbox.pose.y = (y1 + y2) / 2
+                msg_single.bbox.dimension.width = abs(x1 - x2)
+                msg_single.bbox.dimension.height = abs(y1 - y2)
+
                 msg_class = ObjectClass()
-                msg_class.classname = detection[2]
-                msg_class.classid = self.class_dict[detection[2]]
-                msg_class.score = 1
+                msg_class.classname = self.yolo.classes[int(cls_id)]
+                msg_class.classid = cls_id
+                msg_class.score = cls_conf
+
                 msg_single.classes.append(msg_class)
                 msg_to_send.detections.append(msg_single)
+                
             self.pub.publish(msg_to_send)
-        
 
 if __name__ == '__main__':
-    traf = CameraProcessRos()
+    rospy.init_node('yolo_detector')
+    CameraProcessNode()
+    rospy.spin()
