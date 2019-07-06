@@ -1,4 +1,5 @@
 string map_path
 ---
+float32 progress
 ---
 bool success

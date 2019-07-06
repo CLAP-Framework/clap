@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(zzz_cognition_msgs)
+
+find_package(catkin REQUIRED genmsg std_msgs # essential dependency  
+    geometry_msgs zzz_navigation_msgs
+)
+
+add_message_files(DIRECTORY msg FILES
+    JunctionMapState.msg
+    LaneState.msg
+    MultiLaneMapState.msg
+    MapState.msg
+    RoadObstacle.msg
+)
+
+generate_messages(DEPENDENCIES std_msgs geometry_msgs zzz_navigation_msgs)
+catkin_package(CATKIN_DEPENDS std_msgs geometry_msgs zzz_navigation_msgs)

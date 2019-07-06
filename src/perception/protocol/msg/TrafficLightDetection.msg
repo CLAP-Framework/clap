@@ -10,7 +10,7 @@ uint8 PROJECTION_HEV = 1 # Human eye's view
 # Traffic light state
 uint8 traffic_light_state
 
-uint8 TRAFFIC_LIGHT_NONE = 0
+uint8 TRAFFIC_LIGHT_UNKNOWN = 0
 uint8 TRAFFIC_LIGHT_RED = 1
 uint8 TRAFFIC_LIGHT_YELLOW = 2
 uint8 TRAFFIC_LIGHT_GREEN = 3

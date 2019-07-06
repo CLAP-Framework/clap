@@ -1,0 +1,19 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(zzz_navigation_msgs)
+
+find_package(catkin REQUIRED genmsg std_msgs actionlib_msgs # essential dependency  
+    geometry_msgs
+)
+
+add_action_Files(DIRECTORY action FILES
+    LoadMap.action
+)
+
+add_message_files(DIRECTORY msg FILES
+    LanePoint.msg
+    ParamLane.msg
+    PolyLane.msg
+)
+
+generate_messages(DEPENDENCIES std_msgs actionlib_msgs geometry_msgs)
+catkin_package(CATKIN_DEPENDS std_msgs actionlib_msgs geometry_msgs)
