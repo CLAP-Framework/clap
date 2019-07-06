@@ -43,15 +43,15 @@ namespace zzz { namespace perception {
         if (dist2max > dist2min)
         {
             yaw = atan2(y2-y0, x2-x0);
-            target.bbox.dimension.dimension.length = dist2max;
-            target.bbox.dimension.dimension.width = dist2min;
+            target.bbox.dimension.length = dist2max;
+            target.bbox.dimension.width = dist2min;
             target.bbox.pose.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
         }
         else
         {
             yaw = atan2(y1-y0, x1-x0);
-            target.bbox.dimension.dimension.length = dist2min;
-            target.bbox.dimension.dimension.width = dist2max;
+            target.bbox.dimension.length = dist2min;
+            target.bbox.dimension.width = dist2max;
             target.bbox.pose.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
         }
     }

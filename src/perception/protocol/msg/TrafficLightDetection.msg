@@ -1,5 +1,11 @@
-# Location of traffic light. TODO: In bird's eye view or in human eye view?
-geometry_msgs/Pose2D location
+# Location of traffic light.
+BoundingBox2D location
+
+# Projection type of traffic light image
+uint8 projection_type
+
+uint8 PROJECTION_BEV = 0 # Bird eye's view
+uint8 PROJECTION_HEV = 1 # Human eye's view
 
 # Traffic light state
 uint8 traffic_light_state
