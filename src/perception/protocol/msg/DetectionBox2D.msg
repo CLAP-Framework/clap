@@ -13,3 +13,9 @@ sensor_msgs/Image source_img
 
 # This field is for store auxiliary text or data
 string comments
+
+# Describe the projection approach of image with regard to the real world
+uint8 projection_type
+
+uint8 PROJECTION_BEV = 0 # Bird eye's view
+uint8 PROJECTION_HEV = 1 # Human eye's view

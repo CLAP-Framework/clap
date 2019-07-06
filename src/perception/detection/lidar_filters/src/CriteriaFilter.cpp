@@ -22,11 +22,11 @@ namespace zzz { namespace perception {
 
     bool CriteriaFilter::sizeFilter(zzz_perception_msgs::DetectionBox &target)
     {
-        if (target.bbox.dimension.dimension.width > _max_width || target.bbox.dimension.dimension.width < _min_width)
+        if (target.bbox.dimension.width > _max_width || target.bbox.dimension.width < _min_width)
             return false;
-        if (target.bbox.dimension.dimension.length > _max_length || target.bbox.dimension.dimension.length < _min_length)
+        if (target.bbox.dimension.length > _max_length || target.bbox.dimension.length < _min_length)
             return false;
-        if (target.bbox.dimension.dimension.height > _max_height || target.bbox.dimension.dimension.height < _min_height)
+        if (target.bbox.dimension.height > _max_height || target.bbox.dimension.height < _min_height)
             return false;
         return true;
     }

@@ -1,0 +1,5 @@
+#!/usr/bin/env python
+from zzz_perception_tracking_kf.pf import ObjectTracker
+
+if __name__=="__main__":
+    tracker = ObjectTracker()

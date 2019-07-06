@@ -1,0 +1,9 @@
+<launch>
+    <node pkg="zzz_perception_detection_yolo_detector" type="yolo"
+          name="yolo_node" output="screen">
+          <param name="cfg_file"     value="/home/jacobz/ZZZ/src/perception/detection/yolo_detector/src/yolov3/cfg/yolov3-tiny.cfg"/>
+          <param name="data_file"    value="/home/jacobz/ZZZ/src/perception/detection/yolo_detector/src/yolov3/data/coco.data"/>
+          <param name="weights_file" value="/home/jacobz/ZZZ/src/perception/detection/yolo_detector/src/yolov3/weights/yolov3-tiny.weights"/>
+          <param name="names_file"   value="/home/jacobz/ZZZ/src/perception/detection/yolo_detector/src/yolov3/data/coco.names"/>
+    </node>
+</launch>
