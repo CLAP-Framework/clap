@@ -4,11 +4,14 @@ uint64 uid
 bool valid # Defines if this object is valid, or invalid as defined by the filtering
 # XXX: needs a way to define the confidence. Is the tracking age of the obstacle essential?
 
-# Estimated 3D velocity and accelaration
+# Estimated kinematic properties
 geometry_msgs/PoseWithCovariance pose
 geometry_msgs/TwistWithCovariance twist
 geometry_msgs/AccelWithCovariance accel
+
+# Optional field to represent the physical boundary of the object
 geometry_msgs/Polygon shape
+# Null uncertainty of Inf uncertainty means that the shape is not actually generated
 float32[] shape_uncertainty
 
 uint8 behavior

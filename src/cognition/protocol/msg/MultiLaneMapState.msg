@@ -1,7 +1,7 @@
 # This message describes a multi-lane dynamic map model
 
 # ----------- Ego Vehicle Info ----------
-# TODO: reconstruct
+# TODO: reconstruct vehicle state. This can be reused by junction map state
 geometry_msgs/Pose ego_vehicle_pose
 float32 ego_vehicle_speed
 

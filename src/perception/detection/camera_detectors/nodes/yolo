@@ -124,7 +124,7 @@ class CameraProcessNode:
                 msg_single.bbox.dimension.covariance = np.diag([1/obj_conf]*2).flatten().tolist()
 
                 msg_class = ObjectClass()
-                msg_class.classname = self.yolo.classes[int(cls_id)]
+                msg_class.comments = self.yolo.classes[int(cls_id)]
                 msg_class.classid = cls_id
                 msg_class.score = cls_conf
 

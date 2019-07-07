@@ -251,7 +251,7 @@ class ObjectTracker:
         msg_single.pose.pose.covariance = pose_covariance
         msg_class = ObjectClass()
         msg_class.classid = obj.classid
-        msg_class.classname = obj.classname
+        msg_class.comments = obj.classname
         msg_class.score = obj.lost_count / 5.0
         msg_single.classes.append(msg_class)
         msg_single.twist.twist.linear.x = obj.velo_x

@@ -191,7 +191,7 @@ def save_tracklet_data(bag, kitti, velo_frame_id, topic):
 
             cat = ObjectClass()
             cat.classid = driver.LABELS_MAP[track.objectType]
-            # TODO: cat.classname = track.objectType
+            cat.comments = track.objectType
             cat.score = 1
             msg.classes.append(cat)
             msg.uid = track.id

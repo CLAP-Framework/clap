@@ -10,9 +10,10 @@ add_action_Files(DIRECTORY action FILES
 )
 
 add_message_files(DIRECTORY msg FILES
+    Lane.msg
+    LaneBoundary.msg
     LanePoint.msg
-    ParamLane.msg
-    PolyLane.msg
+    LaneSituation.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs actionlib_msgs geometry_msgs)
