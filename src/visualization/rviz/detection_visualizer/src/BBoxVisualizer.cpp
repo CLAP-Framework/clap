@@ -136,9 +136,9 @@ namespace zzz { namespace visualization { namespace rviz {
             // Marker properties
             box.color = _box_color;
 
-            box.scale.x = object.bbox.dimension.length;
-            box.scale.y = object.bbox.dimension.width;
-            box.scale.z = object.bbox.dimension.height;
+            box.scale.x = object.bbox.dimension.length_x;
+            box.scale.y = object.bbox.dimension.length_y;
+            box.scale.z = object.bbox.dimension.length_z;
             box.pose.position = object.bbox.pose.pose.position;
             box.pose.orientation = object.bbox.pose.pose.orientation;
 

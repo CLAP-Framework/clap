@@ -9,7 +9,7 @@ float32 speed_limit
 
 # Central path
 float32[] central_path_coeffs
-uint8 central_path_type
 
+uint8 central_path_type
 uint8 CENTRAL_PATH_LINE = 0
 uint8 CENTRAL_PATH_BEZIER = 1

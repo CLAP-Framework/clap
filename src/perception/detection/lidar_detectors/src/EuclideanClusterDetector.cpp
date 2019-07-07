@@ -155,9 +155,9 @@ namespace zzz { namespace perception {
         // Naive size estimation
         PointXYZ min_pt, max_pt;
         getMinMax3D(*input, min_pt, max_pt);
-        bbox.dimension.length = max_pt.x - min_pt.x;
-        bbox.dimension.width  = max_pt.y - min_pt.y;
-        bbox.dimension.height = max_pt.z - min_pt.z;
+        bbox.dimension.length_x = max_pt.x - min_pt.x;
+        bbox.dimension.length_y  = max_pt.y - min_pt.y;
+        bbox.dimension.length_z = max_pt.z - min_pt.z;
     }
 
     void EuclideanClusterDetector::detect(sensor_msgs::PointCloud2ConstPtr input)

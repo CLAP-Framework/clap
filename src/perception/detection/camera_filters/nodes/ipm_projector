@@ -29,7 +29,7 @@ def IPMNode(class):
 
         for det in detections:
             u = det.bbox.pose.x
-            v = det.bbox.pose.y - det.bbox.dimension.height / 2
+            v = det.bbox.pose.y - det.bbox.dimension.length_y / 2
             lo, la = self._cam.img2world(u, v)
             
             if self.output_3d:
@@ -39,9 +39,9 @@ def IPMNode(class):
                 newdet.bbox.pose.pose.z = self._default_z
                 
                 # FIXME: Distinguish input by projection type
-                newdet.bbox.dimension.width = det.bbox.dimension.width
+                newdet.bbox.dimension.length_x = det.bbox.dimension.length_x
                 newdet.bbox.dimension.length = det.bbox.dimension.length
-                newdet.bbox.dimension.height = self._default_height
+                newdet.bbox.dimension.length_z = self._default_height
 
                 # XXX: Calculate these result
                 # newdet.bbox.pose.covariance = 

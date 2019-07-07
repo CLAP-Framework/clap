@@ -119,8 +119,8 @@ class CameraProcessNode:
                 msg_single.bbox.pose.x = (x1 + x2) / 2
                 msg_single.bbox.pose.y = (y1 + y2) / 2
                 msg_single.bbox.pose.covariance = np.diag([1/obj_conf]*3).flatten().tolist()
-                msg_single.bbox.dimension.width = abs(x1 - x2)
-                msg_single.bbox.dimension.height = abs(y1 - y2)
+                msg_single.bbox.dimension.length_x = abs(x1 - x2)
+                msg_single.bbox.dimension.length_y = abs(y1 - y2)
                 msg_single.bbox.dimension.covariance = np.diag([1/obj_conf]*2).flatten().tolist()
 
                 msg_class = ObjectClass()

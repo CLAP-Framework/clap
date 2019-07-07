@@ -12,6 +12,7 @@ namespace zzz { namespace perception {
         _input_subscriber = nh.subscribe(input_topic, 1, &CriteriaFilter::filter, this);
         _output_publisher = nh.advertise<zzz_perception_msgs::DetectionBoxArray>(output_topic, 1);
 
+        // FIXME(zyxin): width is not a clear definition
         pnh.param<float>("max_width", _max_width, 4.f);
         pnh.param<float>("min_width", _min_width, 0.3f);
         pnh.param<float>("max_length", _max_length, 10.f);
@@ -22,11 +23,11 @@ namespace zzz { namespace perception {
 
     bool CriteriaFilter::sizeFilter(zzz_perception_msgs::DetectionBox &target)
     {
-        if (target.bbox.dimension.width > _max_width || target.bbox.dimension.width < _min_width)
+        if (target.bbox.dimension.length_x > _max_width || target.bbox.dimension.length_x < _min_width)
             return false;
-        if (target.bbox.dimension.length > _max_length || target.bbox.dimension.length < _min_length)
+        if (target.bbox.dimension.length_y > _max_length || target.bbox.dimension.length_y < _min_length)
             return false;
-        if (target.bbox.dimension.height > _max_height || target.bbox.dimension.height < _min_height)
+        if (target.bbox.dimension.length_z > _max_height || target.bbox.dimension.length_z < _min_height)
             return false;
         return true;
     }

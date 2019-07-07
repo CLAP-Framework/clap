@@ -22,16 +22,23 @@ include_directories(
 add_library(zzz_visualization_rviz_detection_visualizer
   src/BBoxVisualizer.cpp
 )
+add_dependencies(zzz_visualization_rviz_detection_visualizer
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(zzz_visualization_rviz_detection_visualizer
+  ${catkin_LIBRARIES}
+)
 
 # Add node targets
 add_executable(bbox_visualizer nodes/bbox_visualizer.cpp)
 set_target_properties(bbox_visualizer PROPERTIES OUTPUT_NAME bbox PREFIX "")
+
 add_dependencies(bbox_visualizer
   zzz_visualization_rviz_detection_visualizer
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
-
 target_link_libraries(bbox_visualizer
   zzz_visualization_rviz_detection_visualizer
   ${catkin_LIBRARIES}

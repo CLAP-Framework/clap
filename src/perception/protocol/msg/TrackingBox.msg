@@ -13,7 +13,7 @@ geometry_msgs/AccelWithCovariance accel
 
 # Unique id to determine the identification of tracked object.
 # This field could be a increasing number from zero or random hash number
-uuid_msgs/UniqueID uid
+uint64 uid
 
 # This field is for store auxiliary text or data
 string comments

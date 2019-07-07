@@ -25,6 +25,13 @@ add_library(zzz_perception_detection_lidar_filters
   src/CriteriaFilter.cpp
   src/LShapeFilter.cpp
 )
+add_dependencies(zzz_perception_detection_lidar_filters
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(zzz_perception_detection_lidar_filters
+  ${catkin_LIBRARIES}
+)
 
 # Add node targets
 add_executable(lshape_filter nodes/lshape_filter.cpp)

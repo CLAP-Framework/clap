@@ -1,3 +1,8 @@
+# This message represents a homogeneous representation of dynamic map
+
+Header header
+
+# ----- Map Model -----
 uint8 model
 
 uint8 MODEL_JUNCTION_MAP = 0

@@ -6,5 +6,11 @@ geometry_msgs/Point position
 # ----- Other useful information -----
 # Distance from lane start to current point. The distance of the first point should be zero
 float32 mileage
+
 # Slope at current position of the road
+# Can be used to control the throttle
 float32 slope
+
+# Road curvature at current position of the road
+# Can be used to slow down before turning
+float32 curvature
