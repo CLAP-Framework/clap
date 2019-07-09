@@ -1,0 +1,10 @@
+<launch>
+    <arg name='hero_actor' default='ego_vehicle'/>
+    <node pkg="topic_tools" type="relay" name="convert_odom" args="/carla/$(arg hero_actor)/odometry /zzz/perception/localization"/>
+    <node pkg="topic_tools" type="relay" name="convert_reference_path" args="/carla/$(arg hero_actor)/waypoints /zzz/navigation/reference_path"/>
+    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_map" output="screen">
+        <param name="input_topic" value="/carla/map" />
+        <param name="output_topic" value="/zzz/navigation/static_map" />
+        <param name="msg_type" value="CarlaMapInfo" />
+    </node>
+</launch>

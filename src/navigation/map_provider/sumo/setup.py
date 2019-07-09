@@ -4,7 +4,7 @@ from distutils.core import setup
 from catkin_pkg.python_setup import generate_distutils_setup
 
 d = generate_distutils_setup(
-    packages=['zzz_driver_simulators_carla_adapter'],
+    packages=['zzz_navigation_map_provider_sumo'],
     package_dir={'': 'src'}
 )
 

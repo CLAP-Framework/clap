@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(zzz_driver_simulators_sumo_adapter)
+project(zzz_navigation_map_provider_sumo)
 
 find_package(catkin REQUIRED)
 catkin_package()

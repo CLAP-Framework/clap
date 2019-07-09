@@ -17,8 +17,7 @@ float32 distance_to_junction
 LaneState[] lanes
 
 # the lane that ego vehicle drives on
-int16 ego_lane_index
+int8 ego_lane_index
 
-# target lane index
-int16 target_lane_index
-
+# target lane index (0 refer to right-most lane in right-side driving situation)
+int8 target_lane_index

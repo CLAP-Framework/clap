@@ -1,5 +1,5 @@
 <package format="2">
-  <name>zzz_driver_simulators_sumo_adapter</name>
+  <name>zzz_navigation_map_provider_sumo</name>
   <version>0.0.1</version>
   <description>
     Adapt ZZZ input and output to CARLA
