@@ -1,1 +1,1 @@
-from .local_map import StaticLocalMap
+from .local_map import LocalMap

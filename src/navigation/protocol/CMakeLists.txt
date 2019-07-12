@@ -5,6 +5,8 @@ find_package(catkin REQUIRED genmsg std_msgs actionlib_msgs # essential dependen
     geometry_msgs
 )
 
+catkin_python_setup()
+
 add_message_files(DIRECTORY msg FILES
     Lane.msg
     LaneBoundary.msg

@@ -1,8 +1,8 @@
 <package format="2">
-  <name>zzz_cognition_dynamic_local_map</name>
+  <name>zzz_cognition_object_locator</name>
   <version>0.0.1</version>
   <description>
-    Get dynamic local map
+    This module provide functionality to locate objects onto lanes
   </description>
   <license>BSD</license>
   <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>
@@ -13,13 +13,12 @@
   <url type="bugtracker">https://github.com/cmpute/zzz/issues</url>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <build_export_depend>roscpp</build_export_depend>
-  <build_export_depend>std_msgs</build_export_depend>
-  <exec_depend>roscpp</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>zzz_common</exec_depend>
+  <exec_depend>zzz_driver_msgs</exec_depend>
+  <exec_depend>zzz_cognition_msgs</exec_depend>
+  <exec_depend>zzz_navigation_msgs</exec_depend>
+  <exec_depend>zzz_perception_msgs</exec_depend>
   <export></export>
 </package>

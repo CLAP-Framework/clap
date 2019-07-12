@@ -2,11 +2,12 @@
 
 Header header
 
-# Percent of throttle, unit in m/s^2
+# TODO(zyxin): should these params be percentage or physical values?
+# Level of throttle, unit in m/s^2
 float32 throttle
-# Percentage of brake, unit in m/s^2
+# Level of brake, unit in m/s^2
 float32 brake
-# Percentage of steering, unit in radian
+# Level of steering, unit in radian
 float32 steer
 
 # Gear shift, positive means manual transmission, negative means automatic transmission

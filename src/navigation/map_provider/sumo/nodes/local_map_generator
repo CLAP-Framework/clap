@@ -11,8 +11,9 @@ import threading
 
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import Path
+from zzz_driver_msgs.msg import RigidBodyState
 from zzz_navigation_msgs.msg import Map, MapString
-from zzz_navigation_map_provider_sumo import StaticLocalMap
+from zzz_navigation_map_provider_sumo import LocalMap
 
 MAP_TYPES = {
     MapString.MAP_UNKNOWN: "unknown",
@@ -33,13 +34,13 @@ class MapProvider(object):
         self._map_trigger = threading.Event()
         self._reference_path_trigger = threading.Event()
 
-        self._map_instance = StaticLocalMap()
+        self._map_instance = LocalMap()
         if os.path.exists(params.map_file):
             if self._map_instance.setup_hdmap(file=params.map_file, mtype=params.map_file_type):
                 self._map_trigger.set()
 
         self._static_map_subscriber = rospy.Subscriber(params.map_input_topic, MapString, self.load_map_callback)
-        self._pose_subscriber = rospy.Subscriber(params.pose_topic, Pose, self.pose_callback)
+        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyState, self.pose_callback)
         self._reference_path_subscriber = rospy.Subscriber(params.reference_path_topic, Path, self.reference_callback)
         self._local_map_publisher = rospy.Publisher(params.map_output_topic, Map, queue_size=1)
 
@@ -60,7 +61,7 @@ class MapProvider(object):
         self._map_trigger.wait()
         self._reference_path_trigger.wait()
 
-        new_static_map = self._map_instance.receive_new_pose(msg.position.x, msg.position.y)
+        new_static_map = self._map_instance.receive_new_pose(msg.pose.position.x, msg.pose.position.y)
         if new_static_map is not None:
             self._local_map_publisher.publish(new_static_map)
 

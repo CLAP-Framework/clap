@@ -19,7 +19,7 @@ else:
     sys.exit("Please declare environment variable 'SUMO_HOME' (e.g. /usr/share/sumo)")
 import sumolib
 
-class StaticLocalMap(object):
+class LocalMap(object):
     def __init__(self, offset_x=0, offset_y=0):
         self._ego_vehicle_x = None # location in meters
         self._ego_vehicle_y = None
@@ -84,6 +84,7 @@ class StaticLocalMap(object):
         '''
         Generate a list of ids of all lane of the reference path
         '''
+        rospy.logdebug("Starting converting reference path to lane list")
         if self._hdmap is None:
             rospy.logerr("Reference lane list should not be set up before map loaded")
             return False
