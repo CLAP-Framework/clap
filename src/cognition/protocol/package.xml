@@ -18,10 +18,12 @@
   <build_depend>geometry_msgs</build_depend>
   <build_depend>zzz_navigation_msgs</build_depend>
   <build_depend>zzz_driver_msgs</build_depend>
+  <build_depend>zzz_perception_msgs</build_depend>
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>zzz_navigation_msgs</exec_depend>
   <exec_depend>zzz_driver_msgs</exec_depend>
+  <exec_depend>zzz_perception_msgs</exec_depend>
   <export><architecture_independent/></export>
 </package>

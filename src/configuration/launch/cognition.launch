@@ -1,9 +1,12 @@
 <launch>
-    <node pkg="zzz_navigation_map_provider_sumo" type="map_provider"
+    <node pkg="zzz_navigation_map_provider_sumo" type="local_map_generator"
           name="static_map_builder" output="screen">
     </node>
-    <node pkg="zzz_cognition_dynamic_local_map" type="dynamic_map_builder"
-          name="dynamic_map_builder" output="screen">
+    <node pkg="zzz_cognition_object_locator" type="nearest_locator"
+          name="nearest_locator" output="screen">
+    </node>
+    <node pkg="zzz_cognition_reference_path" type="put_buffer"
+          name="put_buffer" output="screen">
     </node>
     <!-- <node pkg="zzz_planning_decision_decision_main" type="decision_main_node"
           name="decision_main_node" output="screen">

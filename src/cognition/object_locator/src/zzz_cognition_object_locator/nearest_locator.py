@@ -5,7 +5,7 @@ import numpy as np
 from zzz_driver_msgs.msg import RigidBodyState
 from zzz_navigation_msgs.msg import Map, Lane
 from zzz_navigation_msgs.utils import get_lane_array
-from zzz_cognition_msgs.msg import MapState, LaneState
+from zzz_cognition_msgs.msg import MapState, LaneState, RoadObstacle
 from zzz_cognition_msgs.utils import default_msg as cognition_default
 from zzz_perception_msgs.msg import TrackingBoxArray, TrafficLightDetection, TrafficLightDetectionArray
 from zzz_common.geometry import dist_from_point_to_polyline, nearest_point_to_polyline
@@ -63,8 +63,9 @@ class NearestLocator:
                 self._dynamic_map.mmap.lanes.append(dlane)
             self._dynamic_map.mmap.target_lane_index = self._static_map.target_lane_index
 
+        self.add_obstacles()
         if self._dynamic_map.model == MapState.MODEL_MULTILANE_MAP:
-            self.locate_ego_vehicle()
+            self.locate_ego_vehicle_in_lanes()
             self.locate_surrounding_vehicle_in_lanes()
             self.locate_stop_sign_in_lanes()
             self.locate_speed_limit_in_lanes()
@@ -72,11 +73,21 @@ class NearestLocator:
         rospy.logdebug("Updated Dynamic Map: lanes_num = %d, in_junction = %d, ego_y = %d, distance_to_end = %f",
             len(self._static_map.lanes), int(self._static_map.in_junction), self._dynamic_map.mmap.ego_lane_index, self._dynamic_map.mmap.distance_to_junction)
 
-    """
-    For in lane
-    """
+    def add_obstacles(self):
+        self._dynamic_map.jmap.obstacles.clear()
+        for obj in self._surrounding_object_list.targets:
+            obstacle = RoadObstacle()
+            obstacle.uid = obj.uid
+            obstacle.state.pose = obj.bbox.pose
+            obstacle.state.twist = obj.twist
+            obstacle.state.acces = obj.accel
+            obstacle.cls = obj.classes[0]
+            # TODO: Convert obstacle shape
+            self._dynamic_map.jmap.obstacles.append(obstacle)
 
-    def locate_ego_vehicle(self, lane_end_dist_thres=2, lane_dist_thres=5): 
+    # ========= For in lane =========
+
+    def locate_ego_vehicle_in_lanes(self, lane_end_dist_thres=2, lane_dist_thres=5): 
         dist_list = np.array([dist_from_point_to_polyline(
             self._ego_vehicle_state.pose.pose.x, self._ego_vehicle_state.pose.pose.y, lane)
             for lane in self._static_map_lane_path_array])  

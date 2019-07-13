@@ -6,7 +6,10 @@ uint64 uid
 
 # The confidence of existence, can be used to determine whether this object is valid, or invalid
 # A possible way of get the confidence is by using tracking age
-float32 confidence 
+float32 confidence
+
+# The best guess of obstacle type
+zzz_perception_msgs/ObjectClass cls
 
 # Estimated kinematic properties
 zzz_driver_msgs/RigidBodyState state
