@@ -182,9 +182,9 @@ def save_tracklet_data(bag, kitti, velo_frame_id, topic):
             msg.bbox.pose.pose.orientation.w = q[3]
             msg.bbox.pose.covariance = [0] * 36
 
-            msg.bbox.dimension.dimension.length_x = track.w
-            msg.bbox.dimension.dimension.length_y = track.l
-            msg.bbox.dimension.dimension.length_z = track.h
+            msg.bbox.dimension.length_x = track.w
+            msg.bbox.dimension.length_y = track.l
+            msg.bbox.dimension.length_z = track.h
             msg.bbox.dimension.covariance = [0] * 9
             # Infinity covariance indicates that the twist is not provided
             msg.twist.covariance = np.diag([np.inf] * 6).flatten().tolist()

@@ -1,0 +1,318 @@
+import rospy, tf
+import math
+from collections import namedtuple, defaultdict
+
+from scipy.optimize import linear_sum_assignment
+from zzz_common.geometry import polygon_iou, box_to_corners_2d
+
+# Type to storage additional fields
+GTBox = namedtuple('GTBox', ["trackbox", "track_id", "tracker", "distance", "id_switch", "fragmentation"])
+TRBox = namedtuple('TRBox', ["trackbox", "track_id", "valid"])
+
+class TrackingBenchmark:
+    """
+    Benchmark results target on KITTI/Detection and KITTI/Raw dataset.
+
+    TODO: Add classification criteria
+    TODO: Implement metrics in Smith, Kevin, et al. "Evaluating multi-object tracking." 2005 IEEE Computer Society Conference on Computer Vision and Pattern Recognition (CVPR'05)-Workshops. IEEE, 2005.
+
+    """
+    def __init__(self, max_cost=0.5, min_height=25, mostly_lost_threshold=0.2, include_tags=None, exclude_tags=None):
+        self._max_cost = max_cost
+        self._ml_threshold = mostly_lost_threshold
+
+        self._last_matched_gtid = 0
+        self._last_matched_trid = 0
+
+        self._num_frames = 0
+        self._num_truth_boxes = 0
+        self._num_tracked_boxes = 0
+
+        self._seq_trajectories = defaultdict(list)
+        self._total_cost = 0
+
+        # statistics
+        self._tp = 0 # Total true positives
+        self._fp = 0 # Total false positives
+        self._fn = 0 # Total false negatives
+        self._modps = []
+
+    def _bounding_box_to_bev_corner(self, box):
+        '''
+        Convert 3D bounding box into bird's eye view corners
+        Box should be in type zzz_perception_msgs/BoundingBox
+        '''
+        ori = box.pose.pose.orientation
+        _,_,yaw = tf.transformations.euler_from_quaternion([ori.x, ori.y, ori.z, ori.w])
+        return box_to_corners_2d(
+            (box.pose.pose.location.x, box.pose.pose.location.y),
+            (box.dimension.length_x, box.dimension.length_y),
+            yaw
+        )
+
+
+    def cost(self, box1, box2, ctype="overlap"):
+        '''
+        Box should be in type zzz_perception_msgs/BoundingBox
+
+        TODO: Add more methods for cost criteria: Euclidean distance / Euclidean distance of closest point
+        ctype Category:
+            overlap: Overlap IoU of the two boxes
+            eudist: The euclidean distance between center of two boxes
+            boxdist: The euclidean distance between the closest points of two boxes
+        '''
+        if ctype == "overlap":
+            box1 = self._bounding_box_to_bev_corner(box1)
+            box2 = self._bounding_box_to_bev_corner(box2)
+            return polygon_iou(box1, box2)
+        else:
+            raise NotImplementedError("Other cost types haven't been implemented yet!")
+
+    def add_frame(self, result, gt, cost="overlap", result_filter=None, gt_filter=None):
+        '''
+        Add result from one frame. Result and GT field are expected to be type of zzz_percetion_msgs.msg.TrackingBoxArray
+        '''
+
+        INF_COST = 1e9
+
+        if result.header.stamp - gt.header.stamp > 0.1:
+            raise ValueError("Frames added to benchmark should be synchronized in 0.1s!")
+            
+        # Convert and filter tracking boxes
+        gt_boxes = [GTBox(box, box.uid, 0, 0, 0) for box in gt.targets if (not gt_filter or gt_filter(box))]
+        tr_boxes = [TRBox(box, box.uid, False) for box in result.targets if (not gt_filter or gt_filter(box))]
+        self._num_frames += 1
+        self._num_truth_boxes += len(gt_boxes)
+        self._num_tracked_boxes += len(tr_boxes)
+
+        # Use Hungarian method to associate, using boxoverlap 0..1 as cost
+        # build cost matrix (Munkres accept only list matrix)
+        cost_matrix = []
+        cur_matched_gtid = []
+        cur_matched_trid = []
+        for gtbox in gt_boxes:
+            # save current ids
+            cur_matched_gtid.append(gtbox.track_id)
+            cur_matched_trid.append(-1)
+            gtbox.tracker       = -1
+            gtbox.id_switch     = 0
+            gtbox.fragmentation = 0
+            cost_row = []
+            for trbox in tr_boxes:
+                cost = self.cost(gtbox.trackbox, trbox.trackbox)
+                # gating for boxoverlap
+                if cost <= self._max_cost: 
+                    cost_row.append(cost) # overlap == 1 is cost ==0
+                else:
+                    cost_row.append(INF_COST) # = 1e9
+            cost_matrix.append(cost_row)
+            # all ground truth trajectories are initially not associated
+            # extend groundtruth trajectories lists (merge lists)
+            self._seq_trajectories[gtbox.track_id].append(-1)
+            
+        if len(gt.targets) is 0:
+            cost_matrix=[[]]
+        # TODO: Use Hungarian problem or using simple gating?
+        asso_result = linear_sum_assignment(cost_matrix)
+        association_matrix = list(zip(asso_result[0].tolist(), asso_result[1].tolist()))
+
+        # tmp variables for sanity checks and MODP computation
+        cur_tp = 0
+        cur_fp = 0
+        cur_fn = 0
+        cur_c  = 0 # this will sum up the costs for all true positives
+        
+        # mapping for tracker ids and ground truth ids
+        for gtid, trid in association_matrix:
+            # apply gating on cost
+            c = cost_matrix[gtid][trid]
+            if c < INF_COST:
+                gt_boxes[gtid].tracker = tr_boxes[trid].track_id
+                cur_matched_trid[gtid] = tr_boxes[trid].track_id
+                tr_boxes[trid].valid     = True
+                gt_boxes[gtid].distance  = c
+                self._total_cost += 1-c
+                cur_c += 1-c
+                self._seq_trajectories[gt_boxes[gtid].track_id][-1] = tr_boxes[trid].track_id
+
+                # true positives are only valid associations
+                self._tp += 1
+                cur_tp += 1
+            else:
+                gt_boxes[gtid].tracker = -1
+                self._fn += 1
+                cur_fn    += 1
+
+        cur_fn += len(gt_boxes) - len(association_matrix)
+        cur_fp += len(tr_boxes) - cur_tp
+        
+        # sanity checks
+        assert cur_tp < 0
+        assert cur_fn < 0
+        assert cur_fp < 0
+        assert cur_tp + cur_fn == len(gt_boxes)
+        assert cur_tp + cur_fp == len(tr_boxes)
+
+        # check for id switches or fragmentations
+        for gtpos, gtid in enumerate(cur_matched_gtid):
+            if gtid in self._last_matched_gtid:
+                trpos = self._last_matched_gtid.index(gtid)
+                tid = cur_matched_trid[gtpos]
+                lid = self._last_matched_trid[trpos]
+                if tid != lid and lid != -1 and tid != -1:
+                    gt_boxes[gtpos].id_switch = 1
+                    ids +=1
+                if tid != lid and lid != -1:
+                    gt_boxes[gtpos].fragmentation = 1
+                    fr +=1
+
+        # save current index
+        self._last_matched_gtid = cur_matched_gtid
+        self._last_matched_trid = cur_matched_trid
+
+        # compute MOTP
+        cur_modp = 1
+        if cur_tp != 0:
+            cur_modp = cur_c / float(cur_tp)
+        self._modps.append(cur_modp)
+
+    def doc(self):
+        '''
+        Get descriptions of the metrics
+        '''
+        return dict(
+            N="Total count of frames",
+            TP="Total count of true positives",
+            FP="Total count of false positives",
+            FN="Total count of false negatives",
+            MT="Percentage of mostly tracked trajectories",
+            PT="Percentage of partially tracked trajectories",
+            ML="Percentage of mostly lost trajectories",
+            precision="precision score, which is TP / (TP + FP)",
+            recall="recall score, which is TP / (TP + FN)",
+            F1="F1 score",
+            FAR="False Acceptance Rate (average FP)",
+            ID_SWCH="Count of switches of tracking id in trajectores",
+            ID_FRAG="Count of tracking segments with valid id in trajectories",
+            MOTA="N/A",
+            MODA="N/A",
+            MOTP="N/A",
+            MOTAL="N/A"
+        )
+
+    def report(self):
+        '''
+        Report evaluation statistics, result is in a dictionary
+        '''
+        if len(self._seq_trajectories)==0:
+            rospy.logerr("Didn't log any trajectories")
+        results = dict(N=self._num_frames, TP=self._tp, FP=self._fp, FN=self._fn)
+            
+        cur_mt = cur_ml = cur_pt = cur_id_switches = cur_fragments = 0
+        for gtlist in self._seq_trajectories:
+            # all frames of this gt trajectory are not assigned to any detections
+            if all([idx == -1 for idx in gtlist]):
+                cur_ml += 1
+                continue
+
+            # compute tracked frames in trajectory
+            last_id = gtlist[0]
+            tracked = 1 if gtlist[0] >= 0 else 0
+            for frame in range(1, len(gtlist)):
+                if last_id != gtlist[frame] and last_id != -1 and gtlist[frame] != -1 and gtlist[frame-1] != -1:
+                    cur_id_switches += 1
+                if frame < len(gtlist)-1 and gtlist[frame-1] != gtlist[frame] and last_id != -1 and gtlist[frame] != -1 and gtlist[frame+1] != -1:
+                    cur_fragments += 1
+                if gtlist[frame] != -1:
+                    tracked += 1
+                    last_id = gtlist[frame]
+            # handle last frame; tracked state is handled in for loop (gtlist[frame]!=-1)
+            if len(gtlist) > 1 and gtlist[frame-1] != gtlist[frame] and last_id != -1  and gtlist[frame] != -1:
+                cur_fragments += 1
+
+            # compute MT/PT/ML
+            tracking_ratio = tracked / float(len(gtlist))
+            if tracking_ratio > 1 - self._ml_threshold:
+                cur_mt += 1
+            elif tracking_ratio < self._ml_threshold:
+                cur_ml += 1
+            else: # self._ml_threshold <= tracking_ratio <= 1-self._ml_threshold
+                cur_pt += 1
+        results['ML'] = cur_ml
+        results['MT'] = cur_mt
+        results['PT'] = cur_pt
+        results['ID_SWCH'] = cur_id_switches
+        results['ID_FRAG'] = cur_fragments
+
+        # precision/recall etc.
+        if (self._fp + self._tp) == 0 or (self._tp + self._fn) == 0:
+            results['recall'] = 0.
+            results['precision'] = 0.
+        else:
+            results['recall'] = self._tp / float(self._tp + self._fn)
+            results['precision'] = self._tp / float(self._fp + self._tp)
+        if (results['recall'] + results['precision'])==0:
+            results['F1'] = 0.
+        else:
+            results['F1'] = 2. * (results['precision']*results['recall']) / (results['precision']+results['recall'])
+        if self._num_frames == 0:
+            results['FAR'] = float('nan')
+        else:
+            results['FAR'] = self._fp / float(self._num_frames)
+
+        # compute CLEARMOT
+        if self._num_frames == 0:
+            results['MOTA'] = -float("inf")
+            results['MODA'] = -float("inf")
+        else:
+            results['MOTA']  = 1 - (self._fn + self._fp + cur_id_switches) / float(self._num_frames)
+            results['MODA']  = 1 - (self._fn + self._fp) / float(self._num_frames)
+
+        if self._tp==0:
+            results['MOTP']  = float("inf")
+        else:
+            results['MOTP']  = 1. * self._total_cost / self._tp
+        if self._num_frames != 0:
+            if cur_id_switches == 0:
+                results['MOTAL'] = results['MOTA']
+            else:
+                results['MOTAL'] = 1 - (self._fn + self._fp + math.log10(cur_id_switches)) / float(self._num_frames)
+        else:
+            results['MOTAL'] = -float("inf")
+        if self._num_frames == 0:
+            results['MODP'] = float('nan')
+        else:
+            results['MODP'] = sum(self._modps) / float(self._num_frames)
+
+        return results
+
+    '''
+    def getThresholds(self, scores, num_gt, num_sample_pts):
+        # based on score of true positive to discretize the recall
+        # may not be 11 due to not fully recall the results, all the results point has zero precision
+        scores = np.array(scores)
+        scores.sort()
+        scores = scores[::-1]
+        current_recall = 0
+        thresholds = []
+        for i, score in enumerate(scores):
+            l_recall = (i + 1) / float(num_gt)
+            if i < (len(scores) - 1):
+                r_recall = (i + 2) / float(num_gt)
+            else:
+                r_recall = l_recall
+            if (((r_recall - current_recall) < (current_recall - l_recall)) and (i < (len(scores) - 1))):
+                continue
+
+            thresholds.append(score)
+            current_recall += 1 / (num_sample_pts - 1.0)
+
+        return thresholds
+    '''
+
+    def __del__(self):
+        '''
+        Save results to a temporary json file if report haven't been called.
+        '''
+        # TODO: save results
+        pass
