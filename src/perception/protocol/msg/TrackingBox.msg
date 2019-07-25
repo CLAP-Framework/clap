@@ -17,3 +17,12 @@ uint64 uid
 
 # This field is for store auxiliary text or data
 string comments
+
+# Detemine that whether the tracking result is in relative frame (vehicle attached coordinate)
+# Tracker may need absolute velocity to better estimate vehicle state
+bool relative
+
+# Defines the (existence) confidence of the object [-1 ~ 1].
+# The confidence can be negative to demonstrate that this object is invalid.
+# This confidence should not be fed into decision system. It should be used for validation purpose.
+float32 confidence 

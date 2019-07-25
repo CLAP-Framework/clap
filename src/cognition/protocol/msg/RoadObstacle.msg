@@ -1,8 +1,6 @@
 # This message contains all the information that planning needs for a road object
 
 uint64 uid
-bool valid # Defines if this object is valid, or invalid as defined by the filtering
-# XXX: needs a way to define the confidence. Is the tracking age of the obstacle essential?
 
 # Estimated kinematic properties
 geometry_msgs/PoseWithCovariance pose

@@ -90,8 +90,8 @@ def polygon_iou(p1, p2):
     Intersection area / Union area of two polygons
     """
     p1, p2 = Polygon(p1), Polygon(p2)
-    pi = p1.intersection(p2).area()
-    pu = p1.area() + p2.area() - pi
+    pi = p1.intersection(p2).area
+    pu = p1.area + p2.area - pi
     return pi / pu
 
 def box_to_corners_2d(xy, wh, yaw):
@@ -104,5 +104,5 @@ def box_to_corners_2d(xy, wh, yaw):
         [-np.sin(yaw), np.cos(yaw)]
     ])
     x, y = xy
-    dx, dy = np.dot(np.reshape(wh, (1,-1)) / 2, rot_yaw)
+    dx, dy = np.dot(rot_yaw, np.reshape(wh, (-1,1)) / 2)
     return [(x+dx, y+dy), (x-dx, y+dy), (x-dx, y-dy), (x+dx, y-dy)]

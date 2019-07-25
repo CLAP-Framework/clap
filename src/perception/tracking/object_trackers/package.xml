@@ -1,5 +1,5 @@
 <package format="2">
-  <name>zzz_perception_tracking_kf</name>
+  <name>zzz_perception_tracking_object_trackers</name>
   <version>0.0.1</version>
   <description>
     Get dynamic local map
