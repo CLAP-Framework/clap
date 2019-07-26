@@ -1,3 +1,6 @@
+# This message describes a traffic light detection result
+
+
 # Location of traffic light.
 BoundingBox2D location
 

@@ -5,15 +5,15 @@ find_package(catkin REQUIRED genmsg std_msgs actionlib_msgs # essential dependen
     geometry_msgs
 )
 
-add_action_Files(DIRECTORY action FILES
-    LoadMap.action
-)
+catkin_python_setup()
 
 add_message_files(DIRECTORY msg FILES
     Lane.msg
     LaneBoundary.msg
     LanePoint.msg
     LaneSituation.msg
+    Map.msg
+    MapString.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs actionlib_msgs geometry_msgs)

@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+
+import sys
+import rospy
+
+from zzz_common.params import parse_private_args
+
+from zzz_navigation_msgs.msg import MapString
+from carla_msgs.msg import CarlaMapInfo
+
+def convert_CarlaMapInfo(msg, pub):
+    new_msg = MapString()
+    new_msg.header = msg.header
+    new_msg.map_type = MapString.MAP_OPENDRIVE
+    new_msg.content = msg.opendrive
+    pub.publish(new_msg)
+
+if __name__ == "__main__":
+    rospy.init_node("convert_topic")
+
+    params = parse_private_args(
+        input_topic="",
+        output_topic="",
+        msg_type=""
+    )
+
+    if not (params.input_topic and params.output_topic and params.msg_type):
+        rospy.logerr("Not enought parameters!")
+        sys.exit(-1)
+
+    if params.msg_type == "CarlaMapInfo":
+        pub = rospy.Publisher(params.output_topic, MapString, queue_size=1, latch=True)
+        rospy.Subscriber(params.input_topic, CarlaMapInfo, convert_CarlaMapInfo, pub)
+    else:
+        rospy.logerr("Invalid input message type")
+        sys.exit(-1)
+    
+    rospy.spin()

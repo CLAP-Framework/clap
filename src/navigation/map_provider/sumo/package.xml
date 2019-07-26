@@ -1,8 +1,8 @@
 <package format="2">
-  <name>zzz_driver_msgs</name>
+  <name>zzz_navigation_map_provider_sumo</name>
   <version>0.0.1</version>
   <description>
-    Unified interface message definitions for ZZZ drivers
+    Adapt ZZZ input and output to CARLA
   </description>
   <license>BSD</license>
   <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>
@@ -13,11 +13,8 @@
   <url type="bugtracker">https://github.com/cmpute/zzz/issues</url>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>message_generation</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <build_depend>geometry_msgs</build_depend>
-  <exec_depend>message_runtime</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
-  <exec_depend>geometry_msgs</exec_depend>
-  <export><architecture_independent/></export>
+  <build_depend>zzz_driver_msgs</build_depend>
+  <build_export_depend>zzz_driver_msgs</build_export_depend>
+  <exec_depend>zzz_driver_msgs</exec_depend>
+  <export></export>
 </package>

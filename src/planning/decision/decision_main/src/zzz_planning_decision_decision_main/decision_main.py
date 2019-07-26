@@ -17,6 +17,7 @@ class MainDecision(object):
         self.lateral_model_instance = LatLaneUtility(self.longitudinal_model_instance)
 
 
+    # Loop entry
     def generate_trajectory_with_speed(self,dynamic_map):
 
         # update_dynamic_local_map
@@ -41,7 +42,7 @@ class MainDecision(object):
 
 
     def get_trajectory(self,changing_lane_index,desired_speed,resolution=0.5, time_ahead=5, distance_ahead=10, rectify_thres = 4):
-
+        # TODO: smooth spline
         ego_x = self.dynamic_map.ego_vehicle_pose.position.x
         ego_y = self.dynamic_map.ego_vehicle_pose.position.y
         ego_loc = np.array([ego_x,ego_y])
