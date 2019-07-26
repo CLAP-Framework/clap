@@ -22,6 +22,15 @@ def motion_BR(state, dt):
     '''
     return np.copy(state)
 
+def motion_CV(state, dt):
+    raise NotImplementedError()
+
+def motion_CA(state, dt):
+    raise NotImplementedError()
+
+def motion_CTRV(state, dt):
+    raise NotImplementedError()
+
 def motion_CTRA(state, dt):
     '''
     Constant Turn-Rate and (longitudinal) Acceleration. This model also assume that velocity is the same with heading angle.

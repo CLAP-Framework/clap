@@ -42,9 +42,13 @@ namespace zzz { namespace visualization { namespace rviz {
         return color;
     }
 
-    BBoxVisualizer::BBoxVisualizer(ros::NodeHandle &nh, ros::NodeHandle &pnh,
-        string input_topic, string output_topic, string marker_namespace)
+    BBoxVisualizer::BBoxVisualizer(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     {
+        string input_topic, output_topic, marker_namespace;
+        pnh.param("input_topic", input_topic, string("objects_detected"));
+        pnh.param("output_topic", output_topic, string("objects_visual"));
+        pnh.param("marker_namespace", _marker_namespace, string("bbox"));
+
         // Resolve visualization type and subscribe
         string type_name;
         pnh.param<string>("visualize_type", type_name, "DetectionBoxArray");
@@ -63,7 +67,6 @@ namespace zzz { namespace visualization { namespace rviz {
             ROS_ERROR("[%s] Cannot resolve visualization type. Check configuration please!", __MODULE_NAME__);
         }
         _output_publisher = pnh.advertise<visualization_msgs::MarkerArray>(output_topic, 1);
-        _marker_namespace = marker_namespace;
 
         // General parameters
         pnh.param<float>("marker_lifetime", _marker_lifetime, 0.2f);

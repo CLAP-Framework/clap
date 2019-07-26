@@ -11,8 +11,7 @@ namespace zzz
         class CriteriaFilter
         {
         public:
-            CriteriaFilter(ros::NodeHandle &node_handle, ros::NodeHandle &private_handle,
-                std::string input_topic="objects_detected", std::string output_topic="objects_filtered");
+            CriteriaFilter(ros::NodeHandle &node_handle, ros::NodeHandle &private_handle);
 
         protected:
             ros::Subscriber _input_subscriber;
@@ -21,7 +20,7 @@ namespace zzz
             bool sizeFilter(zzz_perception_msgs::DetectionBox &target);
 
         private:
-            float _max_width, _min_width, _max_length, _min_length, _max_height, _min_height;
+            float _max_length_x, _min_length_x, _max_length_y, _min_length_y, _max_length_z, _min_length_z;
 
             void filter(zzz_perception_msgs::DetectionBoxArrayPtr message);
         };

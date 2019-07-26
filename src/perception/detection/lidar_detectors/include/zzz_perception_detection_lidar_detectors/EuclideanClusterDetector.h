@@ -19,8 +19,8 @@ namespace zzz
             float _downsampling_leaf_size;
 
             bool _crop_enable;
-            float _crop_min_height;
-            float _crop_max_height;
+            float _crop_min_z;
+            float _crop_max_z;
 
             bool _plane_removal_enable;
             float _plane_removal_ransac_thres;
@@ -31,8 +31,7 @@ namespace zzz
             int _cluster_count_max;
 
         public:
-            EuclideanClusterDetector(ros::NodeHandle &node_handle, ros::NodeHandle &private_handle,
-                std::string input_topic="points_raw", std::string output_topic="objects_detected");
+            EuclideanClusterDetector(ros::NodeHandle &node_handle, ros::NodeHandle &private_handle);
             virtual void detect(sensor_msgs::PointCloud2ConstPtr input);
         
         protected:

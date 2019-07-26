@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+import rospy
+from zzz_perception_msgs.msg import DetectionBoxArray, TrackingBoxArray
+from zzz_perception_tracking_kf.trackers import MultiBoxTracker
+
+class TrackingNode:
+    def __init__(self,
+        detection_topic="/zzz/perception/objects_detected",
+        tracking_topic="/zzz/perception/objects_tracked"):
+
+        self._tracker = MultiBoxTracker()
+        self._detection_subscriber = rospy.Subscriber(detection_topic, DetectionBoxArray, self.detection_callback)
+        self._tracking_publisher = rospy.Publisher(tracking_topic, TrackingBoxArray, queue_size=1)
+        
+    def detection_callback(self, msg):
+        self._tracker.update(msg)
+        self._tracking_publisher.publish(self._tracker.report())
+
+if __name__=="__main__":
+    rospy.init_node("box_tracker")
+    tracker = TrackingNode()
+    rospy.spin()

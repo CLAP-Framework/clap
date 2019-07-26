@@ -12,9 +12,11 @@ using namespace Eigen;
 
 namespace zzz { namespace perception {
 
-    LShapeFilter::LShapeFilter(ros::NodeHandle &nh, ros::NodeHandle &pnh,
-        string input_topic, string output_topic)
+    LShapeFilter::LShapeFilter(ros::NodeHandle &nh, ros::NodeHandle &pnh)
     {
+        string input_topic, output_topic;
+        pnh.param("input_topic", input_topic, string("objects_detected"));
+        pnh.param("output_topic", output_topic, string("objects_filtered"));
         _input_subscriber = nh.subscribe(input_topic, 1, &LShapeFilter::filter, this);
         _output_publisher = nh.advertise<zzz_perception_msgs::DetectionBoxArray>(output_topic, 1);
     }

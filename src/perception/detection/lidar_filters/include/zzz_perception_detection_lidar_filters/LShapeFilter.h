@@ -11,8 +11,7 @@ namespace zzz
         class LShapeFilter
         {
         public:
-            LShapeFilter(ros::NodeHandle &node_handle, ros::NodeHandle &private_handle,
-                std::string input_topic="objects_detected", std::string output_topic="objects_lshape");
+            LShapeFilter(ros::NodeHandle &node_handle, ros::NodeHandle &private_handle);
 
         protected:
             ros::Subscriber _input_subscriber;

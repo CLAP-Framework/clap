@@ -22,9 +22,7 @@ namespace zzz
             class BBoxVisualizer
             {
             public:
-                BBoxVisualizer(ros::NodeHandle &node_handle, ros::NodeHandle &private_handle,
-                    std::string input_topic="objects_detected", std::string output_topic="objects_visual",
-                    std::string marker_namespace="bbox");
+                BBoxVisualizer(ros::NodeHandle &node_handle, ros::NodeHandle &private_handle);
                 void visualizeDetection(zzz_perception_msgs::DetectionBoxArrayConstPtr input);
                 void visualizeTracking(zzz_perception_msgs::TrackingBoxArrayConstPtr input);
 

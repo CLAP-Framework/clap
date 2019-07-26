@@ -1,5 +1,5 @@
 # Package Summary
-This package contains filters on detection results with lidar point cloud.
+This package contains filters on point cloud data and detection results with lidar point cloud.
 
 # Node `lshape`
 

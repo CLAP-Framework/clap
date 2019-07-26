@@ -11,7 +11,7 @@ float32 length
 # Type of situation
 uint8 situation_type
 uint8 SITUATION_NOT_SPECIFIED = 0
-uint8 SITUATION_BLOCKED = 1 # Something blocked this lane
+uint8 SITUATION_BLOCKED = 1 # Something blocked this lane, vehicle should stop here
 uint8 SITUATION_CROSSWALK = 2 # Crosswalk
 uint8 SITUATION_REDUCE_SPEED = 3 # Reducing speed is required. This can be due to speed bump, construction, or school bus stop, etc
 

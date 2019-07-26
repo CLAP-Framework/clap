@@ -6,5 +6,5 @@ catkin_package()
 
 catkin_python_setup()
 
-catkin_install_python(PROGRAMS nodes/tracker
+catkin_install_python(PROGRAMS nodes/box_tracker
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
