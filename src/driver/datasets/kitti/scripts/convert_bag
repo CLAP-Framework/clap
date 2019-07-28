@@ -232,15 +232,20 @@ def inv_transform(transform):
     transform_inv[0:3, 3] = t_inv
     return transform_inv
 
-def save_static_transforms(bag, transforms, timestamp):
+# Write static transforms every second. Theoretically static transforms should not be updated in a high frequency
+def save_static_transforms(bag, transforms, timestamps, interval=1):
     print("Exporting static transformations...")
-    tfm = TFMessage()
-    time = rospy.Time.from_sec(timestamp.astype('O') / 1e9)
-    for transform in transforms:
-        t = get_static_transform(from_frame_id=transform[0], to_frame_id=transform[1], transform=transform[2])
-        t.header.stamp = time
-        tfm.transforms.append(t)
-    bag.write('/tf_static', tfm, t=time)
+    time = timestamps[0].astype('O') / 1e9
+    tmax = timestamps[-1].astype('O') / 1e9
+
+    while time < tmax:
+        tfm = TFMessage()
+        for transform in transforms:
+            t = get_static_transform(from_frame_id=transform[0], to_frame_id=transform[1], transform=transform[2])
+            t.header.stamp = rospy.Time.from_sec(time)
+            tfm.transforms.append(t)
+        bag.write('/tf_static', tfm, t=rospy.Time.from_sec(time))
+        time += interval
 
 def save_gps_fix_data(bag, kitti, gps_frame_id, topic):
     for timestamp, oxts in izip(kitti.oxts_timestamps, kitti.oxts):
@@ -328,7 +333,7 @@ def main():
         ]
 
         # Export
-        save_static_transforms(bag, transforms, kitti.oxts_timestamps[0])
+        save_static_transforms(bag, transforms, kitti.oxts_timestamps)
         save_dynamic_tf(bag, kitti, args.type)
         save_imu_data(bag, kitti, imu_frame_id, imu_topic)
         save_gps_fix_data(bag, kitti, imu_frame_id, gps_fix_topic)
