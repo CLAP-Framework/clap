@@ -47,4 +47,8 @@ class LShapeFilter:
         q = tf.transformations.quaternion_from_euler(0, 0, yaw)
         target.bbox.pose.pose.orientation = Quaternion(*q)
 
+        # TODO: Add reasonable covariances
+        target.bbox.pose.covariance = np.diag([1] * 6).flatten().tolist()
+        target.bbox.dimension.covariance = np.diag([1] * 3).flatten().tolist()
+
         return target

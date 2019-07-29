@@ -22,7 +22,7 @@ class NearestNeighborFilter:
     '''
     A naive nearest neighbor association that connect detections to closet tracker.
 
-    XXX: Other metrics can take covariance, speed or heading angle into account
+    XXX: Other metrics: take covariance, speed or heading angle into account
     '''
     def __init__(self, dist_thres=3, dist_metric="euclidean"):
         self._dist_thres = 3
@@ -31,19 +31,22 @@ class NearestNeighborFilter:
     def associate(self, detections, pose_trackers, feature_trackers):
         '''
         detections should be list of zzz_perception_msgs/DetectionBox
+        pose_trackers and feature_trackers are dictionary of trackers
         '''
         if self._metric != "euclidean":
             raise ValueError("Only Euclidean distance nearest neighbor is currently supported")
         results = [float('nan')] * len(detections)
         tracker_locations = np.zeros((len(pose_trackers), 3))
-        for idx_tr, tr in enumerate(pose_trackers):
-            tracker_locations[idx_tr, :] = tr.state[:3]
+        tracker_keymap = {}
+        for keyidx_tr, idx_tr in enumerate(pose_trackers.keys()):
+            tracker_locations[keyidx_tr, :] = pose_trackers[idx_tr].pose_state[:3]
+            tracker_keymap[keyidx_tr] = idx_tr
         for idx_dt, dt in enumerate(detections):
-            pose = dt.bbox.pose.pose
-            d = np.array([pose.x, pose.y, pose.z]) - tracker_locations
+            position = dt.bbox.pose.pose.position
+            d = np.array([position.x, position.y, position.z]) - tracker_locations
             d = np.linalg.norm(d, axis=1)
             if np.min(d) < self._dist_thres:
-                results[idx_dt] = np.argmin(d)
+                results[idx_dt] = tracker_keymap[np.argmin(d)]
 
         return results
 

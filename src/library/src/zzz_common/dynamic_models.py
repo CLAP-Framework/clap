@@ -11,10 +11,7 @@ def wrap_angle(theta):
     '''
     Normalize the angle to [-pi/2, pi/2]
     '''
-    theta = (theta + np.pi) % (2*np.pi)
-    if theta < 0:
-        theta += 2*np.pi
-    return theta - np.pi
+    return (theta + np.pi) % (2*np.pi) - np.pi
 
 def motion_BR(state, dt):
     '''
@@ -23,7 +20,15 @@ def motion_BR(state, dt):
     return np.copy(state)
 
 def motion_CV(state, dt):
-    raise NotImplementedError()
+    '''
+    Constant Velocity
+
+    States: [x, y, vx, vy]
+    '''
+    state = np.copy(state)
+    state[0] += state[2] * dt
+    state[1] += state[3] * dt
+    return state
 
 def motion_CA(state, dt):
     raise NotImplementedError()
@@ -42,16 +47,20 @@ def motion_CTRA(state, dt):
     x, y, th, v, a, w = state
     nth = wrap_angle(th + w * dt)
     nv = v + a * dt
-    nx = x + ( nv*w*np.sin(nth) + a*np.cos(nth) - v*w*np.sin(th) - a*np.cos(th)) / (w*w)
-    ny = y + (-nv*w*np.sin(nth) + a*np.sin(nth) + v*w*np.cos(th) - a*np.sin(th)) / (w*w)
+    if np.isclose(w, 0):
+        nx = x + (nv + v)/2 * np.cos(th) * dt
+        ny = y + (nv + v)/2 * np.sin(th) * dt
+    else:
+        nx = x + ( nv*w*np.sin(nth) + a*np.cos(nth) - v*w*np.sin(th) - a*np.cos(th)) / (w*w)
+        ny = y + (-nv*w*np.cos(nth) + a*np.sin(nth) + v*w*np.cos(th) - a*np.sin(th)) / (w*w)
 
     state = np.copy(state)
     state[:4] = (nx, ny, nth, nv)
     return state
 
-def motion_CCA(state, dt):
+def motion_CSAA(state, dt):
     '''
-    Constant Curvature and Acceleration.
+    Constant Steering Angle and Acceleration.
 
     States: [x, y, theta, v, a, c]
             [0  1    2    3  4  5]
@@ -67,9 +76,9 @@ def motion_CCA(state, dt):
     sz2, cz2 = fresnel(zeta2)
     
     nx = x + (eta * (np.cos(gamma1)*cz1 + np.sin(gamma1)*sz1 - np.cos(gamma1)*cz2 - np.sin(gamma1)*sz2) +
-        2*np.sin(gamma2)*np.sqrt(a*c) + 2*np.sin(th)*np.sqrt(a*c)) / 4*sqrt(a*c)*c
+        2*np.sin(gamma2)*np.sqrt(a*c) + 2*np.sin(th)*np.sqrt(a*c)) / 4*np.sqrt(a*c)*c
     ny = y + (eta * (-np.cos(gamma1)*sz1 + np.sin(gamma1)*cz1 - np.sin(gamma1)*cz2 - np.cos(gamma1)*sz2) +
-        2*np.cos(gamma2)*np.sqrt(a*c) - 2*np.sin(th)*np.sqrt(a*c)) / 4*sqrt(a*c)*c
+        2*np.cos(gamma2)*np.sqrt(a*c) - 2*np.sin(th)*np.sqrt(a*c)) / 4*np.sqrt(a*c)*c
     nth = wrap_angle(th - c*dt*dt*a/2 - c*dt*v)
     nv = v + a*dt
 

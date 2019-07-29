@@ -188,6 +188,7 @@ def save_tracklet_data(bag, kitti, velo_frame_id, topic):
             msg.bbox.dimension.covariance = [0] * 9
             # Infinity covariance indicates that the twist is not provided
             msg.twist.covariance = np.diag([np.inf] * 6).flatten().tolist()
+            msg.accel.covariance = np.diag([np.inf] * 6).flatten().tolist()
 
             cat = ObjectClass()
             cat.classid = driver.LABELS_MAP[track.objectType]
