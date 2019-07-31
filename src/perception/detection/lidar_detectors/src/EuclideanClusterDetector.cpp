@@ -17,13 +17,15 @@ using namespace std;
 using namespace pcl;
 
 namespace zzz { namespace perception {
-    EuclideanClusterDetector::EuclideanClusterDetector(ros::NodeHandle &nh, ros::NodeHandle &pnh,
-        string itopic, string otopic)
-        : LidarDetector(nh, pnh, itopic, otopic)
+    EuclideanClusterDetector::EuclideanClusterDetector(ros::NodeHandle &nh, ros::NodeHandle &pnh)
+        : LidarDetector(nh, pnh)
     {
         #ifndef NDEBUG
-        _cluster_publisher = nh.advertise<sensor_msgs::PointCloud2>("points_cluster", 1);
-        _plane_publisher = nh.advertise<sensor_msgs::PointCloud2>("points_plane", 1);
+        string cluster_topic, plane_topic;
+        pnh.param("cluster_topic", cluster_topic, string("points_cluster"));
+        pnh.param("plane_topic", cluster_topic, string("points_plane"));
+        _cluster_publisher = nh.advertise<sensor_msgs::PointCloud2>(cluster_topic, 1);
+        _plane_publisher = nh.advertise<sensor_msgs::PointCloud2>(plane_topic, 1);
         #endif
 
         // setup parameters

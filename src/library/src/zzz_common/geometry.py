@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.linalg as npl
+from shapely.geometry import Polygon
 
 def dist_from_point_to_line(x0, y0, x1, y1, x2, y2):
     '''
@@ -14,6 +15,10 @@ def dist_from_point_to_line(x0, y0, x1, y1, x2, y2):
     return dl, d1, d2
 
 def nearest_point_to_polyline(x0, y0, line):
+    """
+    line: In shape of Nx2 point array
+    Return: distance_to_line, the_index_of_nearest_point
+    """
 
     dist_pc = npl.norm(line - [x0, y0], axis=1) # dist from point (x0, y0) to line points
     idx_pc = np.argmin(dist_pc) # index of closet point
@@ -21,13 +26,10 @@ def nearest_point_to_polyline(x0, y0, line):
     return dist_pc[idx_pc], idx_pc
 
 def dist_from_point_to_polyline(x0, y0, line):
-    # TODO: test
     """
     line: In shape of Nx2 point array
     Return: distance_to_line, line_head_to_foot_point, foot_point_to_line_end
     """
-    idx_lane_closest_point = []
-    dist_lane_closest_point = []
 
     dist_pc = npl.norm(line - [x0, y0], axis=1) # dist from point (x0, y0) to line points
     idx_pc = np.argmin(dist_pc) # index of closet point
@@ -58,13 +60,21 @@ def dist_from_point_to_polyline(x0, y0, line):
     # If the point is away from polyline area, dist_pstart of dist_pend will be negative
     return dist_pline, abs(dist_pstart), abs(dist_pend)
 
-def dense_polyline(line, resolution):
+def dense_polyline(line, resolution, interp="linear"):
     """
-    return the dense line 
-    The gap between each point < resolution /m
+    Dense a polyline by linear interpolation.
+
+    resolution: The gap between each point <= resolution
+    interp: The interpolation method
+
+    Return: The densed polyline 
     """
     if line is None or len(line) == 0:
         raise ValueError("Line input is null")
+
+    if interp != "linear":
+        raise NotImplementedError("Other interpolation method is not implemented!")
+
     s = np.cumsum(npl.norm(np.diff(line, axis=0), axis=1))
     s = np.concatenate([[0],s])
     num = s[-1]/resolution
@@ -75,4 +85,24 @@ def dense_polyline(line, resolution):
 
     return np.array([x,y]).T
 
-    
+def polygon_iou(p1, p2):
+    """
+    Intersection area / Union area of two polygons
+    """
+    p1, p2 = Polygon(p1), Polygon(p2)
+    pi = p1.intersection(p2).area
+    pu = p1.area + p2.area - pi
+    return pi / pu
+
+def box_to_corners_2d(xy, wh, yaw):
+    """
+    Convert a oriented box to corners on 2d plane.
+    Returned box is in counterclock order
+    """
+    rot_yaw = np.array([
+        [ np.cos(yaw), np.sin(yaw)],
+        [-np.sin(yaw), np.cos(yaw)]
+    ])
+    x, y = xy
+    dx, dy = np.dot(rot_yaw, np.reshape(wh, (-1,1)) / 2)
+    return [(x+dx, y+dy), (x-dx, y+dy), (x-dx, y-dy), (x+dx, y-dy)]
