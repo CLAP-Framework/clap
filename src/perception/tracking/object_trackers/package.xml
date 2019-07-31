@@ -2,7 +2,7 @@
   <name>zzz_perception_tracking_object_trackers</name>
   <version>0.0.1</version>
   <description>
-    Get dynamic local map
+    Module to track detected objects
   </description>
   <license>BSD</license>
   <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>

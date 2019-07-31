@@ -1,5 +1,5 @@
 <package format="2">
-  <name>zzz_visualization_rviz_detection_visualizer</name>
+  <name>zzz_visualization_rviz_box_visualizer</name>
   <version>0.0.1</version>
   <description>
     Visualize detection result in rviz

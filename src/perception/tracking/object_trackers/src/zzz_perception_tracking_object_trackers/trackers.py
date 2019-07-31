@@ -16,6 +16,7 @@ class MultiBoxTracker:
         self._counter_lost = dict() # Count for frames lost consecutively
 
         self._last_timestamp = None
+        self._last_frameid = None
         self._counter_id = 0 # Counter for tracked objects
         self._lost_count = lost_count
 
@@ -91,6 +92,7 @@ class MultiBoxTracker:
 
         # Update times
         self._last_timestamp = array.header.stamp
+        self._last_frameid = array.header.frame_id
 
     def report(self):
         '''
@@ -98,6 +100,7 @@ class MultiBoxTracker:
         '''
         array = TrackingBoxArray()
         array.header.stamp = self._last_timestamp
+        array.header.frame_id = self._last_frameid
         for idx_tr in self._tracked_objects.keys():
             trackbox = TrackingBox()
             trackbox.classes = self._tracked_features[idx_tr].classes
@@ -107,6 +110,9 @@ class MultiBoxTracker:
             trackbox.bbox.dimension.length_x = self._tracked_features[idx_tr].shape_state[0]
             trackbox.bbox.dimension.length_y = self._tracked_features[idx_tr].shape_state[1]
             trackbox.bbox.dimension.length_z = self._tracked_features[idx_tr].shape_state[2]
+            trackbox.twist.twist.linear.x = self._tracked_objects[idx_tr].pose_state[3]
+            trackbox.twist.twist.linear.y = self._tracked_objects[idx_tr].pose_state[4]
+            trackbox.twist.twist.linear.z = self._tracked_objects[idx_tr].pose_state[5]
             # TODO: Filling out more fields
             trackbox.uid = idx_tr
             # TODO: Add option to track these targets using static coordinate

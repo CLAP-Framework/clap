@@ -25,13 +25,15 @@
         <param name="min_length_y" value="0.1"/>
         <param name="min_length_z" value="0.1"/>
     </node>
-    <node pkg="zzz_visualization_rviz_detection_visualizer" type="bbox"
-          name="euclidean_visualize" output="screen" ns="/zzz/perception">
-        <param name="input_topic" value="objects_filtered"/>
-        <param name="marker_lifetime" value="0.5"/>
-    </node>
     <node pkg="zzz_perception_tracking_object_trackers" type="box_tracker"
           name="box_tracker" output="screen" ns="/zzz/perception">
         <param name="detection_topic" value="objects_filtered"/>
+        <param name="tracking_topic" value="objects_tracked"/>
+    </node>
+    <node pkg="zzz_visualization_rviz_box_visualizer" type="tracking"
+          name="box_visualize" output="screen" ns="/zzz/perception">
+        <param name="input_topic" value="objects_tracked"/>
+        <param name="marker_lifetime" value="0.5"/>
+        <param name="box_max_size" value="9999999"/>
     </node>
 </launch>

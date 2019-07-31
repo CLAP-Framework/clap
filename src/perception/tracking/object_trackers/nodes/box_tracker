@@ -8,8 +8,8 @@ from zzz_perception_tracking_object_trackers.trackers import MultiBoxTracker
 class TrackingNode:
     def __init__(self):
         params = parse_private_args(
-            detection_topic="/zzz/perception/objects_detected",
-            tracking_topic="/zzz/perception/objects_tracked"
+            detection_topic="objects_detected",
+            tracking_topic="objects_tracked"
         )
 
         self._tracker = MultiBoxTracker()

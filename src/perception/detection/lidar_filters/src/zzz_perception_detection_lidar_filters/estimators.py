@@ -22,6 +22,13 @@ class LShapeFilter:
     def _fit_shape(self, target):
         cloud = pcl.PointCloud(target.source_cloud)
         xyz = cloud.xyz
+
+        pmax = np.max(xyz, axis=0)
+        pmin = np.min(xyz, axis=0)
+        target.bbox.pose.pose.position.x = (pmax[0] + pmin[0])/2
+        target.bbox.pose.pose.position.y = (pmax[1] + pmin[1])/2
+        target.bbox.pose.pose.position.z = (pmax[2] + pmin[2])/2
+
         angle = xyz[:,1] / xyz[:,0]
         imax, imin = np.argmax(angle), np.argmin(angle)
         assert imax != imin
