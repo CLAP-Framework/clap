@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+import rospy
+import actionlib
+from zzz_driver_msgs.msg import ChassisReport
+from geometry_msgs.msg import Pose
+from zzz_planning_msgs.msg import DecisionTrajectory
+from zzz_control_msgs.msg import ControlCommand
+from zzz_control_pure_persuit_control import PurePersuitController
+
+import threading
+
+
+
+class PurePersuitControllerNode(object):
+    def __init__(self,
+        control_topic="/carla/control_signal",
+        pose_topic="/carla/environment_perception/ego_vehicle_pose",
+        chassis_topic="/carla/ego_vehicle/chassis", # TODO: combine pose and chassis report
+        decision_trajectory_topic="carla/decision_trajectory",
+        safeguard_trajectory_topic="carla/safeguard_trajectory"):
+
+        self._pose_subscriber = rospy.Subscriber(pose_topic, Pose, self.pose_callback)
+        self._chassis_subscriber = rospy.Subscriber(chassis_topic, ChassisReport, self.chassis_callback)
+        # self._decision_trajectory_subscriber = rospy.Subscriber(decision_trajectory_topic, DecisionTrajectory, self.decision_callback)
+        self._safeguard_trajectory_subscriber = rospy.Subscriber(safeguard_trajectory_topic, DecisionTrajectory, self.safeguard_decision_callback)
+        
+        self._control_signal_publisher = rospy.Publisher(control_topic, ControlCommand, queue_size=1)
+
+
+        self._pose_trigger = threading.Event()
+        self._chassis_trigger = threading.Event()
+
+
+        self._control_instance = PurePersuitController()
+
+    def chassis_callback(self, msg):
+        self._control_instance.update_ego_vehicle_speed(msg.speed)
+
+    def pose_callback(self, msg):
+        control_msg = self._control_instance.run_step(msg)
+        self._control_signal_publisher.publish(control_msg)
+
+    def safeguard_decision_callback(self,msg):
+        self._control_instance.update_decision(msg)
+
+    # def decision_callback(self, msg):
+    #     self._control_instance.update_decision(msg)
+    
+    # pose triggered
+
+if __name__ == "__main__":
+
+    rospy.init_node("purepersuit_controller", log_level=rospy.DEBUG)
+    node = PurePersuitControllerNode()
+    rospy.spin()

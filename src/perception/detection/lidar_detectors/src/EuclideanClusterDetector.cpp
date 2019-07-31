@@ -17,13 +17,15 @@ using namespace std;
 using namespace pcl;
 
 namespace zzz { namespace perception {
-    EuclideanClusterDetector::EuclideanClusterDetector(ros::NodeHandle &nh, ros::NodeHandle &pnh,
-        string itopic, string otopic)
-        : LidarDetector(nh, pnh, itopic, otopic)
+    EuclideanClusterDetector::EuclideanClusterDetector(ros::NodeHandle &nh, ros::NodeHandle &pnh)
+        : LidarDetector(nh, pnh)
     {
         #ifndef NDEBUG
-        _cluster_publisher = nh.advertise<sensor_msgs::PointCloud2>("points_cluster", 1);
-        _plane_publisher = nh.advertise<sensor_msgs::PointCloud2>("points_plane", 1);
+        string cluster_topic, plane_topic;
+        pnh.param("cluster_topic", cluster_topic, string("points_cluster"));
+        pnh.param("plane_topic", cluster_topic, string("points_plane"));
+        _cluster_publisher = nh.advertise<sensor_msgs::PointCloud2>(cluster_topic, 1);
+        _plane_publisher = nh.advertise<sensor_msgs::PointCloud2>(plane_topic, 1);
         #endif
 
         // setup parameters
@@ -155,9 +157,9 @@ namespace zzz { namespace perception {
         // Naive size estimation
         PointXYZ min_pt, max_pt;
         getMinMax3D(*input, min_pt, max_pt);
-        bbox.dimension.dimension.length = max_pt.x - min_pt.x;
-        bbox.dimension.dimension.width  = max_pt.y - min_pt.y;
-        bbox.dimension.dimension.height = max_pt.z - min_pt.z;
+        bbox.dimension.length_x = max_pt.x - min_pt.x;
+        bbox.dimension.length_y  = max_pt.y - min_pt.y;
+        bbox.dimension.length_z = max_pt.z - min_pt.z;
     }
 
     void EuclideanClusterDetector::detect(sensor_msgs::PointCloud2ConstPtr input)

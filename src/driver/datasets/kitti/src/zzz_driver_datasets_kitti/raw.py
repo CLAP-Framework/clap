@@ -7,7 +7,7 @@ import os.path as osp
 import numpy as np
 import zzz_driver_datasets_kitti.utils as utils
 
-class raw:
+class RawDataset:
     """
     Load and parse raw data into a usable format.
 
@@ -83,6 +83,7 @@ class raw:
         self._load_calib()
         self._load_timestamps()
         self._load_oxts()
+        if datatype == "sync": self._load_tracklets()
 
     def __len__(self):
         """Return the number of frames loaded."""
@@ -308,3 +309,18 @@ class raw:
         """Load OXTS data from file."""
         data_path = self.data_file if self.inzip else self.data_path
         self.oxts = utils.load_oxts_packets(data_path, self.oxts_files)
+
+    def _load_tracklets(self):
+        """Load tracklets from file. Note: tracklets stamps are assumed to be the same as point clouds'"""
+        data_path = self.data_file if self.inzip else self.data_path
+        tracklets = utils.load_tracklets(data_path, "tracklet_labels.xml")
+        tracklet_frames = [[] for i in range(len(self.velo_timestamps))] # Create array
+        for track in tracklets:
+            for idx, pose in enumerate(track.poses):
+                pose.objectType = track.objectType
+                pose.h = track.h
+                pose.w = track.w
+                pose.l = track.l
+                pose.id = idx
+                tracklet_frames[idx + int(track.first_frame)].append(pose)
+        self.tracklets = tracklet_frames

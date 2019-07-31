@@ -1,7 +1,9 @@
-# Describing the size object in 3D space with uncertainty
+# Describing the size object in 3D space (in meters) with uncertainty
 
-Dimension dimension
+float64 length_x # width
+float64 length_y # height
+float64 length_z # length
 
-# Row-major representation of the 6x6 covariance matrix
-# In order, the parameters are: (width, height, length)
+# Row-major representation of the 3x3 covariance matrix
+# In order, the parameters are: (length_x, length_y, length_z)
 float64[9] covariance

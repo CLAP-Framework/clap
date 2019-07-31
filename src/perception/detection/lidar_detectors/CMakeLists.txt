@@ -25,6 +25,13 @@ add_library(zzz_perception_detection_lidar_detectors
   src/LidarDetector.cpp
   src/EuclideanClusterDetector.cpp
 )
+add_dependencies(zzz_perception_detection_lidar_detectors
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(zzz_perception_detection_lidar_detectors
+  ${catkin_LIBRARIES}
+)
 
 # Add node targets
 add_executable(euclidean_cluster_detector nodes/euclidean_cluster_detector.cpp)
@@ -34,7 +41,6 @@ add_dependencies(euclidean_cluster_detector
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
-
 target_link_libraries(euclidean_cluster_detector
   zzz_perception_detection_lidar_detectors
   ${catkin_LIBRARIES}

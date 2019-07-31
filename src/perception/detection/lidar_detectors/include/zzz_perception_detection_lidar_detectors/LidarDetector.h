@@ -13,8 +13,7 @@ namespace zzz
         class LidarDetector
         {
         public:
-            LidarDetector(ros::NodeHandle &node_handle, ros::NodeHandle &private_handle,
-                std::string input_topic="points_raw", std::string output_topic="objects_detected");
+            LidarDetector(ros::NodeHandle &node_handle, ros::NodeHandle &private_handle);
             virtual void detect(sensor_msgs::PointCloud2ConstPtr input)=0;
 
         protected:

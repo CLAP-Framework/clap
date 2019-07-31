@@ -10,3 +10,6 @@ BoundingBox bbox
 # The 3D data that generated these results (i.e. object region cropped out of
 #   the point cloud). This information is not required for all detectors, so it may be empty.
 sensor_msgs/PointCloud2 source_cloud
+
+# This field is for store auxiliary text or data. (e.g. annotation notes)
+string comments

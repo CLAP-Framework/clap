@@ -1,27 +1,22 @@
-# Universal command output
+# Universal vehicle dynamics command output. This message is sent in high frequency
 
 Header header
 
-# Percent of throttle, unit in m/s^2
+# TODO(zyxin): should these params be percentage or physical values?
+# Level of throttle, unit in m/s^2
 float32 throttle
-# Percentage of brake, unit in m/s^2
+# Level of brake, unit in m/s^2
 float32 brake
-# Percentage of steering, unit in radian
+# Level of steering, unit in radian
 float32 steer
 
 # Gear shift, positive means manual transmission, negative means automatic transmission
-int32 gear
-int32 GEAR_NONE = 0
-int32 GEAR_NEUTRAL = -1
-int32 GEAR_REVERSE = -2
-int32 GEAR_PARKING = -3
-int32 GEAR_DRIVE = -4
+int8 gear
+int8 GEAR_NONE = 0
+int8 GEAR_NEUTRAL = -1
+int8 GEAR_REVERSE = -2
+int8 GEAR_PARKING = -3
+int8 GEAR_DRIVE = -4
 
 # Parking brake switch
 bool parking_brake
-
-# Turning signal output
-uint8 turning_light
-uint8 TURNING_LIGHT_OFF=0
-uint8 TURNING_LIGHT_LEFT=1
-uint8 TURNING_LIGHT_RIGHT=2

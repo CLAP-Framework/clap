@@ -1,0 +1,16 @@
+<package>
+  <name>zzz_driver_datasets_benchmark</name>
+  <version>0.0.2</version>
+  <description>
+    Tools for dataset benchmarking
+  </description>
+  <license>BSD</license>
+  <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>
+  <author email="zyxin@umich.edu">Yuanxin Zhong</author>
+
+  <url type="website">https://github.com/cmpute/zzz</url>
+  <url type="repository">https://github.com/cmpute/zzz</url>
+  <url type="bugtracker">https://github.com/cmpute/zzz/issues</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+</package>

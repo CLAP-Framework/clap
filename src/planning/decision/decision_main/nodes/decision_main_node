@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+
+import rospy
+from zzz_driver_msgs.msg import MapState
+from zzz_planning_decision_decision_main import MainDecision
+from zzz_planning_msgs.msg import DecisionTrajectory
+
+class DecisionNode(object):
+    def __init__(self,
+        # pose_topic="/carla/environment_perception/ego_vehicle_pose",
+        decision_trajectory_topic="carla/decision_trajectory",
+        dynamic_map_topic="carla/dynamic_map"):
+
+        self._dynamic_map_subscriber = rospy.Subscriber(dynamic_map_topic,MapState,self.dynamic_map_callback)
+        self._decision_trajectory_publisher = rospy.Publisher(decision_trajectory_topic, DecisionTrajectory, queue_size=1)
+
+
+        self._decision_instance = MainDecision()
+
+    def dynamic_map_callback(self, msg):
+        publish_msg = self._decision_instance.generate_trajectory_with_speed(msg)
+        rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
+                                                    len(publish_msg.trajectory.poses),
+                                                    publish_msg.desired_speed)
+
+        self._decision_trajectory_publisher.publish(publish_msg)
+        # rospy.logwarn("decision_trajectory_send_out")
+
+
+if __name__ == "__main__":
+
+    rospy.init_node("decision_node", log_level=rospy.DEBUG)
+    node = DecisionNode()
+    rospy.spin()

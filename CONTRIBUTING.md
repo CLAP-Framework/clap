@@ -30,6 +30,13 @@ In order for easier use, we will try to offer non-ROS mode. The existence of env
 # Protocol strategy
 Protocal is defined in its source module. Protocal are defined based on [common_msgs](https://github.com/ros/common_msgs) of ROS and zzz protocals. Please try to prevent depend external dependencies. The protocal should contain as much information as needed. If certain module doesn't need or provide part of the data, then it should directly ignore it.
 
+# Other principles
+- Coordinate system:
+  - Global / Geographic: UTM WGS-84
+  - Local / Ground: East-North-Up (ENU)
+  - Body-fixed: Forward-Left-Up (FLU)
+- Lane operations should be performed in s-coordinate (one-dimensional coordinate along a curve)
+
 # References
 - [ROS CMakeLists.txt documentation](http://wiki.ros.org/catkin/CMakeLists.txt)
 - [How to structure a Python-based ROS package](http://www.artificialhumancompanions.com/structure-python-based-ros-package/)

@@ -12,13 +12,16 @@ add_message_files(DIRECTORY msg FILES
     DetectionBox2D.msg
     DetectionBox2DArray.msg
     DetectionBoxArray.msg
-    Dimension.msg
-    Dimension2D.msg
+    Dimension2DWithCovariance.msg
     DimensionWithCovariance.msg
+    LaneDetection.msg
     ObjectClass.msg
+    Pose2DWithCovariance.msg
     TrackingBox.msg
     TrackingBoxArray.msg
+    TrafficLightDetection.msg
+    TrafficLightDetectionArray.msg
 )
 
-generate_messages(DEPENDENCIES geometry_msgs sensor_msgs std_msgs)
-catkin_package(CATKIN_DEPENDS geometry_msgs sensor_msgs std_msgs)
+generate_messages(DEPENDENCIES std_msgs geometry_msgs sensor_msgs)
+catkin_package(CATKIN_DEPENDS std_msgs geometry_msgs sensor_msgs)
