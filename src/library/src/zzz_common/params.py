@@ -13,10 +13,14 @@ def parse_private_args(**kvargs):
 
     ros_args = {}
     for name, default in kvargs.items():
-        parser.add_argument(name, default=default, nargs='?')
+        parser.add_argument('--' + name, default=default, type=type(default))
         ros_args[name] = rospy.get_param(node_name + '/' + name, default)
-    cmd_args = parser.parse_args()
-
-    # XXX: This will override existing args
-    # ros_args.update(var(cmd_args))
+    
+    # ------------ ros param system conflict with argparse syntax
+    # cmd_args = parser.parse_args()
+    # for k, v in vars(cmd_args).items():
+    #     if k in ros_args and v != ros_args[v]:
+    #         rospy.logwarn("Duplicate arguments {}: {} / {}".format(k, ros_args[k], v))
+    #     if v != kvargs[k]:
+    #         ros_args[k] = v
     return edict(ros_args)
