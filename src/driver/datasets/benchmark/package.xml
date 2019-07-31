@@ -1,6 +1,6 @@
 <package>
   <name>zzz_driver_datasets_benchmark</name>
-  <version>0.0.1</version>
+  <version>0.0.2</version>
   <description>
     Tools for dataset benchmarking
   </description>
