@@ -1,12 +1,17 @@
 <launch>
+    <node pkg="zzz_navigation_pose_reporter" type="manual"
+          name="pose_reporter" output="screen" ns="/zzz/navigation">
+        <param name="map_origin" value="[49,8,0]"/>
+        <param name="odom_input_topic" value="/carla/ego_vehicle/odometry"/>
+    </node>
     <node pkg="zzz_navigation_map_provider_sumo" type="local_map_generator"
-          name="static_map_builder" output="screen">
+          name="static_map_builder" output="screen" ns="/zzz/navigation">
     </node>
     <node pkg="zzz_cognition_object_locator" type="nearest_locator"
-          name="nearest_locator" output="screen">
+          name="nearest_locator" output="screen" ns="/zzz/cognition">
     </node>
     <node pkg="zzz_cognition_reference_path" type="put_buffer"
-          name="put_buffer" output="screen">
+          name="put_buffer" output="screen" ns="/zzz/cognition">
     </node>
     <!-- <node pkg="zzz_planning_decision_decision_main" type="decision_main_node"
           name="decision_main_node" output="screen">

@@ -5,7 +5,7 @@ from collections import deque
 
 from zzz_cognition_msgs.msg import MapState
 from zzz_cognition_msgs.utils import default_msg
-from zzz_driver_msgs.msg import RigidBodyState
+from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import LanePoint
 from zzz_common.geometry import dist_from_point_to_polyline, nearest_point_to_polyline
 from nav_msgs.msg import Path
@@ -28,9 +28,9 @@ class PathBuffer:
         self._dynamic_map = map_input
 
     def receive_ego_state(self, state):
-        assert type(state) == RigidBodyState
+        assert type(state) == RigidBodyStateStamped
 
-        self._ego_vehicle_state = state
+        self._ego_vehicle_state = state.state
 
     def receive_reference_path(self, reference_path):
         # TODO: Define a custom reference_path?

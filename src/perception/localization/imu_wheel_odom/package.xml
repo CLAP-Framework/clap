@@ -1,5 +1,5 @@
 <package format="2">
-  <name>zzz_perception_localization_gnss_odom</name>
+  <name>zzz_perception_localization_imu_wheel_odom</name>
   <version>0.0.2</version>
   <description>
     Get dynamic local map

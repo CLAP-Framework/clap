@@ -7,7 +7,7 @@ import rospy
 import threading
 from zzz_common.params import parse_private_args
 
-from zzz_driver_msgs.msg import RigidBodyState
+from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_cognition_msgs.msg import MapState
 from zzz_cognition_reference_path import PathBuffer
 from nav_msgs.msg import Path
@@ -16,10 +16,10 @@ class Node(object):
     def __init__(self,):
         params = parse_private_args(
             map_file = "",
-            map_input_topic = "/zzz/navigation/local_dynamic_map/map_with_objects",
-            map_output_topic = "/zzz/navigation/local_dynamic_map/map_with_ref",
+            map_input_topic = "local_dynamic_map/map_with_objects",
+            map_output_topic = "local_dynamic_map/map_with_ref",
             map_file_type = "opendrive",
-            pose_topic = "/zzz/perception/ego_pose",
+            pose_topic = "/zzz/navigation/ego_pose",
             reference_path_topic = "/zzz/navigation/reference_path"
         )
 
@@ -29,7 +29,7 @@ class Node(object):
         self._map_instance = PathBuffer()
 
         self._input_map_subscriber = rospy.Subscriber(params.map_input_topic, MapState, self._map_instance.receive_static_map)
-        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyState, self.pose_callback)
+        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.pose_callback)
         self._reference_path_subscriber = rospy.Subscriber(params.reference_path_topic, Path, self.reference_callback)
         self._output_map_publisher = rospy.Publisher(params.map_output_topic, MapState, queue_size=1)
         
@@ -44,7 +44,7 @@ class Node(object):
         self._map_trigger.wait()
         self._reference_path_trigger.wait()
 
-        new_static_map = self._map_instance.receive_new_pose(msg)
+        new_static_map = self._map_instance.receive_ego_state(msg)
         if new_static_map is not None:
             self._output_map_publisher.publish(new_static_map)
 

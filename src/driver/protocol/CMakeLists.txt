@@ -11,6 +11,7 @@ add_message_files(DIRECTORY msg FILES
     ControlReport.msg
     ResourceReport.msg
     RigidBodyState.msg
+    RigidBodyStateStamped.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs geometry_msgs)

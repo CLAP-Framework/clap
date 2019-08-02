@@ -2,7 +2,7 @@
 import rospy
 import numpy as np
 
-from zzz_driver_msgs.msg import RigidBodyState
+from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import Map, Lane
 from zzz_navigation_msgs.utils import get_lane_array
 from zzz_cognition_msgs.msg import MapState, LaneState, RoadObstacle
@@ -38,8 +38,8 @@ class NearestLocator:
         self._surrounding_object_list = object_list
 
     def receive_ego_state(self, state):
-        assert type(state) == RigidBodyState
-        self._ego_vehicle_state = state
+        assert type(state) == RigidBodyStateStamped
+        self._ego_vehicle_state = state.state
 
     def receive_traffic_light_detection(self, detection):
         assert type(detection) == TrafficLightDetectionArray
