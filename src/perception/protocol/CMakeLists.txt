@@ -16,6 +16,7 @@ add_message_files(DIRECTORY msg FILES
     DimensionWithCovariance.msg
     LaneDetection.msg
     ObjectClass.msg
+    ObjectSignals.msg
     Pose2DWithCovariance.msg
     TrackingBox.msg
     TrackingBoxArray.msg

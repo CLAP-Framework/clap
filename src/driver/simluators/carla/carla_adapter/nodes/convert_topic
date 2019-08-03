@@ -16,6 +16,7 @@ def convert_CarlaMapInfo(msg, pub):
     pub.publish(new_msg)
 
 # TODO: Fix odometry orientation
+# TODO: Convert control command back
 
 if __name__ == "__main__":
     rospy.init_node("convert_topic")

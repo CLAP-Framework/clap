@@ -10,18 +10,16 @@ from zzz_control_pure_persuit_control import PurePersuitController
 
 import threading
 
-
-
 class PurePersuitControllerNode(object):
     def __init__(self,
-        control_topic="/carla/control_signal",
-        pose_topic="/carla/environment_perception/ego_vehicle_pose",
+        control_topic="command",
+        pose_topic="/zzz/navigation/ego_vehicle_pose",
         chassis_topic="/carla/ego_vehicle/chassis", # TODO: combine pose and chassis report
         decision_trajectory_topic="carla/decision_trajectory",
         safeguard_trajectory_topic="carla/safeguard_trajectory"):
 
         self._pose_subscriber = rospy.Subscriber(pose_topic, Pose, self.pose_callback)
-        self._chassis_subscriber = rospy.Subscriber(chassis_topic, ChassisReport, self.chassis_callback)
+        # self._chassis_subscriber = rospy.Subscriber(chassis_topic, ChassisReport, self.chassis_callback)
         # self._decision_trajectory_subscriber = rospy.Subscriber(decision_trajectory_topic, DecisionTrajectory, self.decision_callback)
         self._safeguard_trajectory_subscriber = rospy.Subscriber(safeguard_trajectory_topic, DecisionTrajectory, self.safeguard_decision_callback)
         

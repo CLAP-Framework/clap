@@ -23,6 +23,10 @@ class NearestLocator:
         self._ego_vehicle_distance_to_lane_head = 0 # distance from vehicle to lane start
         self._ego_vehicle_distance_to_lane_tail = 0 # distance from vehicle to lane end
 
+    @property
+    def dynamic_map(self):
+        return self._dynamic_map
+
     # ====== Data Receiver =======
 
     def receive_static_map(self, static_map):
@@ -74,7 +78,9 @@ class NearestLocator:
             len(self._static_map.lanes), int(self._static_map.in_junction), self._dynamic_map.mmap.ego_lane_index, self._dynamic_map.mmap.distance_to_junction)
 
     def add_obstacles(self):
-        self._dynamic_map.jmap.obstacles.clear()
+        self._dynamic_map.jmap.obstacles = []
+        if self._surrounding_object_list == None:
+            return
         for obj in self._surrounding_object_list.targets:
             obstacle = RoadObstacle()
             obstacle.uid = obj.uid

@@ -1,4 +1,4 @@
-from zzz_cognition_msgs.msg import LaneState, MapState, RoadObstacle
+from zzz_cognition_msgs.msg import LaneState, MapState, RoadObstacle, JunctionMapState
 
 def default_msg(msg_type):
     '''

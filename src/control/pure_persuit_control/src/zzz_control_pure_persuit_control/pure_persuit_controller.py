@@ -40,7 +40,7 @@ class PurePersuitController():
             return False
 
         last_loc = np.array([self.desired_trajectory.poses[-1].pose.position.x,self.desired_trajectory.poses[-1].pose.position.y]) 
-        ego_loc = np.array([self.ego_vehicle_pose.position.x,self.ego_vehicle_pose.position.y])
+        ego_loc = np.array([self.ego_state.pose.pose.position.x,self.ego_state.pose.pose.position.y])
         d = np.linalg.norm(ego_loc-last_loc)
 
         if d < short_distance_thres:

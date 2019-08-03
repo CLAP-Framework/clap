@@ -1,5 +1,5 @@
 <package format="2">
-  <name>zzz_planning_decision_decision_main</name>
+  <name>zzz_planning_decision_lane_models</name>
   <version>0.0.2</version>
   <description>
     The main decision part
