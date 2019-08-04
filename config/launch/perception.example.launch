@@ -36,4 +36,8 @@
         <param name="marker_lifetime" value="0.5"/>
         <param name="box_max_size" value="9999999"/>
     </node>
+    <!-- <node pkg="zzz_perception_detection_yolo_detector" type="yolo"
+          name="yolo_node" output="screen">
+          <env name="PYTHONPATH" value="$(env PYTHONPATH):/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages"/>
+    </node>  -->
 </launch>

@@ -17,13 +17,9 @@
           name="idm_lane_utility" output="screen" ns="/zzz/planning">
     </node>
     <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
-          name="safeguard" output="screen">
+          name="safeguard" output="screen" ns="/zzz/planning">
     </node>
-    <!-- <node pkg="zzz_control_pure_persuit_control" type="pure_persuit_controller_node"
-          name="pure_persuit_controller_node" output="screen">
-    </node> -->
-    <!-- <node pkg="zzz_perception_detection_yolo_detector" type="yolo"
-          name="yolo_node" output="screen">
-          <env name="PYTHONPATH" value="$(env PYTHONPATH):/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages"/>
-    </node>  -->
+    <node pkg="zzz_control_latlon_controllers" type="pure_persuit"
+          name="latlon_controller" output="screen" ns="/zzz/control">
+    </node>
 </launch>

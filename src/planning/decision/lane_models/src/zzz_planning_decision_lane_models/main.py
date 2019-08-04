@@ -3,7 +3,7 @@
 import rospy
 import numpy as np
 from zzz_planning_decision_lane_models.longitudinal import IDM
-from zzz_planning_decision_lane_models.latitudinal import LaneUtility
+from zzz_planning_decision_lane_models.lateral import LaneUtility
 from zzz_common.geometry import dense_polyline, nearest_point_to_polyline
 from zzz_planning_msgs.msg import DecisionTrajectory
 from nav_msgs.msg import Path

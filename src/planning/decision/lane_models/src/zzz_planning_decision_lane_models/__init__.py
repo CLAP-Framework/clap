@@ -1,1 +1,1 @@
-from .decision_main import MainDecision
+from .main import MainDecision
