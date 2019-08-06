@@ -33,7 +33,7 @@ Protocal is defined in its source module. Protocal are defined based on [common_
 # Coordinate system
 Global / Geographic: UTM WGS-84
 Local / Ground: East-North-Up (ENU)
-Body-fixed: Forward-Left-Up (FLU)
+Body-fixed: Forward-Left-Up (FLU), origin at rear axle center
 
 # Frames definition
 Each sensor has an attached frame, and the extrinsic calibration result should be published as tf.TransformStamped between the sensors. Then the frame attached at geometry center of ego vehicle is defined as `base_link`. The `odom` frame has a coordinate originated at the start point of the vehicle (both position and orientation is fixed to), and the `map` frame has a assigned origin and the axis should be aligned with the ground coordinate (ENU).

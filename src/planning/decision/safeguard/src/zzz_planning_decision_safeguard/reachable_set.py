@@ -5,6 +5,7 @@ import math
 
 from zzz_perception_msgs.msg import ObjectClass
 from zzz_driver_msgs.utils import get_speed, get_yaw
+from zzz_cognition_msgs.msg import MapState
 
 class ReachableSet(object):
 
@@ -28,7 +29,7 @@ class ReachableSet(object):
         nearest_idx = len(decision_trajectory_array)-1
         nearest_obstacle = None
 
-        if self.dynamic_map.in_junction or self.dynamic_map is None:
+        if self.dynamic_map.model == MapState.MODEL_JUNCTION_MAP or self.dynamic_map is None:
             for vehicle in self.vehicle_list:
                 pred_trajectory = self.pred_trajectory(vehicle)
                 collision_idx = self.intersection_between_trajectories(decision_trajectory_array,pred_trajectory)

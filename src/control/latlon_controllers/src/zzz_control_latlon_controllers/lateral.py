@@ -62,11 +62,6 @@ class PurePersuitLateralController():
 
         ego_x = ego_pose.position.x
         ego_y = ego_pose.position.y
-
-        # v_begin = vehicle_transform.location
-        # v_end = v_begin + carla.Location(x=math.cos(math.radians(vehicle_transform.rotation.yaw)),
-        #                                  y=math.sin(math.radians(vehicle_transform.rotation.yaw)))
-        # v_vec = np.array([v_end.x - v_begin.x, v_end.y - v_begin.y, 0.0])
         
         v_vec = np.array([math.cos(ego_yaw),
                           math.sin(ego_yaw),
@@ -78,6 +73,7 @@ class PurePersuitLateralController():
         w_vec = np.array([target_x-
                           ego_x, target_y -
                           ego_y, 0.0])
+
         _dot = math.acos(np.clip(np.dot(w_vec, v_vec) /
                          (np.linalg.norm(w_vec) * np.linalg.norm(v_vec)), -1.0, 1.0))
 
@@ -99,6 +95,7 @@ class PurePersuitLateralController():
 
         k = 1 # XXX: np.pi/180*50
         theta = theta * k
+        
         return theta
 
 

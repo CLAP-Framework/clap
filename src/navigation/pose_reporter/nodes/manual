@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import numpy as np
 import rospy
 import tf.transformations as tft
 import tf2_ros as tf2
@@ -73,24 +74,40 @@ class Node(object):
             self._tfupdate = False
         
         # Convert odometry to map frame
-        odom_pos = msg.pose.pose.position
-        odom_ori = msg.pose.pose.orientation
+        # TODO: Add convert coordinate to a common library
+        odom_pos  = msg.pose.pose.position
+        odom_ori  = msg.pose.pose.orientation
+        odom_vel  = msg.twist.twist.linear
+        odom_vang = msg.twist.twist.angular
+
         q_odom = [odom_ori.x, odom_ori.y, odom_ori.z, odom_ori.w]
         q_tf = [self._odom_rotation[0], self._odom_rotation[1], self._odom_rotation[2], self._odom_rotation[3]]
-        q_map = tft.quaternion_multiply(q_odom, q_tf)
+        R_tf = tft.quaternion_matrix(q_tf)[:3,:3]
+
+        map_pos = np.array([odom_pos.x, odom_pos.y, odom_pos.z]).dot(R_tf.T) + self._odom_translation
+        map_ori = tft.quaternion_multiply(q_odom, q_tf)
+        map_vec = np.array([odom_vel.x, odom_vel.y, odom_vel.z]).dot(R_tf.T)
+        map_ang = odom_vang
 
         state = RigidBodyStateStamped()
         state.header.stamp = rospy.Time.now()
         state.header.frame_id = "map"
-        state.state.pose.pose.position.x = odom_pos.x + self._odom_translation[0]
-        state.state.pose.pose.position.y = odom_pos.y + self._odom_translation[1]
-        state.state.pose.pose.position.z = odom_pos.z + self._odom_translation[2]
-        state.state.pose.pose.orientation.x = q_map[0]
-        state.state.pose.pose.orientation.y = q_map[1]
-        state.state.pose.pose.orientation.z = q_map[2]
-        state.state.pose.pose.orientation.w = q_map[3]
+        
+        state.state.pose.pose.position.x = map_pos[0]
+        state.state.pose.pose.position.y = map_pos[1]
+        state.state.pose.pose.position.z = map_pos[2]
+        state.state.pose.pose.orientation.x = map_ori[0]
+        state.state.pose.pose.orientation.y = map_ori[1]
+        state.state.pose.pose.orientation.z = map_ori[2]
+        state.state.pose.pose.orientation.w = map_ori[3]
+        state.state.twist.twist.linear.x = map_vec[0]
+        state.state.twist.twist.linear.y = map_vec[1]
+        state.state.twist.twist.linear.z = map_vec[2]
+        state.state.twist.twist.angular.x = map_ang.x
+        state.state.twist.twist.angular.y = map_ang.y
+        state.state.twist.twist.angular.z = map_ang.z
+        
         # TODO: Also assign covariance
-        # TODO: Calculate velocities and accelerations
         self._pose_publisher.publish(state)
 
     def create_map_odom_transform(self):

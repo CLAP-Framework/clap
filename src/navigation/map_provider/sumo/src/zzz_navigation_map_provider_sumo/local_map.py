@@ -93,7 +93,7 @@ class LocalMap(object):
         self._reference_lane_list.clear()
         for wp in reference_path.poses:
             # TODO: Takes too much time for processing
-            wp_map_x, wp_map_y = self.convert_to_map_XY(wp.pose.position.x, -wp.pose.position.y)
+            wp_map_x, wp_map_y = self.convert_to_map_XY(wp.pose.position.x, wp.pose.position.y)
 
             # Find the closest lane of the reference path points
             lanes = self._hdmap.getNeighboringLanes(wp_map_x, wp_map_y, self.lane_search_radius, includeJunctions=False)

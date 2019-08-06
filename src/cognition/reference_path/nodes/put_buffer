@@ -28,15 +28,19 @@ class Node(object):
 
         self._map_instance = PathBuffer()
 
-        self._input_map_subscriber = rospy.Subscriber(params.map_input_topic, MapState, self._map_instance.receive_static_map)
+        self._input_map_subscriber = rospy.Subscriber(params.map_input_topic, MapState, self.map_callback)
         self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.pose_callback)
         self._reference_path_subscriber = rospy.Subscriber(params.reference_path_topic, Path, self.reference_callback)
         self._output_map_publisher = rospy.Publisher(params.map_output_topic, MapState, queue_size=1)
-        
+
+    def map_callback(self, msg):
+        self._map_instance.receive_static_map(msg)
+        self._map_trigger.set()
+
     def reference_callback(self, msg):
         self._map_trigger.wait()
-        if self._map_instance.receive_reference_path(msg):
-            self._reference_path_trigger.set()
+        self._map_instance.receive_reference_path(msg)
+        self._reference_path_trigger.set()
         rospy.loginfo("[%s] Received reference path" % __module_name__)
 
     def pose_callback(self, msg):
@@ -45,8 +49,8 @@ class Node(object):
         self._reference_path_trigger.wait()
 
         new_static_map = self._map_instance.receive_ego_state(msg)
-        if new_static_map is not None:
-            self._output_map_publisher.publish(new_static_map)
+        rospy.logdebug("Path length: %d", len(new_static_map.jmap.reference_path.map_lane.central_path_points))
+        self._output_map_publisher.publish(new_static_map)
 
 if __name__ == "__main__":
 

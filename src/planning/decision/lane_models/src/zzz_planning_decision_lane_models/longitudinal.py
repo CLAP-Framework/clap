@@ -24,7 +24,7 @@ class IDM(object):
         if target_lane_index == -1:
             target_lane = self.dynamic_map.jmap.reference_path
 
-        for lane in self.dynamic_map.lanes:
+        for lane in self.dynamic_map.mmap.lanes:
             if lane.map_lane.index == target_lane_index:
                 target_lane = lane
 

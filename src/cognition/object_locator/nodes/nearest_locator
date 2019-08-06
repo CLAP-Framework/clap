@@ -20,7 +20,6 @@ class LocatorNode(object):
             map_input_topic="/zzz/navigation/local_static_map",
             map_output_topic="local_dynamic_map/map_with_objects",
             pose_topic = "/zzz/navigation/ego_pose",
-            reference_path_topic = "/zzz/navigation/reference_path",
             traffic_light_topic = "/zzz/perception/traffic_lights",
         )
 

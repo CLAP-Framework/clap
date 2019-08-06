@@ -26,6 +26,10 @@ class MainDecision(object):
         changing_lane_index, desired_speed = self.lateral_model_instance.lateral_decision(dynamic_map)
         rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
 
+        # TODO: Is this reasonable?
+        if len(self.dynamic_map.jmap.reference_path.map_lane.central_path_points) == 0:
+            return DecisionTrajectory() # Return null trajectory
+
         # get trajectory by target lane and desired speed
         trajectory = self.get_trajectory(changing_lane_index, desired_speed)
 
@@ -40,9 +44,9 @@ class MainDecision(object):
         ego_x = self.dynamic_map.ego_state.pose.pose.position.x
         ego_y = self.dynamic_map.ego_state.pose.pose.position.y
         lane = self.get_lane_by_index(changing_lane_index)
-        central_path = self.convert_path_to_ndarray(lane.central_path.poses)
+        central_path = self.convert_path_to_ndarray(lane.map_lane.central_path_points)
         
-        dense_centrol_path = dense_polyline(central_path,resolution)
+        dense_centrol_path = dense_polyline(central_path, resolution)
         nearest_dis, nearest_idx = nearest_point_to_polyline(ego_x, ego_y, dense_centrol_path)
         
         front_path = dense_centrol_path[nearest_idx:]
@@ -56,16 +60,17 @@ class MainDecision(object):
     def get_lane_by_index(self,lane_index):
 
         if lane_index == -1:
-            return self.dynamic_map.reference_path
+            return self.dynamic_map.jmap.reference_path
 
-        for lane in self.dynamic_map.lanes:
+        for lane in self.dynamic_map.mmap.lanes:
             if lane.index == lane_index:
                 return lane
 
         return None
 
+    # TODO(zyxin): Add these to zzz_navigation_msgs.utils
     def convert_path_to_ndarray(self, path):
-        point_list = [(pose.pose.position.x, pose.pose.position.y) for pose in path]
+        point_list = [(point.position.x, point.position.y) for point in path]
         return np.array(point_list)
 
     def convert_ndarray_to_pathmsg(self, path):

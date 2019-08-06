@@ -64,11 +64,4 @@ class PIDLongitudinalController():
             kd = 0
 
         calculate_value = np.clip((kp * _e) + (kd * _de) + (ki * _ie), -1.0, 1.0)
-        if calculate_value > 0:
-            thr = calculate_value
-            br = 0
-        else:
-            thr = 0
-            br = -calculate_value
-
-        return thr,br
+        return calculate_value
