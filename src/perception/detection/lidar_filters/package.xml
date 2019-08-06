@@ -1,6 +1,6 @@
 <package format="2">
   <name>zzz_perception_detection_lidar_filters</name>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <description>
     Implementation of object filters
   </description>
