@@ -1,0 +1,1 @@
+This package combine wheel encoder and IMU result into a simple odometry. Should act similar as `robot-localization` ROS package.

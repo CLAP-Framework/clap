@@ -1,0 +1,1 @@
+This package contains nodes to perform vehicle localization.

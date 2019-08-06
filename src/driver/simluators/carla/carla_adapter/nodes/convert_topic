@@ -6,14 +6,42 @@ import rospy
 from zzz_common.params import parse_private_args
 
 from zzz_navigation_msgs.msg import MapString
-from carla_msgs.msg import CarlaMapInfo
+from zzz_control_msgs.msg import ControlCommand
+from carla_msgs.msg import CarlaMapInfo, CarlaEgoVehicleControl
+from nav_msgs.msg import Path
 
 def convert_CarlaMapInfo(msg, pub):
+    assert type(msg) == CarlaMapInfo
     new_msg = MapString()
     new_msg.header = msg.header
     new_msg.map_type = MapString.MAP_OPENDRIVE
     new_msg.content = msg.opendrive
     pub.publish(new_msg)
+
+def convert_ControlCommand(msg, pub):
+    assert type(msg) == ControlCommand
+    new_msg = CarlaEgoVehicleControl()
+    new_msg.header = msg.header
+
+    new_msg.steer = -msg.steer # In Carla, right turning is positive
+    if msg.accel > 0:
+        new_msg.throttle = msg.accel
+    else:
+        new_msg.brake = -msg.accel
+
+    if msg.gear == ControlCommand.GEAR_PARKING or msg.parking_brake:
+        new_msg.hand_brake = 1
+    elif msg.gear == ControlCommand.GEAR_REVERSE:
+        new_msg.reverse = 1
+    elif msg.gear == ControlCommand.GEAR_DRIVE:
+        new_msg.manual_gear_shift = False
+    elif msg.gear > 0:
+        new_msg.gear = msg.gear
+        new_msg.manual_gear_shift = True
+
+    pub.publish(new_msg)
+
+# TODO: Convert Road objects
 
 if __name__ == "__main__":
     rospy.init_node("convert_topic")
@@ -31,6 +59,9 @@ if __name__ == "__main__":
     if params.msg_type == "CarlaMapInfo":
         pub = rospy.Publisher(params.output_topic, MapString, queue_size=1, latch=True)
         rospy.Subscriber(params.input_topic, CarlaMapInfo, convert_CarlaMapInfo, pub)
+    elif params.msg_type == "ControlCommand":
+        pub = rospy.Publisher(params.output_topic, CarlaEgoVehicleControl, queue_size=1, latch=True)
+        rospy.Subscriber(params.input_topic, ControlCommand, convert_ControlCommand, pub)
     else:
         rospy.logerr("Invalid input message type")
         sys.exit(-1)

@@ -5,7 +5,7 @@ import rospy
 import threading
 
 from zzz_common.params import parse_private_args
-from zzz_driver_msgs.msg import RigidBodyState
+from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import Map
 from zzz_cognition_msgs.msg import MapState
 from zzz_perception_msgs.msg import TrafficLightDetectionArray, TrackingBoxArray
@@ -16,17 +16,16 @@ class LocatorNode(object):
     def __init__(self):
 
         params = parse_private_args(
-            objects_topic = "/zzz/perception/tracked_objects",
+            objects_topic = "/zzz/perception/objects_tracked",
             map_input_topic="/zzz/navigation/local_static_map",
-            map_output_topic="/zzz/navigation/local_dynamic_map/map_with_objects",
-            pose_topic = "/zzz/perception/ego_pose",
-            reference_path_topic = "/zzz/navigation/reference_path",
+            map_output_topic="local_dynamic_map/map_with_objects",
+            pose_topic = "/zzz/navigation/ego_pose",
             traffic_light_topic = "/zzz/perception/traffic_lights",
         )
 
         self._map_instance = NearestLocator()
 
-        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyState, self.pose_callback)
+        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.pose_callback)
         self._surrounding_vehicle_subscriber = rospy.Subscriber(params.objects_topic, TrackingBoxArray, self._map_instance.receive_object_list)
         self._static_map_subscriber = rospy.Subscriber(params.map_input_topic, Map, self._map_instance.receive_static_map)
         self._dynamic_map_publisher = rospy.Publisher(params.map_output_topic, MapState, queue_size=1)
