@@ -9,6 +9,7 @@ from zzz_perception_detection_lidar_filters.transformers import ExtrinsicFilter
 class FilterNode():
     def __init__(self):
         params = parse_private_args(
+            # TODO: Rename "/zzz/perception/points_raw" to "/zzz/driver/points_raw"
             input_topic="points_raw",
             output_topic="points_transformed",
             target_frame="base_link"

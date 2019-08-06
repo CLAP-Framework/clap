@@ -38,10 +38,11 @@ uint8 BEHAVIOR_MOVING_LEFT = 3 # changing to its left lane or branch left
 uint8 BEHAVIOR_MOVING_RIGHT = 4 # changing to its right lane or branch right
 
 # This field is preserved to adapt to yield situation.
-# Yield situation includes left turn, right turn, sequencial stop sign, etc.
+# Yield situation includes left turn, right turn, sequencial stop sign, emergency vehicle, etc.
 # Yield means if your path conflict with the object's, you should wait for the object
 # to go through the conflict point.
 uint8 priority
-uint8 PRIORITY_NORMAL = 0
-uint8 PRIORITY_CAUTIOUS = 1 # You can move when this obstacle is far away
-uint8 PRIORITY_STOP = 2 # Should let this vehicle to go and then you can move
+uint8 PRIORITY_UNKNOWN = 0
+uint8 PRIORITY_NORMAL = 1
+uint8 PRIORITY_CAUTIOUS = 2 # You can move when this obstacle is far away
+uint8 PRIORITY_STOP = 3 # Should let this vehicle to go and then you can move

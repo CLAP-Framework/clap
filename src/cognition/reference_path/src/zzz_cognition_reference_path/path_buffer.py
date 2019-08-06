@@ -5,16 +5,16 @@ from collections import deque
 
 from zzz_cognition_msgs.msg import MapState
 from zzz_cognition_msgs.utils import default_msg
-from zzz_driver_msgs.msg import RigidBodyState
+from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import LanePoint
 from zzz_common.geometry import dist_from_point_to_polyline, nearest_point_to_polyline
 from nav_msgs.msg import Path
 
 class PathBuffer:
-    def __init__(self):
+    def __init__(self, buffer_size=200):
         self._dynamic_map = default_msg(MapState)
 
-        self._buffer_size = 200
+        self._buffer_size = buffer_size
         self._reference_path = deque(maxlen=20000)
         self._reference_path_buffer = deque(maxlen=self._buffer_size)
 
@@ -28,9 +28,13 @@ class PathBuffer:
         self._dynamic_map = map_input
 
     def receive_ego_state(self, state):
-        assert type(state) == RigidBodyState
+        assert type(state) == RigidBodyStateStamped
 
-        self._ego_vehicle_state = state
+        self._ego_vehicle_state = state.state
+
+        # TODO: Move return to another function
+        self.update_reference_path_buffer()
+        return self._dynamic_map
 
     def receive_reference_path(self, reference_path):
         # TODO: Define a custom reference_path?
@@ -38,7 +42,7 @@ class PathBuffer:
 
         self._reference_path.clear()
         for wp in reference_path.poses:
-            self._reference_path.append((wp.pose.position.x, -wp.pose.position.y))
+            self._reference_path.append((wp.pose.position.x, wp.pose.position.y))
 
     def update_reference_path_buffer(self):
         """
@@ -47,8 +51,8 @@ class PathBuffer:
 
         if self._reference_path_buffer:
             _, nearest_idx = nearest_point_to_polyline(
-                self._ego_vehicle_state.position.pose.x,
-                self._ego_vehicle_state.position.pose.y,
+                self._ego_vehicle_state.pose.pose.position.x,
+                self._ego_vehicle_state.pose.pose.position.y,
                 np.array(self._reference_path_buffer)
             )
             # Remove passed waypoints
@@ -58,7 +62,7 @@ class PathBuffer:
         # Choose points from reference path to buffer
         while self._reference_path and len(self._reference_path_buffer) < self._buffer_size:
             wp = self._reference_path.popleft()
-            self.lane_change_smoothen(wp)
+            self.lane_change_smoothen(wp) # Change this to a planning module
             self._reference_path_buffer.append(wp)
 
         # Put buffer into dynamic map
@@ -68,7 +72,7 @@ class PathBuffer:
             point.position.y = wp[1]
             self._dynamic_map.jmap.reference_path.map_lane.central_path_points.append(point)
         
-        self._dynamic_map.jmap.reference_path.index = -1
+        self._dynamic_map.jmap.reference_path.map_lane.index = -1
 
         # Calculate vehicles on the reference path
         front_vehicle = self.get_front_vehicle_on_reference_path()
@@ -78,7 +82,7 @@ class PathBuffer:
             self._dynamic_map.jmap.reference_path.have_front_vehicle = True
             self._dynamic_map.jmap.reference_path.front_vehicle = front_vehicle
 
-        self._dynamic_map.jmap.reference_path.speed_limit = 30
+        self._dynamic_map.jmap.reference_path.map_lane.speed_limit = 30
 
     def lane_change_smoothen(self, wp):
         """
