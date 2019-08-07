@@ -10,7 +10,7 @@ bool in_junction # = True
 # Target lane index at the end of the section.
 int8 target_lane_index # TODO(zyxin): Change to a list to support multiple lane turning
 
-# Lanes if it's in a structured road
+# Lanes if it's in a structured road, should be sorted by ascending index
 Lane[] lanes
 
 # Road area if in junction

@@ -95,7 +95,7 @@ class NearestLocator:
 
     def locate_ego_vehicle_in_lanes(self, lane_end_dist_thres=2, lane_dist_thres=5): 
         dist_list = np.array([dist_from_point_to_polyline(
-            self._ego_vehicle_state.pose.pose.x, self._ego_vehicle_state.pose.pose.y, lane)
+            self._ego_vehicle_state.pose.pose.position.x, self._ego_vehicle_state.pose.pose.position.y, lane)
             for lane in self._static_map_lane_path_array])  
         closest_lane = np.argmin(dist_list[:, 0])
 
@@ -120,21 +120,22 @@ class NearestLocator:
         lane_rear_vehicle_list = [[] for _ in self._static_map.lanes]
 
         # TODO: separate vehicle and other objects?
-        for vehicle_idx, vehicle in enumerate(self._surrounding_object_list):
-            dist_list = np.array([dist_from_point_to_polyline(vehicle.obstacle_pos_x, vehicle.obstacle_pos_y, lane)
-                for lane in self._static_map_lane_path_array])
-            dist_list = np.abs(dist_list)
-            closest_lane = np.argmin(dist_list[:, 0])
+        if self._surrounding_object_list is not None:
+            for vehicle_idx, vehicle in enumerate(self._surrounding_object_list):
+                dist_list = np.array([dist_from_point_to_polyline(vehicle.obstacle_pos_x, vehicle.obstacle_pos_y, lane)
+                    for lane in self._static_map_lane_path_array])
+                dist_list = np.abs(dist_list)
+                closest_lane = np.argmin(dist_list[:, 0])
 
-            # Determine if the vehicle is close to lane enough
-            if dist_list[closest_lane, 0] > lane_dist_thres:
-                continue 
-            if dist_list[closest_lane, 1] < self._ego_vehicle_distance_to_lane_head:
-                # The vehicle is behind if its distance to lane start is smaller
-                lane_rear_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,1]))
-            if dist_list[closest_lane, 2] < self._ego_vehicle_distance_to_lane_tail:
-                # The vehicle is ahead if its distance to lane end is smaller
-                lane_front_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,2]))
+                # Determine if the vehicle is close to lane enough
+                if dist_list[closest_lane, 0] > lane_dist_thres:
+                    continue 
+                if dist_list[closest_lane, 1] < self._ego_vehicle_distance_to_lane_head:
+                    # The vehicle is behind if its distance to lane start is smaller
+                    lane_rear_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,1]))
+                if dist_list[closest_lane, 2] < self._ego_vehicle_distance_to_lane_tail:
+                    # The vehicle is ahead if its distance to lane end is smaller
+                    lane_front_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,2]))
         
         for lane_id in range(len(self._static_map.lanes)):
             front_vehicles = np.array(lane_front_vehicle_list[lane_id])
