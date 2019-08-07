@@ -3,31 +3,29 @@ session_name: 'carla'
 windows:
 - window_name: ros
   layout: main-vertical
-  start_directory: /home/jacobz/Carla/ros-bridge
+  start_directory: /home/jacobz/carla_server/bridge
   shell_command_before:
-    - source /opt/ros/melodic/setup.bash
-  panes:
-  - null # workspace
-  - roscore
-  - shell_command:
+    - source /opt/env-ros.sh
     - source devel/setup.bash
-    - export PYTHONPATH=$PYTHONPATH:/home/jacobz/Carla/PythonAPI/carla:/home/jacobz/Carla/PythonAPI/carla/dist/carla-0.9.6-py2.7-linux-x86_64.egg
-    - sleep 3s
-    - roslaunch ../bridge.launch
+    - export PYTHONPATH=$PYTHONPATH:/home/jacobz/carla_server/python-api/carla:/home/jacobz/carla_server/python-api/carla/dist/carla-0.9.6-py2.7-linux-x86_64.egg
+  panes:
+  # [Note] Run roscore first
+  - null # workspace
+  - sleep 8s && rosrun carla_waypoint_publisher carla_waypoint_publisher.py role_name:=ego_vehicle __name:=carla_waypoint_publisher
+  - sleep 4s && roslaunch ../bridge.launch
 - window_name: carla
-  focus: 'true'
   layout: main-vertical
-  start_directory: /home/jacobz/Carla/PythonAPI
+  start_directory: /home/jacobz/carla_server/python-api
   shell_command_before:
-    - source /opt/anaconda3/etc/profile.d/conda.sh
+    - source /opt/env-anaconda.sh
     - conda activate carla
   panes:
   - null # workspace
-  - docker run -p 2000-2002:2000-2002 --gpus all carlasim/carla:0.9.6
-  - shell_command:
-    - sleep 4s
-    - python ../spawn_agent.py
+  # [Note] Create container first: docker create -p 2000-2002:2000-2002 --gpus all --name dcarla carlasim/carla /bin/bash CarlaUE4.sh
+  - docker start -a dcarla
+  - sleep 6s && python ../spawn_agent.py
 - window_name: ws
-  start_directory: /home/jacobz/Carla
+  focus: 'true'
+  start_directory: /home/jacobz/carla_server
   panes:
-  - sleep 3s
+  - sleep 8s

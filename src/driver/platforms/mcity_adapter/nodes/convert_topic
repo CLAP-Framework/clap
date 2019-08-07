@@ -1,0 +1,107 @@
+#!/usr/bin/env python
+
+import sys
+import rospy
+import tf.transformations as tft
+
+from zzz_common.params import parse_private_args
+from zzz_control_msgs.msg import ControlCommand
+from zzz_perception_msgs.msg import TrackingBoxArray, TrackingBox
+from zzz_driver_actuators_dataspeed_adapter.mkz import \
+    to_mkz_throttle, to_mkz_brake, to_mkz_steering, to_mkz_gear, to_mkz_turn_signal
+from zzz_driver_platforms_mcity_adapter.msg import BSMVec, Control
+
+control_counter = 0
+
+def convert_BSMVec(msg, pub):
+    assert type(msg) == BSMVec
+    
+    new_msg = TrackingBoxArray()
+    new_msg.header.stamp = rospy.Time.from_sec(msg.timestamp)
+    for obj in msg.bsmVec:
+        new_obj = TrackingBox()
+        new_obj.uid = obj.id
+        new_obj.bbox.dimension.length_x = obj.size_x
+        new_obj.bbox.dimension.length_y = obj.size_y
+        new_obj.bbox.dimension.length_z = obj.size_z
+
+        # XXX: Use xyz or use gps coordinate?
+        new_obj.bbox.pose.pose.position.x = obj.x
+        new_obj.bbox.pose.pose.position.y = obj.y
+        new_obj.bbox.pose.pose.position.z = obj.z
+
+        q = tft.quaternion_from_euler(0, 0, msg.heading)
+        new_obj.bbox.pose.pose.orientation.x = q[0]
+        new_obj.bbox.pose.pose.orientation.y = q[1]
+        new_obj.bbox.pose.pose.orientation.z = q[2]
+        new_obj.bbox.pose.pose.orientation.w = q[3]
+        new_obj.twist.twist.x = obj.speed_x
+        new_obj.twist.twist.y = obj.speed_y
+
+        new_msg.targets.append(new_obj)
+        
+    pub.publish(new_msg)
+
+def convert_ControlCommand(msg, args):
+    assert type(msg) == ControlCommand
+    pub, map_cmd, map_act = args
+    global control_counter
+
+    new_msg = Control()
+    new_msg.timestamp = msg.header.stamp.to_sec()
+    new_msg.count = control_counter
+    control_counter += 1
+
+    cmd = to_mkz_throttle(msg, map_cmd['throttle'], map_act['throttle'])
+    if cmd is not None:
+        new_msg.throttle_cmd = cmd.pedal_cmd
+    else:
+        cmd = to_mkz_brake(msg, map_cmd['brake'], map_act['brake'])
+        new_msg.brake_cmd = cmd.pedal_cmd
+
+    new_msg.steering_cmd = to_mkz_steering(msg, map_cmd['steer'], map_act['steer']).steering_wheel_angle_cmd
+    new_msg.gear_cmd = to_mkz_gear(msg).gear
+
+    pub.publish(new_msg)
+
+if __name__ == "__main__":
+    rospy.init_node("convert_topic")
+
+    params = parse_private_args(
+        input_topic="",
+        output_topic="",
+        msg_type="",
+        throttle_map_command=[0,1],
+        throttle_map_actuator=[0,1],
+        brake_map_command=[0,1],
+        brake_map_actuator=[0,1],
+        steer_map_command=[-1,1],
+        steer_map_actuator=[-1,1],
+    )
+
+    map_cmd = dict(
+        throttle=params.throttle_map_command,
+        brake=params.brake_map_command,
+        steer=params.steer_map_command
+    )
+    map_act = dict(
+        throttle=params.throttle_map_actuator,
+        brake=params.brake_map_actuator,
+        steer=params.steer_map_actuator
+    )
+
+    if not (params.input_topic and params.output_topic and params.msg_type):
+        rospy.logerr("Not enought parameters!")
+        sys.exit(-1)
+
+    if params.msg_type == "BSM":
+        pub = rospy.Publisher(params.output_topic, TrackingBoxArray, queue_size=1, latch=True)
+        rospy.Subscriber(params.input_topic, BSMVec, convert_BSMVec, pub)
+    elif params.msg_type == "ControlCommand":
+        pub = rospy.Publisher(params.output_topic, Control, queue_size=1, latch=True)
+        rospy.Subscriber(params.input_topic, ControlCommand, convert_ControlCommand, (pub, map_cmd, map_act))
+    else:
+        rospy.logerr("Invalid input message type")
+        sys.exit(-1)
+    
+    rospy.spin()

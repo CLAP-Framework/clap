@@ -33,6 +33,12 @@ default_sensor_configuration = {
             'roll': 0.0, 'pitch': 0.0, 'yaw': 45.0,
             'image_size_x': 800, 'image_size_y': 600, 'fov': 100
         },
+        'Sky': {
+            'type': 'sensor.camera.rgb',
+            'x': 0, 'y': 0, 'z': 50,
+            'roll': 0, 'pitch': -90.0, 'yaw': 0,
+            'image_size_x': 800, 'image_size_y': 600, 'fov': 100
+        },
         'Lidar': {
             'type': 'sensor.lidar.ray_cast',
             'x': 0.7, 'y': -0.4, 'z': 1.60,

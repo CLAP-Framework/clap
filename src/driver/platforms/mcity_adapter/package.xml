@@ -1,0 +1,21 @@
+<package format="2">
+  <name>zzz_driver_platforms_mcity_adapter</name>
+  <version>0.0.3</version>
+  <description>
+    Adapt input and output on MCity OpenCAV platform
+  </description>
+  <license>BSD</license>
+  <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>
+  <author email="zyxin@umich.edu">Yuanxin Zhong</author>
+  <author email="xushao@umich.edu">Shaobing Xu</author>
+
+  <url type="website">https://github.com/cmpute/zzz</url>
+  <url type="repository">https://github.com/cmpute/zzz</url>
+  <url type="bugtracker">https://github.com/cmpute/zzz/issues</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>zzz_driver_actuators_dataspeed_adapter</exec_depend>
+  <export></export>
+</package>

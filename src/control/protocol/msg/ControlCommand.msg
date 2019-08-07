@@ -5,7 +5,7 @@ Header header
 # TODO(zyxin): should these params be percentage or physical values?
 # Level of accelaration, unit in m/s^2, throttle is positive, braking is negative
 float32 accel
-# Level of steering, unit in radian, left turning is positive
+# Level of steering on front wheel, unit in radian, left turning is positive
 float32 steer
 
 # Gear shift, positive means manual transmission, negative means automatic transmission
