@@ -6,7 +6,7 @@ from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import Map, Lane
 from zzz_navigation_msgs.utils import get_lane_array
 from zzz_cognition_msgs.msg import MapState, LaneState, RoadObstacle
-from zzz_cognition_msgs.utils import default_msg as cognition_default
+from zzz_cognition_msgs.utils import convert_tracking_box, default_msg as cognition_default
 from zzz_perception_msgs.msg import TrackingBoxArray, TrafficLightDetection, TrafficLightDetectionArray
 from zzz_common.geometry import dist_from_point_to_polyline, nearest_point_to_polyline
 
@@ -82,14 +82,7 @@ class NearestLocator:
         if self._surrounding_object_list == None:
             return
         for obj in self._surrounding_object_list.targets:
-            obstacle = RoadObstacle()
-            obstacle.uid = obj.uid
-            obstacle.state.pose = obj.bbox.pose
-            obstacle.state.twist = obj.twist
-            obstacle.state.accel = obj.accel
-            obstacle.cls = obj.classes[0]
-            # TODO: Convert obstacle shape
-            self._dynamic_map.jmap.obstacles.append(obstacle)
+            self._dynamic_map.jmap.obstacles.append(convert_tracking_box(obj))
 
     # ========= For in lane =========
 
@@ -143,7 +136,7 @@ class NearestLocator:
                 # Select vehicle ahead with maximum distance to lane start as front vehicle
                 front_vehicle_idx = int(front_vehicles[np.argmax(front_vehicles[:,1]), 0])
                 self._dynamic_map.mmap.lanes[lane_id].have_front_vehicle = True
-                self._dynamic_map.mmap.lanes[lane_id].front_vehicle = self._surrounding_object_list[front_vehicle_idx]
+                self._dynamic_map.mmap.lanes[lane_id].front_vehicle = convert_tracking_box(self._surrounding_object_list.targets[front_vehicle_idx])
                 rospy.logdebug("Lane index: %d, Front vehicle id: %d", lane_id, self._dynamic_map.mmap.lanes[lane_id].front_vehicle.uid)                
             else:
                 self._dynamic_map.mmap.lanes[lane_id].have_front_vehicle = False
@@ -153,7 +146,7 @@ class NearestLocator:
                 # Select vehicle behine with maximum distance to lane start as rear vehicle
                 rear_vehicle_idx  = int(rear_vehicles [np.argmax(rear_vehicles[:,1]), 0])
                 self._dynamic_map.mmap.lanes[lane_id].have_rear_vehicle = True
-                self._dynamic_map.mmap.lanes[lane_id].rear_vehicle  = self._surrounding_object_list[rear_vehicle_idx]
+                self._dynamic_map.mmap.lanes[lane_id].rear_vehicle = convert_tracking_box(self._surrounding_object_list.targets[rear_vehicle_idx])
                 rospy.logdebug("Lane index: %d, Rear vehicle id: %d", lane_id, self._dynamic_map.mmap.lanes[lane_id].rear_vehicle.uid) 
             else:
                 self._dynamic_map.mmap.lanes[lane_id].have_rear_vehicle = False
