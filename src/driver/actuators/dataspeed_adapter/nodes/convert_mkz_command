@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+
+import sys
+import rospy
+
+from zzz_common.params import parse_private_args
+from zzz_control_msgs.msg import ControlCommand, AuxiliaryCommand
+from zzz_driver_actuators_dataspeed_adapter.mkz import \
+    to_mkz_throttle, to_mkz_brake, to_mkz_steering, to_mkz_gear, to_mkz_turn_signal
+from dbw_mkz_msgs.msg import ThrottleCmd, BrakeCmd, SteeringCmd, GearCmd, TurnSignalCmd
+
+def convert_ControlCommand(msg, args):
+    assert type(msg) == ControlCommand
+    pubs, map_cmd, map_act = args
+
+    cmd = to_mkz_throttle(msg, map_cmd['throttle'], map_act['throttle'])
+    if cmd is not None:
+        pubs[0].publish(cmd)
+    else:
+        cmd = to_mkz_brake(msg, map_cmd['brake'], map_act['brake'])
+        pubs[1].publish(cmd)
+    
+    cmd = to_mkz_steering(msg, map_cmd['steer'], map_act['steer'])
+    pubs[2].publish(cmd)
+
+    cmd = to_mkz_gear(msg)
+    pubs[3].publish(cmd)
+
+def convert_AuxiliaryCommand(msg, pubs):
+    assert type(msg) == AuxiliaryCommand
+
+    cmd = to_mkz_turn_signal(msg)
+    pubs[4].publish(cmd)
+
+if __name__ == "__main__":
+    rospy.init_node("convert_command")
+
+    # See https://bitbucket.org/DataspeedInc/dbw_mkz_ros/src/default/dbw_mkz_can/src/DbwNode.cpp
+    params = parse_private_args(
+        input_control_topic="/zzz/control/command",
+        input_auxiliary_topic="/zzz/control/aux_command",
+        output_throttle_topic="throttle_cmd",
+        output_brake_topic="brake_cmd",
+        output_steering_topic="steering_cmd",
+        output_gear_topic="gear_cmd",
+        output_turn_signal_topic="turn_signal_cmd",
+        throttle_map_command=[0,1],
+        throttle_map_actuator=[0,1],
+        brake_map_command=[0,1],
+        brake_map_actuator=[0,1],
+        steer_map_command=[-1,1],
+        steer_map_actuator=[-1,1],
+    )
+
+    map_cmd = dict(
+        throttle=params.throttle_map_command,
+        brake=params.brake_map_command,
+        steer=params.steer_map_command
+    )
+    map_act = dict(
+        throttle=params.throttle_map_actuator,
+        brake=params.brake_map_actuator,
+        steer=params.steer_map_actuator
+    )
+
+    pubs = [
+        rospy.Publisher(params.output_throttle_topic, ThrottleCmd, queue_size=1, latch=True),
+        rospy.Publisher(params.output_brake_topic, BrakeCmd, queue_size=1, latch=True),
+        rospy.Publisher(params.output_steering_topic, SteeringCmd, queue_size=1, latch=True),
+        rospy.Publisher(params.output_gear_topic, GearCmd, queue_size=1, latch=True),
+        rospy.Publisher(params.output_turn_signal_topic, TurnSignalCmd, queue_size=1, latch=True)
+    ]
+    rospy.Subscriber(params.input_control_topic, ControlCommand, convert_ControlCommand, (pubs, map_cmd, map_act))
+    rospy.Subscriber(params.input_auxiliary_topic, AuxiliaryCommand, convert_ControlCommand, (pubs, map_cmd, map_act))
+    
+    rospy.spin()
