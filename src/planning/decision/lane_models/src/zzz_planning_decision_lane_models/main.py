@@ -63,7 +63,7 @@ class MainDecision(object):
             return self.dynamic_map.jmap.reference_path
 
         for lane in self.dynamic_map.mmap.lanes:
-            if lane.index == lane_index:
+            if lane.map_lane.index == lane_index:
                 return lane
 
         return None

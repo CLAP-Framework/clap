@@ -17,7 +17,7 @@ class LaneUtility(object):
         self.dynamic_map = dynamic_map
 
         # Following reference path in junction
-        if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or len(dynamic_map.mmap.lanes) < 2 or dynamic_map.mmap.target_lane_index == -1:
+        if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or dynamic_map.mmap.target_lane_index == -1:
             return -1, self.longitudinal_model_instance.IDM_speed(-1)
 
         if dynamic_map.distance_to_next_lane < close_to_junction:
@@ -68,8 +68,8 @@ class LaneUtility(object):
         exit_lane_index = self.dynamic_map.mmap.target_lane_index
         distance_to_end = self.dynamic_map.mmap.distance_to_junction
         # XXX: Change 260 to a adjustable parameter?
-        utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(260-distance_to_end))
-
+        utility = available_speed # + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(260-distance_to_end))
+        # FIXME: Should consider the exit here
         return utility
 
     def lane_change_safe(self, ego_lane_index, target_index):
@@ -85,7 +85,7 @@ class LaneUtility(object):
                                          self.dynamic_map.ego_state.pose.pose.position.y])
 
         for lane in self.dynamic_map.mmap.lanes:
-            if lane.index == target_index:
+            if lane.map_lane.index == target_index:
                 if lane.have_front_vehicle:
                     front_vehicle = lane.front_vehicle
                 if lane.have_rear_vehicle:
