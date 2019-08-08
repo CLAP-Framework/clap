@@ -86,7 +86,7 @@ class NearestLocator:
             obstacle.uid = obj.uid
             obstacle.state.pose = obj.bbox.pose
             obstacle.state.twist = obj.twist
-            obstacle.state.acces = obj.accel
+            obstacle.state.accel = obj.accel
             obstacle.cls = obj.classes[0]
             # TODO: Convert obstacle shape
             self._dynamic_map.jmap.obstacles.append(obstacle)
@@ -120,8 +120,8 @@ class NearestLocator:
 
         # TODO: separate vehicle and other objects?
         if self._surrounding_object_list is not None:
-            for vehicle_idx, vehicle in enumerate(self._surrounding_object_list):
-                dist_list = np.array([dist_from_point_to_polyline(vehicle.obstacle_pos_x, vehicle.obstacle_pos_y, lane)
+            for vehicle_idx, vehicle in enumerate(self._surrounding_object_list.targets):
+                dist_list = np.array([dist_from_point_to_polyline(vehicle.bbox.pose.pose.position.x, vehicle.bbox.pose.pose.position.y, lane)
                     for lane in self._static_map_lane_path_array])
                 dist_list = np.abs(dist_list)
                 closest_lane = np.argmin(dist_list[:, 0])
