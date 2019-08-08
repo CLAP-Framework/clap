@@ -20,8 +20,8 @@ class LaneUtility(object):
         if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or len(dynamic_map.mmap.lanes) < 2 or dynamic_map.mmap.target_lane_index == -1:
             return -1, self.longitudinal_model_instance.IDM_speed(-1)
 
-        if dynamic_map.distance_to_next_lane < close_to_junction:
-            return -1, self.longitudinal_model_instance.IDM_speed(-1)
+        # if dynamic_map.distance_to_next_lane < close_to_junction:
+        #     return -1, self.longitudinal_model_instance.IDM_speed(-1)
 
         # Case if cannot locate ego vehicle correctly
         if dynamic_map.mmap.ego_lane_index < 0 or dynamic_map.mmap.ego_lane_index > len(dynamic_map.mmap.lanes)-1:

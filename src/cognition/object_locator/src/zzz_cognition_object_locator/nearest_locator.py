@@ -98,7 +98,6 @@ class NearestLocator:
             self._ego_vehicle_state.pose.pose.position.x, self._ego_vehicle_state.pose.pose.position.y, lane)
             for lane in self._static_map_lane_path_array])  
         closest_lane = np.argmin(dist_list[:, 0])
-
         if dist_list[closest_lane, 0] > lane_dist_thres:
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             return

@@ -27,8 +27,8 @@ class MainDecision(object):
         rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
 
         # TODO: Is this reasonable?
-        if len(self.dynamic_map.jmap.reference_path.map_lane.central_path_points) == 0:
-            return DecisionTrajectory() # Return null trajectory
+        # if len(self.dynamic_map.jmap.reference_path.map_lane.central_path_points) == 0:
+        #     return DecisionTrajectory() # Return null trajectory
 
         # get trajectory by target lane and desired speed
         trajectory = self.get_trajectory(changing_lane_index, desired_speed)

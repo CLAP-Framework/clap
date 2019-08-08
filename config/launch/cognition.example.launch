@@ -4,7 +4,7 @@
         <param name="map_origin" value="[49,8,0]"/>
         <param name="odom_input_topic" value="/carla/ego_vehicle/odometry"/>
     </node>
-    <node pkg="zzz_navigation_map_provider_sumo" type="local_map_generator"
+    <node pkg="zzz_driver_simulators_carla_challenge" type="generate"
           name="static_map_builder" output="screen" ns="/zzz/navigation">
     </node>
     <node pkg="zzz_cognition_object_locator" type="nearest_locator"
@@ -12,7 +12,7 @@
     </node>
     <node pkg="zzz_cognition_reference_path" type="put_buffer"
           name="put_buffer" output="screen" ns="/zzz/cognition">
-        <param name="reference_path_topic" value="/carla/ego_vehicle/waypoints"/>
+        <param name="reference_path_topic" value="/zzz/navigation/reference_path"/> 
     </node>
     <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
           name="idm_lane_utility" output="screen" ns="/zzz/planning">
@@ -23,7 +23,7 @@
     <node pkg="zzz_control_latlon_controllers" type="pure_persuit"
           name="latlon_controller" output="screen" ns="/zzz/control">
     </node>
-
+   
     <!-- Command converter -->
     <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_command" output="screen">
         <param name="input_topic" value="/zzz/control/command" />
@@ -32,7 +32,7 @@
     </node>
 
     <!-- Carla viewer -->
-    <node pkg="image_view" type="image_view" name="birds_eye_view">
+    <!-- <node pkg="image_view" type="image_view" name="birds_eye_view">
         <remap from="image" to="/carla/ego_vehicle/camera/rgb/Sky/image_color" />
-    </node>
+    </node> -->
 </launch>
