@@ -20,8 +20,8 @@ class NearestLocator:
         self._ego_vehicle_state = None
         self._traffic_light_detection = None
         
-        self._ego_vehicle_distance_to_lane_head = 0 # distance from vehicle to lane start
-        self._ego_vehicle_distance_to_lane_tail = 0 # distance from vehicle to lane end
+        self._ego_vehicle_distance_to_lane_head = [] # distance from vehicle to lane start
+        self._ego_vehicle_distance_to_lane_tail = [] # distance from vehicle to lane end
 
     @property
     def dynamic_map(self):
@@ -95,17 +95,17 @@ class NearestLocator:
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             return
 
-        self._ego_vehicle_distance_to_lane_head = dist_list[closest_lane, 1]
-        self._ego_vehicle_distance_to_lane_tail = dist_list[closest_lane, 2]
+        self._ego_vehicle_distance_to_lane_head = dist_list[:, 1]
+        self._ego_vehicle_distance_to_lane_tail = dist_list[:, 2]
         
-        if self._ego_vehicle_distance_to_lane_tail <= lane_end_dist_thres:
+        if self._ego_vehicle_distance_to_lane_tail[closest_lane] <= lane_end_dist_thres:
             # Drive into junction, wait until next map # TODO: change the condition
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             return
         else:
             self._dynamic_map.model = MapState.MODEL_MULTILANE_MAP
             self._dynamic_map.mmap.ego_lane_index = self._static_map.lanes[closest_lane].index
-            self._dynamic_map.mmap.distance_to_junction = self._ego_vehicle_distance_to_lane_tail
+            self._dynamic_map.mmap.distance_to_junction = self._ego_vehicle_distance_to_lane_tail[closest_lane]
 
     def locate_surrounding_vehicle_in_lanes(self, lane_dist_thres=2):
         lane_front_vehicle_list = [[] for _ in self._static_map.lanes]
@@ -122,10 +122,10 @@ class NearestLocator:
                 # Determine if the vehicle is close to lane enough
                 if dist_list[closest_lane, 0] > lane_dist_thres:
                     continue 
-                if dist_list[closest_lane, 1] < self._ego_vehicle_distance_to_lane_head:
+                if dist_list[closest_lane, 1] < self._ego_vehicle_distance_to_lane_head[closest_lane]:
                     # The vehicle is behind if its distance to lane start is smaller
                     lane_rear_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,1]))
-                if dist_list[closest_lane, 2] < self._ego_vehicle_distance_to_lane_tail:
+                if dist_list[closest_lane, 2] < self._ego_vehicle_distance_to_lane_tail[closest_lane]:
                     # The vehicle is ahead if its distance to lane end is smaller
                     lane_front_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,2]))
         
