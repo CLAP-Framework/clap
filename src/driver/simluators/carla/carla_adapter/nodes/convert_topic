@@ -61,7 +61,7 @@ def convert_VehicleStatus(msg, chassis_pub, control_pub):
     control_pub.publish(control_msg)
 
 def convert_ObjectArray(msg, pub):
-    assert type(pub) == ObjectArray
+    assert type(msg) == ObjectArray
 
     new_msg = TrackingBoxArray()
     new_msg.header = msg.header
@@ -72,7 +72,11 @@ def convert_ObjectArray(msg, pub):
         new_obj.accel.accel = target.accel
         new_obj.relative = False
 
-        # Convert classification
+        assert target.shape.type == 1 # SolidPrimitive.BOX
+        new_obj.bbox.dimension.length_x, new_obj.bbox.dimension.length_y,\
+            new_obj.bbox.dimension.length_z = target.shape.dimensions
+
+        # Convert classification, XXX: Actually carla didn't provide object property now
         tclass = ObjectClass()
         tclass.score = target.classification_certainty
         if target.classification == Object.CLASSIFICATION_UNKNOWN or target.classification == Object.CLASSIFICATION_UNKNOWN_SMALL\
@@ -95,8 +99,9 @@ def convert_ObjectArray(msg, pub):
         else:
             raise ValueError("Unrecognized object class")
         new_obj.classes.append(tclass)
+        new_obj.uid = target.id
 
-        new_msg.targets.append(new_msg)
+        new_msg.targets.append(new_obj)
     pub.publish(new_msg)
 
 if __name__ == "__main__":

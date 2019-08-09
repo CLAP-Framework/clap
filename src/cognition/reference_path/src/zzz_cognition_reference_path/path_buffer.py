@@ -126,8 +126,8 @@ class PathBuffer:
                 continue
 
             d = np.linalg.norm([
-                vehicle.state.pose.pose.position.x - self._dynamic_map.ego_state.pose.pose.x,
-                vehicle.state.pose.pose.position.y - self._dynamic_map.ego_state.pose.pose.y])
+                vehicle.state.pose.pose.position.x - self._dynamic_map.ego_state.pose.pose.position.x,
+                vehicle.state.pose.pose.position.y - self._dynamic_map.ego_state.pose.pose.position.y])
 
             if d < nearest_dis:
                 front_vehicle = vehicle

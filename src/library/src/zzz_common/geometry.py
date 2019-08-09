@@ -20,6 +20,7 @@ def nearest_point_to_polyline(x0, y0, line):
     Return: distance_to_line, the_index_of_nearest_point
     """
 
+    assert len(line) > 0
     dist_pc = npl.norm(line - [x0, y0], axis=1) # dist from point (x0, y0) to line points
     idx_pc = np.argmin(dist_pc) # index of closet point
 

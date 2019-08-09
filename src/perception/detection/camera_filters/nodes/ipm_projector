@@ -34,9 +34,9 @@ def IPMNode(class):
             
             if self.output_3d:
                 newdet = DetectionBox()
-                newdet.bbox.pose.pose.x = det.bbox.u
-                newdet.bbox.pose.pose.y = det.bbox.v
-                newdet.bbox.pose.pose.z = self._default_z
+                newdet.bbox.pose.pose.position.x = det.bbox.u
+                newdet.bbox.pose.pose.position.y = det.bbox.v
+                newdet.bbox.pose.pose.position.z = self._default_z
                 
                 # FIXME: Distinguish input by projection type
                 newdet.bbox.dimension.length_x = det.bbox.dimension.length_x

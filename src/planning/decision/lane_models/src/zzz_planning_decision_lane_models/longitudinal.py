@@ -60,7 +60,7 @@ class IDM(object):
                 lane.front_vehicle.state.pose.pose.position.x,
                 lane.front_vehicle.state.pose.pose.position.y
             ])
-            v_f = lane.front_vehicle.obstacle_speed
+            v_f = get_speed(lane.front_vehicle.state)
             dv = v - v_f
             g = np.linalg.norm(f_v_location - ego_vehicle_location)
             g1 = g0 + T*v + v*dv/(2*np.sqrt(a*b))
