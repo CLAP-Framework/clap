@@ -44,7 +44,7 @@ class IDM(object):
                                          self.dynamic_map.ego_state.pose.pose.position.y])
 
         v = get_speed(self.dynamic_map.ego_state)
-        v0 = 30 / 3.6 # TODO: lane.speed_limit/3.6
+        v0 = 50 / 3.6 # TODO: lane.speed_limit/3.6 FIXME: CARLA CHALLENGE
         if v < 5:
             a = self.a + (5 - v)/5*2
         else:

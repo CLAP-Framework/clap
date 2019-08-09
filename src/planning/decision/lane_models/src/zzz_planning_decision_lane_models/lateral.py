@@ -68,8 +68,9 @@ class LaneUtility(object):
         exit_lane_index = self.dynamic_map.mmap.target_lane_index
         distance_to_end = self.dynamic_map.mmap.distance_to_junction
         # XXX: Change 260 to a adjustable parameter?
-        utility = available_speed # + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(260-distance_to_end))
-        # FIXME: Should consider the exit here
+        utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1)*1.5
+        # + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(260-distance_to_end))
+        # FIXME: Adjust for roundabout
         return utility
 
     def lane_change_safe(self, ego_lane_index, target_index):
@@ -95,6 +96,7 @@ class LaneUtility(object):
         ego_v = get_speed(self.dynamic_map.ego_state)
 
         if front_vehicle is None:
+            d_front = -1
             front_safe = True
         else:
             front_vehicle_location = np.array([
@@ -109,6 +111,7 @@ class LaneUtility(object):
 
         if rear_vehicle is None:
             rear_safe = True
+            d_rear = -1
         else:
             rear_vehicle_location = np.array([
                 rear_vehicle.state.pose.pose.position.x,
@@ -119,6 +122,7 @@ class LaneUtility(object):
             if d_rear > max(10 + 3*(rear_v-ego_v), 10):
                 rear_safe = True
 
+        rospy.logdebug("ego_lane = %d, target_lane = %d, front_d = %f, rear_d = %f",ego_lane_index, target_index, d_front, d_rear)
         if front_safe and rear_safe:
             return True
             

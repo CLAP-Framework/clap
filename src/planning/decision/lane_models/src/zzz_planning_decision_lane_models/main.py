@@ -24,6 +24,8 @@ class MainDecision(object):
         self.dynamic_map = dynamic_map
 
         changing_lane_index, desired_speed = self.lateral_model_instance.lateral_decision(dynamic_map)
+        if desired_speed < 0:
+            desired_speed = 0
         rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
 
         # TODO: Is this reasonable?
@@ -52,7 +54,7 @@ class MainDecision(object):
         front_path = dense_centrol_path[nearest_idx:]
         # correct if ego vehicle is away from target trajectory
         # if nearest_dis > rectify_thres:
-            
+
         dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path, axis=0), axis = 1))
         trajectory = front_path[:np.searchsorted(dis_to_ego, desired_speed*time_ahead+distance_ahead)-1]
         return trajectory

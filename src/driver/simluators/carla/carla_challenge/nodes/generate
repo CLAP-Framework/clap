@@ -85,7 +85,8 @@ def remove_non_traffic_circle_agents(world, verbose=False):
 
     for vehicle in vehicle_list:
         dist_from_origin = vehicle.get_location().distance(circle_center)
-        if dist_from_origin > dist_range:
+        
+        if dist_from_origin > dist_range or vehicle.get_location().x<-60:
             vehicle.destroy()
 
 ##########

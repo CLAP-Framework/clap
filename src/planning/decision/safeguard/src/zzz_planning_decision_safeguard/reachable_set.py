@@ -28,8 +28,9 @@ class ReachableSet(object):
         ego_idx = self.get_ego_idx(decision_trajectory_array)
         nearest_idx = len(decision_trajectory_array)-1
         nearest_obstacle = None
-
-        if self.dynamic_map.model == MapState.MODEL_JUNCTION_MAP or self.dynamic_map is None:
+        
+        # FIXME: should be in prediction part
+        if True: #self.dynamic_map.model == MapState.MODEL_JUNCTION_MAP or self.dynamic_map is None:
             for vehicle in self.vehicle_list:
                 pred_trajectory = self.pred_trajectory(vehicle)
                 collision_idx = self.intersection_between_trajectories(decision_trajectory_array,pred_trajectory)

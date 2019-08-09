@@ -14,8 +14,15 @@ class DecisionNode(object):
         self._decision_trajectory_publisher = rospy.Publisher(decision_trajectory_topic, DecisionTrajectory, queue_size=1)
 
         self._decision_instance = MainDecision()
+        self._last_decision_time = 0
 
-    def dynamic_map_callback(self, msg):
+    def dynamic_map_callback(self, msg, decision_time = 0.75):
+        # current_time = rospy.Time.now().to_sec()
+        # if current_time - self._last_decision_time < decision_time:
+        #     return
+        # self._last_decision_time = current_time
+
+        rospy.logdebug("Current_time: %f",self._last_decision_time)
         publish_msg = self._decision_instance.generate_trajectory_with_speed(msg)
         rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
             len(publish_msg.trajectory.poses), publish_msg.desired_speed)
