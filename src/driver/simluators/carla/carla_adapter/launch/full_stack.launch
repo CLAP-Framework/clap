@@ -1,6 +1,5 @@
 <launch>
-
-    <arg name='hero_actor' default='ego_vehicle'/>
+    <!-- Adapters -->
     <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_map" output="screen">
         <param name="input_topic" value="/carla/map" />
         <param name="output_topic" value="/zzz/navigation/static_map" />
@@ -8,17 +7,14 @@
     </node>
     <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_command" output="screen">
         <param name="input_topic" value="/zzz/control/command" />
-        <param name="output_topic" value="/carla/ego_vehicle/vehicle_control_cmd" />
+        <param name="output_topic" value="/carla/$(arg ego_actor)/vehicle_control_cmd" />
         <param name="msg_type" value="ControlCommand" />
-    </node>
-    <node pkg="image_view" type="image_view" name="birds_eye_view">
-        <remap from="image" to="/carla/ego_vehicle/camera/rgb/Sky/image_color" />
     </node>
 
     <!-- Perception -->
     <node pkg="zzz_perception_detection_lidar_filters" type="extrinsic"
           name="extrinsic_filter" output="screen" ns="/zzz/perception">
-        <param name="input_topic" value="/carla/ego_vehicle/lidar/Lidar/point_cloud"/>
+        <param name="input_topic" value="/carla/$(arg ego_actor)/lidar/Lidar/point_cloud"/>
         <param name="output_topic" value="points_transformed"/>
     </node>
     <node pkg="zzz_perception_detection_lidar_detectors" type="euclidean_cluster"

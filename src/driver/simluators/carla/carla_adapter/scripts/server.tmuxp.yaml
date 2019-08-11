@@ -1,18 +1,17 @@
-# This is a example session file for tmuxp
+# This is a example session file for tmux (load this using tmuxp)
 session_name: 'carla'
 windows:
 - window_name: ros
-  layout: main-vertical
   start_directory: /home/jacobz/carla_server/bridge
   shell_command_before:
-    - source /opt/env-ros.sh
+    - export ROS_MASTER_URI=http://172.16.0.1:11311
+    - export ROS_IP=172.16.0.1
     - source devel/setup.bash
     - export PYTHONPATH=$PYTHONPATH:/home/jacobz/carla_server/python-api/carla:/home/jacobz/carla_server/python-api/carla/dist/carla-0.9.6-py2.7-linux-x86_64.egg
   panes:
   # [Note] Run roscore first
   - null # workspace
-  - sleep 8s && rosrun carla_waypoint_publisher carla_waypoint_publisher.py role_name:=ego_vehicle __name:=carla_waypoint_publisher
-  - sleep 4s && roslaunch ../bridge.launch
+  - sleep 4s && roslaunch ../server.launch
 - window_name: carla
   layout: main-vertical
   start_directory: /home/jacobz/carla_server/python-api
