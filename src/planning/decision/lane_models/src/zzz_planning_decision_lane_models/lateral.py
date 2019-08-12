@@ -3,7 +3,7 @@ import rospy
 import numpy as np
 
 from zzz_driver_msgs.utils import get_speed
-from zzz_cognition_msgs.msg import MapState
+from zzz_cognition_msgs.msg import MapState, RoadObstacle
 
 class LaneUtility(object):
 
@@ -18,19 +18,19 @@ class LaneUtility(object):
 
         # Following reference path in junction
         if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or dynamic_map.mmap.target_lane_index == -1:
-            return -1, self.longitudinal_model_instance.IDM_speed(-1)
+            return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         # if dynamic_map.distance_to_next_lane < close_to_junction:
-        #     return -1, self.longitudinal_model_instance.IDM_speed(-1)
+        #     return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         # Case if cannot locate ego vehicle correctly
         if dynamic_map.mmap.ego_lane_index < 0 or dynamic_map.mmap.ego_lane_index > len(dynamic_map.mmap.lanes)-1:
-            return -1, self.longitudinal_model_instance.IDM_speed(-1)
+            return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         target_index = self.generate_lane_change_index()
         # ego_lane = self.dynamic_map.mmap.lanes[0]
 
-        target_speed = self.longitudinal_model_instance.IDM_speed(dynamic_map.mmap.ego_lane_index,traffic_light = True)
+        target_speed = self.longitudinal_model_instance.longitudinal_speed(dynamic_map.mmap.ego_lane_index,traffic_light = True)
         # TODO: More accurate speed
         
         return target_index, target_speed
@@ -64,13 +64,13 @@ class LaneUtility(object):
 
     def lane_utility(self, lane_index):
 
-        available_speed = self.longitudinal_model_instance.IDM_speed(lane_index)
+        available_speed = self.longitudinal_model_instance.longitudinal_speed(lane_index)
         exit_lane_index = self.dynamic_map.mmap.target_lane_index
         distance_to_end = self.dynamic_map.mmap.distance_to_junction
         # XXX: Change 260 to a adjustable parameter?
         utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1)*1.5
         # + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(260-distance_to_end))
-        # FIXME: Adjust for roundabout
+        # FIXME: This utility is adjusted for roundabout
         return utility
 
     def lane_change_safe(self, ego_lane_index, target_index):
@@ -98,11 +98,14 @@ class LaneUtility(object):
         if front_vehicle is None:
             d_front = -1
             front_safe = True
+            behavior_front = RoadObstacle.BEHAVIOR_UNKNOWN
         else:
             front_vehicle_location = np.array([
                 front_vehicle.state.pose.pose.position.x,
                 front_vehicle.state.pose.pose.position.y
             ])
+            behavior_front = front_vehicle.behavior
+            # TODO: Change to real distance in lane
             d_front = np.linalg.norm(front_vehicle_location - ego_vehicle_location)
             front_v = get_speed(front_vehicle.state)
             if d_front > max(10 + 3*(ego_v-front_v), 10):
@@ -112,17 +115,22 @@ class LaneUtility(object):
         if rear_vehicle is None:
             rear_safe = True
             d_rear = -1
+            behavior_rear = RoadObstacle.BEHAVIOR_UNKNOWN
         else:
             rear_vehicle_location = np.array([
                 rear_vehicle.state.pose.pose.position.x,
                 rear_vehicle.state.pose.pose.position.y
             ])
+            behavior_rear = rear_vehicle.behavior
             d_rear = np.linalg.norm(rear_vehicle_location - ego_vehicle_location)
             rear_v = get_speed(rear_vehicle.state)
             if d_rear > max(10 + 3*(rear_v-ego_v), 10):
                 rear_safe = True
 
-        rospy.logdebug("ego_lane = %d, target_lane = %d, front_d = %f, rear_d = %f",ego_lane_index, target_index, d_front, d_rear)
+        rospy.logdebug("ego_lane = %d, target_lane = %d, front_d = %f(%d), rear_d = %f(%d)",
+                                ego_lane_index, target_index, d_front, 
+                                behavior_front, d_rear, behavior_rear)
+                                
         if front_safe and rear_safe:
             return True
             

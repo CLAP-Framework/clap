@@ -46,3 +46,9 @@ uint8 PRIORITY_UNKNOWN = 0
 uint8 PRIORITY_NORMAL = 1
 uint8 PRIORITY_CAUTIOUS = 2 # You can move when this obstacle is far away
 uint8 PRIORITY_STOP = 3 # Should let this vehicle to go and then you can move
+
+# -------Multilane Coordinate (Translator) ----- TODO
+
+float32 mmap_x
+float32 mmap_y
+float32 mmap_vx

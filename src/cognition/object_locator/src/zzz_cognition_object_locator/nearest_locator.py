@@ -10,6 +10,8 @@ from zzz_cognition_msgs.utils import convert_tracking_box, default_msg as cognit
 from zzz_perception_msgs.msg import TrackingBoxArray, TrafficLightDetection, TrafficLightDetectionArray
 from zzz_common.geometry import dist_from_point_to_polyline, nearest_point_to_polyline
 
+from zzz_driver_msgs.utils import get_speed, get_yaw
+
 class NearestLocator:
     def __init__(self):
         self._static_map = Map()
@@ -50,7 +52,6 @@ class NearestLocator:
         self._traffic_light_detection = detection
 
     # ====== Data Updator =======
-    # TODO: edit following implementations
     
     def update(self):
         self._dynamic_map = cognition_default(MapState)
@@ -137,7 +138,11 @@ class NearestLocator:
                 front_vehicle_idx = int(front_vehicles[np.argmax(front_vehicles[:,1]), 0])
                 self._dynamic_map.mmap.lanes[lane_id].have_front_vehicle = True
                 self._dynamic_map.mmap.lanes[lane_id].front_vehicle = convert_tracking_box(self._surrounding_object_list.targets[front_vehicle_idx])
-                rospy.logdebug("Lane index: %d, Front vehicle id: %d", lane_id, self._dynamic_map.mmap.lanes[lane_id].front_vehicle.uid)                
+                self._dynamic_map.mmap.lanes[lane_id].front_vehicle.mmap_y = self.vehicle_mmap_y(self._dynamic_map.mmap.lanes[lane_id].front_vehicle)
+                self._dynamic_map.mmap.lanes[lane_id].front_vehicle.behavior = self.predict_vehicle_behavior(self._dynamic_map.mmap.lanes[lane_id].front_vehicle)
+                rospy.logdebug("Lane index: %d, Front vehicle id: %d, behavior: %d", 
+                                            lane_id, self._dynamic_map.mmap.lanes[lane_id].front_vehicle.uid,
+                                            self._dynamic_map.mmap.lanes[lane_id].front_vehicle.behavior)                
             else:
                 self._dynamic_map.mmap.lanes[lane_id].have_front_vehicle = False
 
@@ -147,7 +152,11 @@ class NearestLocator:
                 rear_vehicle_idx  = int(rear_vehicles [np.argmax(rear_vehicles[:,1]), 0])
                 self._dynamic_map.mmap.lanes[lane_id].have_rear_vehicle = True
                 self._dynamic_map.mmap.lanes[lane_id].rear_vehicle = convert_tracking_box(self._surrounding_object_list.targets[rear_vehicle_idx])
-                rospy.logdebug("Lane index: %d, Rear vehicle id: %d", lane_id, self._dynamic_map.mmap.lanes[lane_id].rear_vehicle.uid) 
+                self._dynamic_map.mmap.lanes[lane_id].rear_vehicle.mmap_y = self.vehicle_mmap_y(self._dynamic_map.mmap.lanes[lane_id].rear_vehicle)
+                self._dynamic_map.mmap.lanes[lane_id].rear_vehicle.behavior = self.predict_vehicle_behavior(self._dynamic_map.mmap.lanes[lane_id].rear_vehicle)
+                rospy.logdebug("Lane index: %d, Rear vehicle id: %d, behavior: %d", 
+                                            lane_id, self._dynamic_map.mmap.lanes[lane_id].rear_vehicle.uid, 
+                                            self._dynamic_map.mmap.lanes[lane_id].rear_vehicle.behavior)
             else:
                 self._dynamic_map.mmap.lanes[lane_id].have_rear_vehicle = False
 
@@ -196,3 +205,54 @@ class NearestLocator:
         Put stop sign detections into lanes
         '''
         pass
+
+    def predict_vehicle_behavior(self, vehicle, lane_change_thres = 0.2):
+        '''
+        Detect the behaviors of surrounding vehicles
+        '''
+
+        dist_list = np.array([nearest_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
+            for lane in self._static_map_lane_path_array])
+        dist_list = np.abs(dist_list)
+        closest_lane, second_closest_lane = dist_list[:, 0].argsort()[:2]
+        closest_lane_dist, second_closest_lane_dist = dist_list[closest_lane, 0], dist_list[second_closest_lane, 0]
+        closest_idx = int(dist_list[closest_lane, 1])
+        closest_point = self._dynamic_map.mmap.lanes[closest_lane].map_lane.central_path_points[closest_idx]
+
+        vehicle_driving_direction = get_yaw(vehicle.state)
+        lane_direction = closest_point.tangent
+
+        rospy.logdebug("id:%d, vehicle_direction:%.2f, lane_direction:%.2f, mmap_y: %.2f",vehicle.uid,vehicle_driving_direction,lane_direction,vehicle.mmap_y)
+        if abs(vehicle_driving_direction - lane_direction) > lane_change_thres:
+            if vehicle_driving_direction > lane_direction:
+                behavior = RoadObstacle.BEHAVIOR_MOVING_LEFT
+            else:
+                behavior = RoadObstacle.BEHAVIOR_MOVING_RIGHT
+        else:
+            behavior = RoadObstacle.BEHAVIOR_FOLLOW
+        
+        return behavior
+
+    def vehicle_mmap_y(self,vehicle,in_lane_thres = 0.9):
+
+        dist_list = np.array([nearest_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
+            for lane in self._static_map_lane_path_array])
+        dist_list = np.abs(dist_list)
+        closest_lane, second_closest_lane = dist_list[:, 0].argsort()[:2]
+        closest_lane_dist, second_closest_lane_dist = dist_list[closest_lane, 0], dist_list[second_closest_lane, 0]
+        closest_idx = int(dist_list[closest_lane, 1])
+        closest_point = self._dynamic_map.mmap.lanes[closest_lane].map_lane.central_path_points[closest_idx]
+        second_closest_idx = int(dist_list[second_closest_lane, 1])
+        second_closest_point = self._dynamic_map.mmap.lanes[second_closest_lane].map_lane.central_path_points[second_closest_idx]
+
+
+        if abs(second_closest_lane_dist-closest_lane_dist) > ((closest_point.width/2)+(second_closest_point.width/2))*in_lane_thres:
+            mmap_y = closest_lane
+        else:
+            a = closest_lane
+            la = closest_lane_dist
+            b = second_closest_lane
+            lb = second_closest_lane_dist
+            mmap_y = (b*la+a*lb)/(lb+la)
+            
+        return mmap_y

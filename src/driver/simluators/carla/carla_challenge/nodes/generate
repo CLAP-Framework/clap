@@ -118,6 +118,9 @@ def build_lane(r,lane_index,ego_x,ego_y):
         point = LanePoint()
         point.position.x = cx + r*np.cos(angle)
         point.position.y = cy + r*np.sin(angle)
+        point.tangent = angle + np.pi/2
+        point.tangent = (point.tangent + np.pi)%(2*np.pi)-np.pi
+        point.width = 3.7
         lane.central_path_points.append(point)
 
     return lane

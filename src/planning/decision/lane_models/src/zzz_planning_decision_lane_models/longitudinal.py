@@ -1,7 +1,10 @@
 
 import numpy as np
+import rospy
+
 from zzz_navigation_msgs.msg import Lane
 from zzz_driver_msgs.utils import get_speed
+from zzz_cognition_msgs.msg import RoadObstacle
 
 class IDM(object):
 
@@ -17,7 +20,7 @@ class IDM(object):
     def update_dynamic_map(self, dynamic_map):
         self.dynamic_map = dynamic_map
 
-    def IDM_speed(self, target_lane_index, traffic_light = False):
+    def longitudinal_speed(self, target_lane_index, traffic_light = False):
 
         target_lane = None
 
@@ -32,6 +35,30 @@ class IDM(object):
             return 0
         else:
             idm_speed = self.IDM_speed_in_lane(target_lane)
+            # Response to front vehicle in left lane
+            if target_lane_index < len(self.dynamic_map.mmap.lanes)-1:
+                left_lane = None
+                for lane in self.dynamic_map.mmap.lanes:
+                    if lane.map_lane.index == target_lane_index+1:
+                        left_lane = lane
+                        break
+                if left_lane is not None and self.neighbor_vehicle_is_cutting_in(left_lane,target_lane):
+                    rospy.logwarn("response to left front vehicle(%d)",target_lane_index+1)
+                    left_idm_speed = self.IDM_speed_in_lane(left_lane)
+                    idm_speed = min(idm_speed,left_idm_speed)
+
+            # Response to front vehicle in right lane
+            if target_lane_index > 0:
+                for lane in self.dynamic_map.mmap.lanes:
+                    right_lane = None
+                    if lane.map_lane.index == target_lane_index-1:
+                        right_lane = lane
+                        break
+                if right_lane is not None and self.neighbor_vehicle_is_cutting_in(right_lane,target_lane):
+                    rospy.logwarn("response to right front vehicle(%d)",target_lane_index-1)
+                    right_idm_speed = self.IDM_speed_in_lane(right_lane)
+                    idm_speed = min(idm_speed,right_idm_speed)
+
             traffic_light_speed = float("inf")
             if traffic_light:
                 traffic_light_speed = self.traffic_light_speed(target_lane)
@@ -54,13 +81,13 @@ class IDM(object):
         g0 = self.g0
         T = self.T
         delta = self.delta
-
+        
         if lane.have_front_vehicle:
             f_v_location = np.array([
                 lane.front_vehicle.state.pose.pose.position.x,
                 lane.front_vehicle.state.pose.pose.position.y
             ])
-            v_f = get_speed(lane.front_vehicle.state)
+            v_f = get_speed(lane.front_vehicle.state) # TODO: get mmap vx and vy, the translator part in nearest locator
             dv = v - v_f
             g = np.linalg.norm(f_v_location - ego_vehicle_location)
             g1 = g0 + T*v + v*dv/(2*np.sqrt(a*b))
@@ -85,6 +112,27 @@ class IDM(object):
                 return 0 
 
         return float("inf")
+
+
+    def neighbor_vehicle_is_cutting_in(self,neighbor_lane,ego_lane):
+        if not neighbor_lane.have_front_vehicle:
+            return False
+        
+        if neighbor_lane.front_vehicle.behavior is not RoadObstacle.BEHAVIOR_MOVING_LEFT \
+                            and neighbor_lane.front_vehicle.behavior is not RoadObstacle.BEHAVIOR_MOVING_RIGHT:
+            return False
+        
+        mmap_y = neighbor_lane.front_vehicle.mmap_y
+
+        ego_idx = ego_lane.map_lane.index
+        neighbor_idx = neighbor_lane.map_lane.index
+
+        if ((neighbor_idx-mmap_y)*(ego_idx-mmap_y)) < 0:
+            return True
+
+        return False
+
+
 
 class Gipps(object):
     # TODO(zhcao): Implement Gipps model

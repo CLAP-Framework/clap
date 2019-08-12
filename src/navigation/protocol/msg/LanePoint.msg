@@ -15,6 +15,9 @@ float32 slope
 # Can be used to slow down before turning
 float32 curvature
 
+# The yaw angle of tangent line (in radian)
+float32 tangent
+
 # Road width at current position
 # Can be used to determine the carefulness of driving
 float32 width
