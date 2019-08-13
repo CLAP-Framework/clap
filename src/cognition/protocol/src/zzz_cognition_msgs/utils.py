@@ -1,5 +1,5 @@
 from zzz_cognition_msgs.msg import LaneState, MapState, RoadObstacle, JunctionMapState
-from zzz_perception_msgs.msg import TrackingBox
+from zzz_perception_msgs.msg import TrackingBox, ObjectClass
 
 def default_msg(msg_type):
     '''
@@ -28,7 +28,11 @@ def convert_tracking_box(obj):
     obstacle.state.pose = obj.bbox.pose
     obstacle.state.twist = obj.twist
     obstacle.state.accel = obj.accel
-    obstacle.cls = obj.classes[0]
+    if len(obj.classes) > 0:
+        obstacle.cls = obj.classes[0]
+    else:
+        obstacle.cls.classid = ObjectClass.UNKNOWN
+        obstacle.cls.score = 1
     # TODO: Convert obstacle shape
 
     return obstacle
