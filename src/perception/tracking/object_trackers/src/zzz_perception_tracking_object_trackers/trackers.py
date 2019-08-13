@@ -116,7 +116,6 @@ class MultiBoxTracker:
             # TODO: Filling out more fields
             trackbox.uid = idx_tr
             # TODO: Add option to track these targets using static coordinate
-            trackbox.relative = True
             # FIXME: This is a very naive confidence report
             trackbox.confidence = min(1, (self._counter_track[idx_tr] + 5) / 10.)
             array.targets.append(trackbox)

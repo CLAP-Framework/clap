@@ -7,6 +7,9 @@ from zzz_perception_msgs.msg import TrackingBoxArray
 from visualization_msgs.msg import MarkerArray
 from zzz_visualization_rviz_box_visualizer.tracking import TrackingBoxVisualizer
 
+# TODO: directly publish Marker message since we have id for each object
+# TODO: Add option to publish message after rigid body transformation
+
 class Node():
     def __init__(self):
         params = parse_private_args(

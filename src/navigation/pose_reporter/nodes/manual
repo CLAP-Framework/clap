@@ -7,7 +7,7 @@ import tf2_ros as tf2
 import utm # utm is required
 
 from zzz_common.params import parse_private_args
-from zzz_common.kinematic import get_absolute_state
+from zzz_common.kinematics import get_absolute_state
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_driver_msgs.utils import convert_odometry_to_state
 from geometry_msgs.msg import TransformStamped
@@ -81,16 +81,16 @@ class Node(object):
         odom_state.header.frame_id = "map"
         odom_state.state.child_frame_id = "odom"
 
-        odom_state.state.pose.position.x = self._odom_translation[0]
-        odom_state.state.pose.position.y = self._odom_translation[1]
-        odom_state.state.pose.position.z = self._odom_translation[2]
-        odom_state.state.pose.orientation.x = self._odom_translation[0]
-        odom_state.state.pose.orientation.y = self._odom_translation[1]
-        odom_state.state.pose.orientation.z = self._odom_translation[2]
-        odom_state.state.pose.orientation.w = self._odom_translation[3]
+        odom_state.state.pose.pose.position.x = self._odom_translation[0]
+        odom_state.state.pose.pose.position.y = self._odom_translation[1]
+        odom_state.state.pose.pose.position.z = self._odom_translation[2]
+        odom_state.state.pose.pose.orientation.x = self._odom_rotation[0]
+        odom_state.state.pose.pose.orientation.y = self._odom_rotation[1]
+        odom_state.state.pose.pose.orientation.z = self._odom_rotation[2]
+        odom_state.state.pose.pose.orientation.w = self._odom_rotation[3]
 
         rel_state = convert_odometry_to_state(msg)
-        state = get_absolute_state(rel_state, odom_state)
+        state = get_absolute_state(rel_state, odom_state, check_frame=False)
         
         self._pose_publisher.publish(state)
 
