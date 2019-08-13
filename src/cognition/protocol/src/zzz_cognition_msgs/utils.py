@@ -29,14 +29,21 @@ def convert_tracking_box(array, pose):
     obstacles = []
     
     for obj in array.targets:
-        trackpose = RigidBodyStateStamped()
-        trackpose.header = array.header
-        trackpose.state.pose = obj.bbox.pose
-        trackpose.state.twist = obj.twist
-        trackpose.state.accel = obj.accel
-        abspose = get_absolute_state(trackpose, pose)
+        if array.header.frame_id != pose.header.frame_id:
+            trackpose = RigidBodyStateStamped()
+            trackpose.header = array.header
+            trackpose.state.pose = obj.bbox.pose
+            trackpose.state.twist = obj.twist
+            trackpose.state.accel = obj.accel
+            abspose = get_absolute_state(trackpose, pose)
 
-        assert abspose.header.frame_id == 'map'
+            assert abspose.header.frame_id == 'map'
+        else:
+            abspose = RigidBodyStateStamped()
+            abspose.header = array.header
+            abspose.state.pose = obj.bbox.pose
+            abspose.state.twist = obj.twist
+            abspose.state.accel = obj.accel
 
         obstacle = RoadObstacle()
         obstacle.uid = obj.uid

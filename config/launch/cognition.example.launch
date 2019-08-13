@@ -38,7 +38,7 @@
     </node> -->
 
     <!-- Perception -->
-    <node pkg="zzz_perception_detection_camera_detectors" type="yolo"
+    <!-- <node pkg="zzz_perception_detection_camera_detectors" type="yolo"
           name="yolo_node" output="screen" ns="/zzz/perception">
           <env   name="PYTHONPATH"   value="$(env PYTHONPATH):/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages"/>
           <param name="input_topic"  value="/carla/ego_vehicle/camera/rgb/Left/image_color"/>
@@ -55,7 +55,7 @@
         <param name="input_topic" value="objects_projected"/>
         <param name="marker_lifetime" value="0.5"/>
         <param name="box_max_size" value="9999999"/>
-    </node>
+    </node> -->
     <node pkg="zzz_perception_detection_lidar_filters" type="extrinsic"
           name="extrinsic_filter" output="screen" ns="/zzz/perception">
         <param name="input_topic" value="/carla/ego_vehicle/lidar/Lidar/point_cloud"/>
@@ -80,9 +80,14 @@
         <param name="min_length_y" value="0.1"/>
         <param name="min_length_z" value="0.1"/>
     </node>
+    <node pkg="zzz_perception_tracking_object_filters" type="to_static"
+          name="static_converter" output="screen" ns="/zzz/perception">
+        <param name="input_topic" value="objects_filtered"/>
+        <param name="output_topic" value="objects_transformed"/>
+    </node>
     <node pkg="zzz_perception_tracking_object_trackers" type="box_tracker"
           name="box_tracker" output="screen" ns="/zzz/perception">
-        <param name="detection_topic" value="objects_filtered"/>
+        <param name="detection_topic" value="objects_transformed"/>
         <param name="tracking_topic" value="objects_tracked"/>
     </node>
     <node pkg="zzz_visualization_rviz_box_visualizer" type="tracking"
