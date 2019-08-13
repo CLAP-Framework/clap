@@ -1,8 +1,8 @@
 <package format="2">
-  <name>zzz_common</name>
+  <name>zzz_perception_tracking_object_filters</name>
   <version>0.0.3</version>
   <description>
-    Common used libraries.
+    Implementation of object filters
   </description>
   <license>BSD</license>
   <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>
@@ -13,7 +13,10 @@
   <url type="bugtracker">https://github.com/cmpute/zzz/issues</url>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <exec_depend>std_msgs</exec_depend>
-  <exec_depend>zzz_driver_msgs</exec_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>zzz_perception_msgs</exec_depend>
+  <exec_depend>pcl_ros</exec_depend>
   <export></export>
 </package>
