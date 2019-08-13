@@ -126,11 +126,11 @@ def build_lane(r,lane_index,ego_x,ego_y):
     return lane
 
 
-def build_multilane_map(ego_x,ego_y):
+def build_multilane_map(ego_x,ego_y,target_lane_index):
 
     static_map = Map()
     static_map.in_junction = False
-    static_map.target_lane_index = 1
+    static_map.target_lane_index = target_lane_index
     lane_inside = build_lane(19.8,1,ego_x,ego_y)
     lane_outside = build_lane(23.5,0,ego_x,ego_y)
     static_map.lanes.append(lane_outside)
@@ -148,15 +148,23 @@ def build_reference_path(ego_x,ego_y,ReferencePathGenerator,publisher_reference_
         msg = ReferencePathGenerator.publish_waypoints()
         publisher_reference_lane.publish(msg)
         
+global published_exit_path
 
-def build_exit_map(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane):
-    static_map = Map()
-    static_map.in_junction = True
-    goal_x = 42.6482
-    goal_y = -7.8439
-    ReferencePathGenerator.calculate_route(ego_x,-ego_y,goal_x,goal_y)
-    msg = ReferencePathGenerator.publish_waypoints()
-    publisher_reference_lane.publish(msg)
+def build_exit_map(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane,ready_to_exit):
+    
+    global published_exit_path
+    if ready_to_exit or published_exit_path:
+        static_map = Map()
+        static_map.in_junction = True
+        goal_x = 42.6482
+        goal_y = -7.8439
+        if not published_exit_path:
+            ReferencePathGenerator.calculate_route(ego_x,-ego_y,goal_x,goal_y)
+            msg = ReferencePathGenerator.publish_waypoints()
+            publisher_reference_lane.publish(msg)
+            published_exit_path = True
+    else:
+        static_map = build_multilane_map(ego_x,ego_y,0)
 
     return static_map
 
@@ -168,12 +176,22 @@ def pose_callback(msg, args):
     ego_y = msg.state.pose.pose.position.y
     current_time = msg.header.stamp.to_sec()
 
-    if True: #current_time-starting_time < 20:
-        static_map = build_multilane_map(ego_x,ego_y)
+    cx = -0.4771
+    cy = 0.1983
+    d_to_center = np.sqrt((ego_x-cx)*(ego_x-cx)+(ego_y-cy)*(ego_y-cy))
+    ego_vehicle_angle = np.arctan2(ego_y-cy,ego_x-cx)
+
+    if d_to_center > 22.5 and d_to_center< 24.5 and ego_vehicle_angle < -0.1*np.pi and ego_vehicle_angle > -0.4*np.pi:
+        ready_to_exit = True
+    else:
+        ready_to_exit = False
+
+    if True:#current_time-starting_time < 15:
+        static_map = build_multilane_map(ego_x,ego_y,1)
         publisher_map.publish(static_map)
         build_reference_path(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane)
     else:
-        static_map = build_exit_map(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane)
+        static_map = build_exit_map(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane,ready_to_exit)
         publisher_map.publish(static_map)
     
 
@@ -187,6 +205,8 @@ if __name__ == "__main__":
     carla_world = carla_client.get_world()
     rospy.loginfo("Connected to Carla.")
     ReferencePathGenerator = CarlaReferecePathGenerator(carla_world)
+    global published_exit_path
+    published_exit_path = False
 
     _local_map_publisher = rospy.Publisher("/zzz/navigation/local_static_map", Map, queue_size=1)
     _reference_path_publisher = rospy.Publisher("/zzz/navigation/reference_path", Path, queue_size=1)
