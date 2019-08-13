@@ -98,7 +98,7 @@ class IDM(object):
 
         acc = a*(1 - pow(v/v0, delta) - (g1/g)*((g1/g)))
 
-        return v + acc*self.decision_dt
+        return max(0, v + acc*self.decision_dt)
 
 
     def traffic_light_speed(self, lane):

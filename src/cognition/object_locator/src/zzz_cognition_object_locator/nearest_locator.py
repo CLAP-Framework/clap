@@ -72,6 +72,7 @@ class NearestLocator:
         if self._dynamic_map.model == MapState.MODEL_MULTILANE_MAP:
             self.locate_ego_vehicle_in_lanes()
             self.locate_surrounding_vehicle_in_lanes()
+            self.vehicles_mmap_y_in_jmap()
             self.locate_stop_sign_in_lanes()
             self.locate_speed_limit_in_lanes()
 
@@ -119,7 +120,6 @@ class NearestLocator:
                     for lane in self._static_map_lane_path_array])
                 dist_list = np.abs(dist_list)
                 closest_lane = np.argmin(dist_list[:, 0])
-
                 # Determine if the vehicle is close to lane enough
                 if dist_list[closest_lane, 0] > lane_dist_thres:
                     continue 
@@ -233,7 +233,7 @@ class NearestLocator:
         
         return behavior
 
-    def vehicle_mmap_y(self,vehicle,in_lane_thres = 0.9):
+    def vehicle_mmap_y(self,vehicle,in_lane_thres = 0.9,lane_dist_thres = 2):
 
         dist_list = np.array([nearest_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
             for lane in self._static_map_lane_path_array])
@@ -245,6 +245,9 @@ class NearestLocator:
         second_closest_idx = int(dist_list[second_closest_lane, 1])
         second_closest_point = self._dynamic_map.mmap.lanes[second_closest_lane].map_lane.central_path_points[second_closest_idx]
 
+        if closest_lane_dist > lane_dist_thres:
+            mmap_y = -1
+            return mmap_y
 
         if abs(second_closest_lane_dist-closest_lane_dist) > ((closest_point.width/2)+(second_closest_point.width/2))*in_lane_thres:
             mmap_y = closest_lane
@@ -256,3 +259,9 @@ class NearestLocator:
             mmap_y = (b*la+a*lb)/(lb+la)
             
         return mmap_y
+    
+    def vehicles_mmap_y_in_jmap(self):
+        
+        for vehicle_idx, vehicle in enumerate(self._dynamic_map.jmap.obstacles):
+            mmap_y = self.vehicle_mmap_y(vehicle)
+            self._dynamic_map.jmap.obstacles[vehicle_idx].mmap_y = mmap_y
