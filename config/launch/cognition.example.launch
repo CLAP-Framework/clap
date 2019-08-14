@@ -31,14 +31,14 @@
         <param name="msg_type" value="ControlCommand" />
     </node>
 
-    <!-- <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_objects" output="screen">
+    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_objects" output="screen">
         <param name="input_topic" value="/carla/ego_vehicle/objects" />
         <param name="output_topic" value="/zzz/perception/objects_tracked" />
         <param name="msg_type" value="ObjectArray" />
-    </node> -->
+    </node>
 
     <!-- Camera Perception -->
-    <node pkg="zzz_perception_detection_camera_detectors" type="yolo"
+    <!-- <node pkg="zzz_perception_detection_camera_detectors" type="yolo"
           name="yolo_node" output="screen" ns="/zzz/perception">
           <env   name="PYTHONPATH"   value="$(env PYTHONPATH):/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages"/>
           <param name="input_topic"  value="/carla/ego_vehicle/camera/rgb/Center/image_color"/>
@@ -66,10 +66,14 @@
         <param name="input_topic" value="objects_projected"/>
         <param name="marker_lifetime" value="0.5"/>
         <param name="box_max_size" value="9999999"/>
+    </node> -->
+    <node pkg="zzz_perception_detection_camera_filters" type="pseudo_lidar_generator"
+          name="pseudo" output="screen" ns="/zzz/perception">
+        <env   name="PYTHONPATH"   value="$(env PYTHONPATH):/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages"/>
     </node>
-    
+
     <!-- Lidar Perception -->
-    <node pkg="zzz_perception_detection_lidar_filters" type="extrinsic"
+    <!-- <node pkg="zzz_perception_detection_lidar_filters" type="extrinsic"
           name="extrinsic_filter" output="screen" ns="/zzz/perception">
         <param name="input_topic" value="/carla/ego_vehicle/lidar/Lidar/point_cloud"/>
         <param name="output_topic" value="points_transformed"/>
@@ -109,7 +113,7 @@
         <param name="output_topic" value="carla/debug_marker"/>
         <param name="marker_lifetime" value="0.5"/>
         <param name="box_max_size" value="9999999"/>
-    </node>
+    </node> -->
 
     <!-- Carla viewer -->
     <!-- <node pkg="image_view" type="image_view" name="birds_eye_view">
