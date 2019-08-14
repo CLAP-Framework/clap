@@ -10,7 +10,7 @@ class IPMNode():
     def __init__(self):
 
         params = parse_private_args(
-            input_topic="objects_2d_detected",
+            input_topic="objects2d_detected",
             output_topic="objects_projected",
             output_3d=True,
         )
@@ -29,7 +29,7 @@ class IPMNode():
 
         # initialize camera geometry model
         # TODO: read from camera info
-        self._cam = CamIntrExtr(-45, 0, 0, 1.6)
+        self._cam = CamIntrExtr(0, 0, 0, 1.6)
         self._cam.setIntr(400, 300, fov=100)
 
     def obj_callback(self, detections):

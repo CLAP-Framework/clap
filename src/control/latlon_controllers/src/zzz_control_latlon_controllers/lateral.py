@@ -117,10 +117,7 @@ class PurePersuitLateralController():
             if dist_list[end_idx] > dist_list[start_idx] + distance:
                 return end_idx
 
-        rospy.logdebug("start_idx: %s, ego_loc: %s, trajectory: %s", 
-                                                    str(start_idx),
-                                                    str(start_loc),
-                                                    str(trajectory))
+        rospy.logdebug("start_idx: %s, ego_loc: %s", str(start_idx), str(start_loc))
                                                     
 class PreviewLateralController():
     """

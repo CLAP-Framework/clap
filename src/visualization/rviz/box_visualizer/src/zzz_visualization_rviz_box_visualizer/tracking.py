@@ -3,12 +3,13 @@ import rospy
 import numpy as np
 
 from visualization_msgs.msg import Marker, MarkerArray
+from geometry_msgs.msg import Point
 from zzz_visualization_rviz_box_visualizer.utils import parse_color
 
 class TrackingBoxVisualizer:
     def __init__(self, **params):
-        self._marker_id = 0 # XXX: Do we need to hold same ID for markers of same object?
         self._params = EasyDict(params)
+        self._tracker_set = set()
         
         if isinstance(self._params.label_color, list):
             self._params.label_color = parse_color(self._params.label_color)
@@ -22,15 +23,13 @@ class TrackingBoxVisualizer:
     def addLabels(self, in_objects, out_markers):
         for obj in in_objects.targets:
             label_marker = Marker()
-            label_marker.lifetime = rospy.Duration(self._params.marker_lifetime)
 
             # Message headers
             label_marker.header = in_objects.header
-            label_marker.action = Marker.ADD
+            label_marker.action = Marker.MODIFY if obj.uid in self._tracker_set else Marker.ADD
             label_marker.type = Marker.TEXT_VIEW_FACING
             label_marker.ns = self._params.marker_namespace + "/labels"
-            label_marker.id = self._marker_id
-            self._marker_id += 1
+            label_marker.id = obj.uid
 
             # Marker properties
             label_marker.scale.x = self._params.label_scale
@@ -61,15 +60,13 @@ class TrackingBoxVisualizer:
     def addBoxes(self, in_objects, out_markers):
         for obj in in_objects.targets:
             box = Marker()
-            box.lifetime = rospy.Duration(self._params.marker_lifetime)
 
             # Message headers
             box.header = in_objects.header
             box.type = Marker.CUBE
-            box.action = Marker.ADD
+            box.action = Marker.MODIFY if obj.uid in self._tracker_set else Marker.ADD
             box.ns = self._params.marker_namespace + "/boxs"
-            box.id = self._marker_id
-            self._marker_id += 1
+            box.id = obj.uid
 
             # Marker properties
             box.color = self._params.box_color
@@ -95,15 +92,13 @@ class TrackingBoxVisualizer:
     def addCentroids(self, in_objects, out_markers):
         for obj in in_objects.targets:
             centroid_marker = Marker()
-            centroid_marker.lifetime = rospy.Duration(self._params.marker_lifetime)
 
             # Message headers
             centroid_marker.header = in_objects.header
             centroid_marker.type = Marker.SPHERE
-            centroid_marker.action = Marker.ADD
+            centroid_marker.action = Marker.MODIFY if obj.uid in self._tracker_set else Marker.ADD
             centroid_marker.ns = self._params.marker_namespace + "/centroids"
-            centroid_marker.id = self._marker_id
-            self._marker_id += 1
+            centroid_marker.id = obj.uid
 
             # Marker properties
             centroid_marker.scale.x = self._params.centroid_scale
@@ -121,51 +116,82 @@ class TrackingBoxVisualizer:
         '''
         for obj in in_objects.targets:
             arrow_marker = Marker()
-            arrow_marker.lifetime = rospy.Duration(self._params.marker_lifetime)
 
             # Message headers
             arrow_marker.header = in_objects.header
             arrow_marker.type = Marker.ARROW
-            arrow_marker.action = Marker.ADD
+            arrow_marker.action = Marker.MODIFY if obj.uid in self._tracker_set else Marker.ADD
             arrow_marker.ns = self._params.marker_namespace + "/arrows"
-            arrow_marker.id = self._marker_id
-            self._marker_id += 1
+            arrow_marker.id = obj.uid
 
             # Marker properties
-            arrow_marker.scale.y = self._params.arrow_width
-            arrow_marker.scale.z = self._params.arrow_width
             arrow_marker.color = self._params.arrow_color
+            arrow_marker.scale.x = self._params.arrow_width
+            arrow_marker.scale.y = 0.4
+            arrow_marker.scale.z = 0.5
 
             arrow_marker.pose.position = obj.bbox.pose.pose.position
 
             vel = np.array([obj.twist.twist.linear.x, obj.twist.twist.linear.y, obj.twist.twist.linear.z])
             vel_len = np.linalg.norm(vel)
             if vel_len > 0:
-                arrow_marker.scale.x = vel_len * self._params.arrow_speed_scale
-                vel = vel / vel_len
-                rot = np.cross([1,0,0], vel)
-                angle_sin = np.dot([1,0,0], vel)
-                angle_cos = np.linalg.norm(rot)
-                angle = np.arctan2(angle_sin, angle_cos)
-
-                if angle != 0:
-                    obj.bbox.pose.pose.orientation.x = rot[0] / np.sin(angle/2)
-                    obj.bbox.pose.pose.orientation.y = rot[1] / np.sin(angle/2)
-                    obj.bbox.pose.pose.orientation.z = rot[2] / np.sin(angle/2)
-                    obj.bbox.pose.pose.orientation.w = np.cos(angle/2)
+                arrow_marker.points.append(Point())
+                p1 = Point()
+                p1.x = obj.twist.twist.linear.x * self._params.arrow_speed_scale
+                p1.y = obj.twist.twist.linear.y * self._params.arrow_speed_scale
+                p1.z = obj.twist.twist.linear.z * self._params.arrow_speed_scale
+                arrow_marker.points.append(p1)
             else:
                 # No arrow is shown if the velocity is zero
                 continue
 
             out_markers.markers.append(arrow_marker)
 
+    def deleteMarkers(self, id_set, out_markers):
+        for obj_id in id_set:
+            marker_del = Marker()
+            marker_del.action = Marker.DELETE
+            marker_del.type = Marker.TEXT_VIEW_FACING
+            marker_del.ns = self._params.marker_namespace + "/labels"
+            marker_del.id = obj_id
+            out_markers.markers.append(marker_del)
+
+            marker_del = Marker()
+            marker_del.action = Marker.DELETE
+            marker_del.type = Marker.CUBE
+            marker_del.ns = self._params.marker_namespace + "/boxs"
+            marker_del.id = obj_id
+            out_markers.markers.append(marker_del)
+            
+            marker_del = Marker()
+            marker_del.action = Marker.DELETE
+            marker_del.type = Marker.SPHERE
+            marker_del.ns = self._params.marker_namespace + "/centroids"
+            marker_del.id = obj_id
+            out_markers.markers.append(marker_del)
+            
+            marker_del = Marker()
+            marker_del.action = Marker.DELETE
+            marker_del.type = Marker.ARROW
+            marker_del.ns = self._params.marker_namespace + "/arrows"
+            marker_del.id = obj_id
+            out_markers.markers.append(marker_del)
+
+
     def visualize(self, msg):
         markers = MarkerArray()
-        self._marker_id = 0
 
+        # Remove old trackers
+        new_set = set()
+        for obj in msg.targets:
+            new_set.add(obj.uid)
+        self.deleteMarkers(self._tracker_set.difference(new_set), markers)
+
+        # Add new trackers
         self.addBoxes(msg, markers)
         self.addCentroids(msg, markers)
         self.addLabels(msg, markers)
         self.addArrow(msg, markers)
 
+        self._tracker_set = new_set
         return markers        
