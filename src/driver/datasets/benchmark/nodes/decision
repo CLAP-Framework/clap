@@ -7,19 +7,21 @@ from zzz_common.params import parse_private_args
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 
 from zzz_perception_msgs.msg import TrackingBoxArray
-from zzz_driver_datasets_benchmark.tracking import TrackingBenchmark
+from zzz_driver_datasets_benchmark.decision import DecisionBenchmark
 
-class TrackingBenchmarkNode(object):
+class DecisionBenchmarkNode(object):
     def __init__(self):
         params = parse_private_args(
-            ground_truth_topic="/kitti/tracklets",
-            result_topic="/zzz/perception/objects_tracked"
+            perception_ground_truth_topic="",
+            perception_result_topic="",
+            command_with_ground_truth="",
+            command_with_perception=""
         )
 
-        self._benchmark = TrackingBenchmark()
+        self._benchmark = DecisionBenchmark()
         self._synced_subscriber = ApproximateTimeSynchronizer([
-            Subscriber(params.ground_truth_topic, TrackingBoxArray),
-            Subscriber(params.result_topic, TrackingBoxArray)
+            Subscriber(params.perception_ground_truth_topic, TrackingBoxArray),
+            Subscriber(params.perception_result_topic, TrackingBoxArray)
         ], 5, 0.1)
         self._synced_subscriber.registerCallback(self.boxes_callback)
 
@@ -28,13 +30,13 @@ class TrackingBenchmarkNode(object):
         self._benchmark.add_frame(gtbox, trbox)
 
     def save_results(self):
-        with open("tracking_results.json", "w") as jout:
+        with open("decision_results.json", "w") as jout:
             json.dump(dict(report=self._benchmark.report(), desc=self._benchmark.doc()),
                 jout, sort_keys=True)
 
 if __name__ == "__main__":
 
-    rospy.init_node("tracking", log_level=rospy.DEBUG)
-    node = TrackingBenchmarkNode()
+    rospy.init_node("decision", log_level=rospy.DEBUG)
+    node = DecisionBenchmarkNode()
     rospy.on_shutdown(node.save_results)
     rospy.spin()
