@@ -118,11 +118,10 @@ class CameraProcessNode:
         msg_to_send.header = self.header
         if detections is not None and len(detections) > 0:
             for x1, y1, x2, y2, obj_conf, cls_conf, cls_id in detections:
-
                 msg_single = DetectionBox2D()
                 msg_single.projection_type = DetectionBox2D.PROJECTION_HEV
                 msg_single.bbox.pose.x = (x1 + x2) / 2
-                msg_single.bbox.pose.y = (y1 + y2) / 2
+                msg_single.bbox.pose.y = (y1 + y2) / 2 # + 90 # BUG: Temporarily solution for 800*600, 800*800 we got correct result
                 msg_single.bbox.pose.covariance = np.diag([1/obj_conf]*3).flatten().tolist()
                 msg_single.bbox.dimension.length_x = abs(x1 - x2)
                 msg_single.bbox.dimension.length_y = abs(y1 - y2)
@@ -130,7 +129,7 @@ class CameraProcessNode:
 
                 msg_class = ObjectClass()
                 msg_class.comments = self.yolo.classes[int(cls_id)]
-                msg_class.classid = cls_id
+                msg_class.classid = cls_id # TODO: Add conversion
                 msg_class.score = cls_conf
 
                 msg_single.classes.append(msg_class)

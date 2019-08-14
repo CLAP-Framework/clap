@@ -17,10 +17,11 @@ class FilterNode():
             pose_topic="/zzz/navigation/ego_pose"
         )
 
+        self._filter = RigidToStaticTransformer(**params)
+        
         self._input_subscriber = rospy.Subscriber(params.pop("input_topic"), DetectionBoxArray, self.detection_callback)
         self._pose_subscriber = rospy.Subscriber(params.pop("pose_topic"), RigidBodyStateStamped, self.pose_callback)
         self._publisher = rospy.Publisher(params.pop("output_topic"), DetectionBoxArray, queue_size=1)
-        self._filter = RigidToStaticTransformer(**params)
 
         self._pose_trigger = threading.Event()
 

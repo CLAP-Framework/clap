@@ -6,7 +6,7 @@ from zzz_perception_tracking_object_trackers.filters import Pose_UKF_CV, Pose_UK
 from zzz_perception_tracking_object_trackers.associate import NearestNeighborFilter
 
 class MultiBoxTracker:
-    def __init__(self, lost_count=3,
+    def __init__(self, lost_count=6, # TODO: add track_count to filter false positives
         pose_tracker_cls=Pose_UKF_CV, feature_tracker_cls=Box_KF,
         pose_tracker_args=None, feature_tracker_args=None,
         associate_filter=NearestNeighborFilter()):
