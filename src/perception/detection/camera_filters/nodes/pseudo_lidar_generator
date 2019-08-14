@@ -6,8 +6,152 @@ from zzz_common.params import parse_private_args
 from pseudo_lidar.psmnet.pred_disp_module import DisparityNet
 from pseudo_lidar.preprocessing.generate_lidar_module import PclGenerator
 
-from sensor_msgs.msg import Image, PointCloud2
+from sensor_msgs.msg import Image, PointCloud2, PointField
 
+import message_filters
+
+import skimage
+import skimage.io
+import numpy as np
+import pseudo_lidar.preprocessing.kitti_util as kitti_util
+import pseudo_lidar.preprocessing.cam_velo_utils as cam_velo_utils
+
+import argparse
+import os
+
+class detection3dPseudeLidarNode(object):
+    def __init__(self):
+        params = parse_private_args(
+            input_topic_left="/zzz/driver/image_raw",
+            input_topic_right="/zzz/driver/image_raw",
+            output_topic="points_pseudo",
+            target_frame="base_link" # TODO: which frame
+        )
+        self.args_disp = parse_private_args(
+            KITTI="2015", 
+            datapath='/scratch/datasets/kitti2015/testing/', 
+            loadmodel=None,
+            model='stackhourglass', 
+            maxdisp=192,
+            no_cuda=False,
+            seed=1,
+            save_path='finetune_1000',
+            save_figure=False
+        )
+        self.args_gen_lidar = parse_private_args(
+            calib_dir='~/Kitti/object/training/calib', 
+            disparity_dir='~/Kitti/object/training/predicted_disparity', 
+            save_dir='~/Kitti/object/training/predicted_velodyne',
+            max_high=1
+        )
+
+        # network initialization
+        self.disp_pred_net = DisparityNet(self.args_disp)
+        self.pcl_generator = PclGenerator(self.args_gen_lidar)
+
+        self._bridge = cv_bridge.CvBridge()
+        
+        self._subscriber = rospy.Subscriber(params.pop("input_topic"), Image, self.callback)
+        self._publisher = rospy.Publisher(params.pop("output_topic"), PointCloud2, queue_size=1)
+
+        image_left_sub = message_filters.Subscriber('input_topic_left', Image)
+        image_right_sub = message_filters.Subscriber('input_topic_right', Image)
+        info_left_sub = message_filters.Subscriber('camera_info_left', CameraInfo)
+
+        ts = message_filters.TimeSynchronizer([image_left_sub, image_right_sub, info_left_sub], 10)
+        ts.registerCallback(self.callback)
+
+
+    
+    def callback(self, msg_image_left, msg_image_right, info_cam_left):
+        self._image_left = self._bridge.imgmsg_to_cv2(msg_image_left, "bgr8")
+        self._image_right = self._bridge.imgmsg_to_cv2(msg_image_right, "bgr8")
+        self.K_left = info_cam_left.K
+        
+        imgL_o = self._image_left.astype('float32'))
+        imgR_o = self._image_right.astype('float32'))
+
+        img = self.disp_pred_net.run(imgL_o, imgR_o)
+
+        # # file output
+        # print(test_left_img[inx].split('/')[-1])
+        # if self.args.save_figure:
+        #     skimage.io.imsave(self.args.save_path+'/'+test_left_img[inx].split('/')[-1],(img*256).astype('uint16'))
+        # else:
+        #     np.save(self.args.save_path+'/'+test_left_img[inx].split('/')[-1][:-4], img)
+
+        ################# part 2 ###################
+        # predix = test_left_img[inx].split('/')[-1][:-4]
+        # calib_file = '{}/{}.txt'.format(self.args_gen_lidar.calib_dir, predix)
+        # calib = kitti_util.Calibration(calib_file)
+
+        calib = cam_velo_utils.Calibration(self.K_left)
+
+        img = (img*256).astype(np.uint16)/256.
+        lidar = self.pcl_generator.run(calib, img, baseline=0.5) # n*3 array
+
+        # pad 1 in the indensity dimension
+        # lidar = np.concatenate([lidar, np.ones((lidar.shape[0], 1))], 1) # n*4 array
+        lidar = lidar.astype(np.float32)
+
+        lidar_msg = PointCloud2()
+        lidar_msg.header = msg_image_left.header
+        lidar_msg.width = lidar.shape[0]
+        lidar_msg.height = 1
+        lidar_msg.fields = [
+            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1), 
+            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1), 
+            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1)
+        ]
+        lidar_msg.is_bigendian = False
+        lidar_msg.point_step = 12
+        lidar_msg.row_step = 12*lidar.shape[0]
+        lidar_msg.is_dense = int(np.isfinite(lidar).all())
+        lidar_msg.data = lidar.tostring()
+        self._publisher.publish(lidar_msg)
+
+        # lidar.tofile('{}/{}.bin'.format(self.args_gen_lidar.save_dir, predix))
+        # print('Finish Depth {}'.format(predix))
+
+
+    def run_from_file(self):
+        if self.args_disp.KITTI == '2015':
+            from psmnet.dataloader import KITTI_submission_loader as DA
+        else:
+            from psmnet.dataloader import KITTI_submission_loader2012 as DA  
+        test_left_img, test_right_img = DA.dataloader(self.args_disp.datapath)
+    
+        if not os.path.isdir(self.args_disp.save_path):
+            os.makedirs(self.args_disp.save_path)
+
+    
+        for inx in range(len(test_left_img)):
+            ################ part 1 #######################
+            imgL_o = (skimage.io.imread(test_left_img[inx]).astype('float32'))
+            imgR_o = (skimage.io.imread(test_right_img[inx]).astype('float32'))
+    
+            img = self.disp_pred_net.run(imgL_o, imgR_o)
+
+            # # file output
+            # print(test_left_img[inx].split('/')[-1])
+            # if self.args.save_figure:
+            #     skimage.io.imsave(self.args.save_path+'/'+test_left_img[inx].split('/')[-1],(img*256).astype('uint16'))
+            # else:
+            #     np.save(self.args.save_path+'/'+test_left_img[inx].split('/')[-1][:-4], img)
+
+            ################# part 2 ###################
+            predix = test_left_img[inx].split('/')[-1][:-4]
+            calib_file = '{}/{}.txt'.format(self.args_gen_lidar.calib_dir, predix)
+            calib = kitti_util.Calibration(calib_file)
+
+            img = (img*256).astype(np.uint16)/256.
+            lidar = self.pcl_generator.run(calib, img)
+
+            # pad 1 in the indensity dimension
+            lidar = np.concatenate([lidar, np.ones((lidar.shape[0], 1))], 1)
+            lidar = lidar.astype(np.float32)
+            lidar.tofile('{}/{}.bin'.format(self.args_gen_lidar.save_dir, predix))
+            print('Finish Depth {}'.format(predix))
 class FilterNode():
     def __init__(self):
         params = parse_private_args(
@@ -22,8 +166,6 @@ class FilterNode():
         self._subscriber = rospy.Subscriber(params.pop("input_topic"), Image, self.callback)
         self._publisher = rospy.Publisher(params.pop("output_topic"), PointCloud2, queue_size=1)
 
-    def callback(self, msg):
-        pass
 
 if __name__ == "__main__":
     rospy.init_node("pseudo_lidar")
