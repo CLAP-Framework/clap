@@ -4,3 +4,6 @@
 [submodule "src/perception/detection/camera_detectors/src/yolov3"]
 	path = src/perception/detection/camera_detectors/src/yolov3
 	url = https://github.com/cmpute/zzz_yolov3.git
+[submodule "src/perception/detection/camera_filters/src/pseudo_lidar"]
+	path = src/perception/detection/camera_filters/src/pseudo_lidar
+	url = https://github.com/minghanz/pseudo_lidar.git

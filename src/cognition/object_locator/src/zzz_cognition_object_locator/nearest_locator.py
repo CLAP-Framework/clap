@@ -113,6 +113,10 @@ class NearestLocator:
         lane_front_vehicle_list = [[] for _ in self._static_map.lanes]
         lane_rear_vehicle_list = [[] for _ in self._static_map.lanes]
 
+        # Only locate when in multi-lanes
+        if self._dynamic_map.model == MapState.MODEL_JUNCTION_MAP:
+            return
+
         if self._surrounding_object_list is not None:
             for vehicle_idx, vehicle in enumerate(self._surrounding_object_list):
                 dist_list = np.array([dist_from_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)

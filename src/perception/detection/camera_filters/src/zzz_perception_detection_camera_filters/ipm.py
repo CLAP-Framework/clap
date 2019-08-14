@@ -8,7 +8,7 @@ import numpy as np
 import os
 
 def R_yaw(a):
-    a = a/180*np.pi
+    a = a/180.*np.pi
     mat = np.zeros((3,3))
     mat[0,0] = np.cos(a)
     mat[0,1] = -np.sin(a)
@@ -18,7 +18,7 @@ def R_yaw(a):
     return mat
 
 def R_pitch(a):
-    a = a/180*np.pi
+    a = a/180.*np.pi
     mat = np.zeros((3,3))
     mat[0,0] = np.cos(a)
     mat[0,2] = np.sin(a)
@@ -28,7 +28,7 @@ def R_pitch(a):
     return mat
 
 def R_roll(a):
-    a = a/180*np.pi
+    a = a/180.*np.pi
     mat = np.zeros((3,3))
     mat[0,0] = 1
     mat[1,1] = np.cos(a)

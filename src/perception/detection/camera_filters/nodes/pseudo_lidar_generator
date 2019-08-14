@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+
+import rospy
+
+from zzz_common.params import parse_private_args
+from pseudo_lidar.psmnet.pred_disp_module import DisparityNet
+from pseudo_lidar.preprocessing.generate_lidar_module import PclGenerator
+
+from sensor_msgs.msg import Image, PointCloud2
+
+class FilterNode():
+    def __init__(self):
+        params = parse_private_args(
+            input_topic="/zzz/driver/image_raw",
+            output_topic="points_pseudo",
+            target_frame="base_link" # TODO: which frame
+        )
+
+        self._generator = PclGenerator()
+        self._net = DisparityNet()
+        
+        self._subscriber = rospy.Subscriber(params.pop("input_topic"), Image, self.callback)
+        self._publisher = rospy.Publisher(params.pop("output_topic"), PointCloud2, queue_size=1)
+
+    def callback(self, msg):
+        pass
+
+if __name__ == "__main__":
+    rospy.init_node("pseudo_lidar")
+    node = FilterNode()
+    rospy.spin()
+
