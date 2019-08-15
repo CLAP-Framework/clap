@@ -82,12 +82,12 @@ class IDM(object):
         T = self.T
         delta = self.delta
         
-        if lane.have_front_vehicle:
+        if len(lane.front_vehicles) > 0:
             f_v_location = np.array([
-                lane.front_vehicle.state.pose.pose.position.x,
-                lane.front_vehicle.state.pose.pose.position.y
+                lane.front_vehicles[0].state.pose.pose.position.x,
+                lane.front_vehicles[0].state.pose.pose.position.y
             ])
-            v_f = get_speed(lane.front_vehicle.state) # TODO: get mmap vx and vy, the translator part in nearest locator
+            v_f = get_speed(lane.front_vehicles[0].state) # TODO: get mmap vx and vy, the translator part in nearest locator
             dv = v - v_f
             g = np.linalg.norm(f_v_location - ego_vehicle_location)
             g1 = g0 + T*v + v*dv/(2*np.sqrt(a*b))
@@ -115,14 +115,14 @@ class IDM(object):
 
 
     def neighbor_vehicle_is_cutting_in(self,neighbor_lane,ego_lane):
-        if not neighbor_lane.have_front_vehicle:
+        if len(neighbor_lane.front_vehicles) == 0:
             return False
         
-        if neighbor_lane.front_vehicle.behavior is not RoadObstacle.BEHAVIOR_MOVING_LEFT \
-                            and neighbor_lane.front_vehicle.behavior is not RoadObstacle.BEHAVIOR_MOVING_RIGHT:
+        if neighbor_lane.front_vehicles[0].behavior is not RoadObstacle.BEHAVIOR_MOVING_LEFT \
+                            and neighbor_lane.front_vehicles[0].behavior is not RoadObstacle.BEHAVIOR_MOVING_RIGHT:
             return False
         
-        mmap_y = neighbor_lane.front_vehicle.mmap_y
+        mmap_y = neighbor_lane.front_vehicles[0].mmap_y
 
         ego_idx = ego_lane.map_lane.index
         neighbor_idx = neighbor_lane.map_lane.index

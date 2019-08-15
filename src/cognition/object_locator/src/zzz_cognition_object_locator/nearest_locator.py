@@ -117,51 +117,48 @@ class NearestLocator:
         if self._dynamic_map.model == MapState.MODEL_JUNCTION_MAP:
             return
 
+        # Calculate vehicle distances
         if self._surrounding_object_list is not None:
             for vehicle_idx, vehicle in enumerate(self._surrounding_object_list):
                 dist_list = np.array([dist_from_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
                     for lane in self._static_map_lane_path_array])
                 dist_list = np.abs(dist_list)
                 closest_lane = np.argmin(dist_list[:, 0])
+                
                 # Determine if the vehicle is close to lane enough
                 if dist_list[closest_lane, 0] > lane_dist_thres:
                     continue 
                 if dist_list[closest_lane, 1] < self._ego_vehicle_distance_to_lane_head[closest_lane]:
                     # The vehicle is behind if its distance to lane start is smaller
-                    lane_rear_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,1]))
+                    lane_rear_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane, 1]))
                 if dist_list[closest_lane, 2] < self._ego_vehicle_distance_to_lane_tail[closest_lane]:
                     # The vehicle is ahead if its distance to lane end is smaller
-                    lane_front_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,2]))
+                    lane_front_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane, 2]))
         
+        # Put the vehicles onto lanes
         for lane_id in range(len(self._static_map.lanes)):
             front_vehicles = np.array(lane_front_vehicle_list[lane_id])
             rear_vehicles = np.array(lane_rear_vehicle_list[lane_id])
-            if len(front_vehicles) > 0:
-                # Select vehicle ahead with maximum distance to lane start as front vehicle
-                front_vehicle_idx = int(front_vehicles[np.argmax(front_vehicles[:,1]), 0])
-                self._dynamic_map.mmap.lanes[lane_id].have_front_vehicle = True
-                self._dynamic_map.mmap.lanes[lane_id].front_vehicle = self._surrounding_object_list[front_vehicle_idx]
-                self._dynamic_map.mmap.lanes[lane_id].front_vehicle.mmap_y = self.vehicle_mmap_y(self._dynamic_map.mmap.lanes[lane_id].front_vehicle)
-                self._dynamic_map.mmap.lanes[lane_id].front_vehicle.behavior = self.predict_vehicle_behavior(self._dynamic_map.mmap.lanes[lane_id].front_vehicle)
-                rospy.logdebug("Lane index: %d, Front vehicle id: %d, behavior: %d", 
-                                            lane_id, self._dynamic_map.mmap.lanes[lane_id].front_vehicle.uid,
-                                            self._dynamic_map.mmap.lanes[lane_id].front_vehicle.behavior)                
-            else:
-                self._dynamic_map.mmap.lanes[lane_id].have_front_vehicle = False
 
+            if len(front_vehicles) > 0:
+                for vehicle_row in front_vehicles[front_vehicles[:,1].argsort()]:
+                    front_vehicle_idx = int(vehicle_row[0])
+                    front_vehicle = self._surrounding_object_list[front_vehicle_idx]
+                    front_vehicle.mmap_y = self.vehicle_mmap_y(front_vehicle)
+                    front_vehicle.behavior = self.predict_vehicle_behavior(front_vehicle)
+                    self._dynamic_map.mmap.lanes[lane_id].front_vehicles.append(front_vehicle)
+                    rospy.logdebug("Lane index: %d, Front vehicle id: %d, behavior: %d", 
+                                    lane_id, front_vehicle.uid, front_vehicle.behavior)
 
             if len(rear_vehicles) > 0:
-                # Select vehicle behine with maximum distance to lane start as rear vehicle
-                rear_vehicle_idx  = int(rear_vehicles [np.argmax(rear_vehicles[:,1]), 0])
-                self._dynamic_map.mmap.lanes[lane_id].have_rear_vehicle = True
-                self._dynamic_map.mmap.lanes[lane_id].rear_vehicle = self._surrounding_object_list[rear_vehicle_idx]
-                self._dynamic_map.mmap.lanes[lane_id].rear_vehicle.mmap_y = self.vehicle_mmap_y(self._dynamic_map.mmap.lanes[lane_id].rear_vehicle)
-                self._dynamic_map.mmap.lanes[lane_id].rear_vehicle.behavior = self.predict_vehicle_behavior(self._dynamic_map.mmap.lanes[lane_id].rear_vehicle)
-                rospy.logdebug("Lane index: %d, Rear vehicle id: %d, behavior: %d", 
-                                            lane_id, self._dynamic_map.mmap.lanes[lane_id].rear_vehicle.uid, 
-                                            self._dynamic_map.mmap.lanes[lane_id].rear_vehicle.behavior)
-            else:
-                self._dynamic_map.mmap.lanes[lane_id].have_rear_vehicle = False
+                for vehicle_row in front_vehicles[front_vehicles[:,1].argsort()]:
+                    rear_vehicle_idx = int(vehicle_row[0])
+                    rear_vehicle = self._surrounding_object_list[rear_vehicle_idx]
+                    rear_vehicle.mmap_y = self.vehicle_mmap_y(rear_vehicle)
+                    rear_vehicle.behavior = self.predict_vehicle_behavior(rear_vehicle)
+                    self._dynamic_map.mmap.lanes[lane_id].rear_vehicles.append(rear_vehicle)
+                    rospy.logdebug("Lane index: %d, Rear vehicle id: %d, behavior: %d", 
+                                    lane_id, rear_vehicle.uid, rear_vehicle.behavior)
 
     def locate_traffic_light_in_lanes(self):
         # TODO: Currently it's a very simple rule to locate the traffic lights
@@ -209,6 +206,7 @@ class NearestLocator:
         '''
         pass
 
+    # TODO: Move this function into separate prediction module
     def predict_vehicle_behavior(self, vehicle, lane_change_thres = 0.2):
         '''
         Detect the behaviors of surrounding vehicles
@@ -236,6 +234,7 @@ class NearestLocator:
         
         return behavior
 
+    # TODO: Combine this into locate_surrounding_vehicle_in_lanes
     def vehicle_mmap_y(self,vehicle,in_lane_thres = 0.9,lane_dist_thres = 2):
 
         dist_list = np.array([nearest_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
@@ -252,6 +251,7 @@ class NearestLocator:
             mmap_y = -1
             return mmap_y
 
+        # XXX: This is a naive method to detect whether the vehicle is outsize of the edge
         if abs(second_closest_lane_dist-closest_lane_dist) > ((closest_point.width/2)+(second_closest_point.width/2))*in_lane_thres:
             mmap_y = closest_lane
         else:

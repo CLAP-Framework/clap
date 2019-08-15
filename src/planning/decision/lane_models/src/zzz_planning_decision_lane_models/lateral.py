@@ -87,10 +87,10 @@ class LaneUtility(object):
 
         for lane in self.dynamic_map.mmap.lanes:
             if lane.map_lane.index == target_index:
-                if lane.have_front_vehicle:
-                    front_vehicle = lane.front_vehicle
-                if lane.have_rear_vehicle:
-                    rear_vehicle = lane.rear_vehicle
+                if len(lane.front_vehicles) > 0:
+                    front_vehicle = lane.front_vehicles[0]
+                if len(lane.rear_vehicles) > 0:
+                    rear_vehicle = lane.rear_vehicles[0]
                 break
 
         ego_v = get_speed(self.dynamic_map.ego_state)

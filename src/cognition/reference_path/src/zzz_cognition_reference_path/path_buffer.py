@@ -75,12 +75,10 @@ class PathBuffer:
         self._dynamic_map.jmap.reference_path.map_lane.index = -1
 
         # Calculate vehicles on the reference path
+        # TODO: find all vehicles near enough on reference_path
         front_vehicle = self.get_front_vehicle_on_reference_path()
-        if front_vehicle is None:
-            self._dynamic_map.jmap.reference_path.have_front_vehicle = False
-        else:
-            self._dynamic_map.jmap.reference_path.have_front_vehicle = True
-            self._dynamic_map.jmap.reference_path.front_vehicle = front_vehicle
+        if front_vehicle is not None:
+            self._dynamic_map.jmap.reference_path.front_vehicles = [front_vehicle]
 
         self._dynamic_map.jmap.reference_path.map_lane.speed_limit = 30
 
