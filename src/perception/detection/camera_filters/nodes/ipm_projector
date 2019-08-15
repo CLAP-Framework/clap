@@ -51,7 +51,6 @@ def IPMNode(class):
 
             else:
                 newdet = DetectionBox2D()
-                newdet.projection_type = DetectionBox2D.PROJECTION_HEV
                 newdet.bbox.pose.u = u
                 newdet.bbox.pose.v = v
 

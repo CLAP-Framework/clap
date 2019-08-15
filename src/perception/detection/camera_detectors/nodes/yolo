@@ -115,7 +115,6 @@ class CameraProcessNode:
             for x1, y1, x2, y2, obj_conf, cls_conf, cls_id in detections:
 
                 msg_single = DetectionBox2D()
-                msg_single.projection_type = DetectionBox2D.PROJECTION_HEV
                 msg_single.bbox.pose.x = (x1 + x2) / 2
                 msg_single.bbox.pose.y = (y1 + y2) / 2
                 msg_single.bbox.pose.covariance = np.diag([1/obj_conf]*3).flatten().tolist()

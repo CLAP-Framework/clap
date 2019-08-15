@@ -6,12 +6,6 @@
 #   the image). Not required for all use cases, so it may be empty.
 sensor_msgs/Image source_img
 
-# Describe the projection approach of image with regard to the real world
-uint8 projection_type
-
-uint8 PROJECTION_BEV = 0 # Bird eye's view
-uint8 PROJECTION_HEV = 1 # Human eye's view
-
 # ---------------- Properties --------------------
 
 # Describe several classification result for the object
