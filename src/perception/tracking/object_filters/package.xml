@@ -1,6 +1,6 @@
 <package format="2">
   <name>zzz_perception_tracking_object_filters</name>
-  <version>0.0.3</version>
+  <version>0.0.4</version>
   <description>
     Implementation of object filters
   </description>
