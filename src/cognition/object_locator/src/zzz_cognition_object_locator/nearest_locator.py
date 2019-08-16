@@ -55,6 +55,9 @@ class NearestLocator:
     
     def update(self):
         self._dynamic_map = cognition_default(MapState)
+        self._dynamic_map.header.frame_id = "map"
+        self._dynamic_map.header.stamp = rospy.Time.now()
+
         self._dynamic_map.ego_state = self._ego_vehicle_state.state
         if self._static_map.in_junction or len(self._static_map.lanes) == 0:
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
@@ -110,6 +113,7 @@ class NearestLocator:
             self._dynamic_map.mmap.distance_to_junction = self._ego_vehicle_distance_to_lane_tail[closest_lane]
 
     def locate_surrounding_vehicle_in_lanes(self, lane_dist_thres=2):
+        surround_vehicles = self._surrounding_object_list # Prevent data update during processing XXX: use a better mechanism?
         lane_front_vehicle_list = [[] for _ in self._static_map.lanes]
         lane_rear_vehicle_list = [[] for _ in self._static_map.lanes]
 
@@ -118,7 +122,7 @@ class NearestLocator:
             return
 
         # Calculate vehicle distances
-        if self._surrounding_object_list is not None:
+        if surround_vehicles is not None:
             for vehicle_idx, vehicle in enumerate(self._surrounding_object_list):
                 dist_list = np.array([dist_from_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
                     for lane in self._static_map_lane_path_array])
@@ -141,9 +145,14 @@ class NearestLocator:
             rear_vehicles = np.array(lane_rear_vehicle_list[lane_id])
 
             if len(front_vehicles) > 0:
-                for vehicle_row in front_vehicles[front_vehicles[:,1].argsort()]:
-                    front_vehicle_idx = int(vehicle_row[0])
-                    front_vehicle = self._surrounding_object_list[front_vehicle_idx]
+                for vehicle_row in front_vehicles[:,1].argsort():
+
+                    # FIXME: Here only two vehicles are calculated because the speed is too slow
+                    if len(self._dynamic_map.mmap.lanes[lane_id].front_vehicles) > 1:
+                        continue
+
+                    front_vehicle_idx = int(front_vehicles[vehicle_row, 0])
+                    front_vehicle = surround_vehicles[front_vehicle_idx]
                     front_vehicle.mmap_y = self.vehicle_mmap_y(front_vehicle)
                     front_vehicle.behavior = self.predict_vehicle_behavior(front_vehicle)
                     self._dynamic_map.mmap.lanes[lane_id].front_vehicles.append(front_vehicle)
@@ -151,9 +160,14 @@ class NearestLocator:
                                     lane_id, front_vehicle.uid, front_vehicle.behavior)
 
             if len(rear_vehicles) > 0:
-                for vehicle_row in front_vehicles[front_vehicles[:,1].argsort()]:
-                    rear_vehicle_idx = int(vehicle_row[0])
-                    rear_vehicle = self._surrounding_object_list[rear_vehicle_idx]
+                for vehicle_row in rear_vehicles[:,1].argsort():
+
+                    # FIXME: Here only two vehicles are calculated because the speed is too slow
+                    if len(self._dynamic_map.mmap.lanes[lane_id].rear_vehicles) > 1:
+                        continue
+
+                    rear_vehicle_idx = int(rear_vehicles[vehicle_row, 0])
+                    rear_vehicle = surround_vehicles[rear_vehicle_idx]
                     rear_vehicle.mmap_y = self.vehicle_mmap_y(rear_vehicle)
                     rear_vehicle.behavior = self.predict_vehicle_behavior(rear_vehicle)
                     self._dynamic_map.mmap.lanes[lane_id].rear_vehicles.append(rear_vehicle)

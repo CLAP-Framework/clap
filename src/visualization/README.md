@@ -1,4 +1,4 @@
 This module contains packages for system and data visualization.
 
-- **dashboard**: Modules for stand-alone rendering
+- **web**: Modules for web based rendering
 - **rviz**: Modules for visualization in RViz

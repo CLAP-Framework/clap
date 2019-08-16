@@ -123,4 +123,6 @@
     <!-- <node pkg="image_view" type="image_view" name="birds_eye_view">
         <remap from="image" to="/carla/ego_vehicle/camera/rgb/Sky/image_color" />
     </node> -->
+    <node pkg="zzz_visualization_web_dash" type="dashboard" name="dashboard">
+    </node>
 </launch>
