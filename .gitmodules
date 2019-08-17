@@ -7,3 +7,6 @@
 [submodule "src/perception/detection/camera_filters/src/pseudo_lidar"]
 	path = src/perception/detection/camera_filters/src/pseudo_lidar
 	url = https://github.com/minghanz/pseudo_lidar.git
+[submodule "src/tools/openai_baselines"]
+	path = src/tools/openai_baselines
+	url = https://github.com/cmpute/baselines.git

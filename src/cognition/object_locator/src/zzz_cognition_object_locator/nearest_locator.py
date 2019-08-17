@@ -41,7 +41,8 @@ class NearestLocator:
 
     def receive_object_list(self, object_list):
         assert type(object_list) == TrackingBoxArray
-        self._surrounding_object_list = convert_tracking_box(object_list, self._ego_vehicle_state)
+        if self._ego_vehicle_state != None:
+            self._surrounding_object_list = convert_tracking_box(object_list, self._ego_vehicle_state)
 
     def receive_ego_state(self, state):
         assert type(state) == RigidBodyStateStamped

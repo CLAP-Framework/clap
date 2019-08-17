@@ -2,8 +2,6 @@
 
 import rospy
 import numpy as np
-from zzz_planning_decision_lane_models.longitudinal import IDM
-from zzz_planning_decision_lane_models.lateral import LaneUtility
 from zzz_common.geometry import dense_polyline, nearest_point_to_polyline
 from zzz_planning_msgs.msg import DecisionTrajectory
 from nav_msgs.msg import Path
@@ -12,10 +10,10 @@ from geometry_msgs.msg import PoseStamped
 # Make lat lon model as parameter 
 
 class MainDecision(object):
-    def __init__(self):
+    def __init__(self, lon_decision=None, lat_decision=None):
         self.dynamic_map = None
-        self.longitudinal_model_instance = IDM()
-        self.lateral_model_instance = LaneUtility(self.longitudinal_model_instance)
+        self.longitudinal_model_instance = lon_decision
+        self.lateral_model_instance = lat_decision
 
     # Loop entry
     def generate_trajectory_with_speed(self, dynamic_map):
