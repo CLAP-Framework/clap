@@ -14,20 +14,28 @@ class DecisionBenchmarkNode(object):
         params = parse_private_args(
             perception_ground_truth_topic="",
             perception_result_topic="",
-            command_with_ground_truth="",
-            command_with_perception=""
+            command_with_ground_truth_topic="",
+            command_with_perception_topic="",
+            dynamic_map_with_ground_truth_topic="",
+            dynamic_map_with_perception_topic=""
         )
 
         self._benchmark = DecisionBenchmark()
         self._synced_subscriber = ApproximateTimeSynchronizer([
             Subscriber(params.perception_ground_truth_topic, TrackingBoxArray),
-            Subscriber(params.perception_result_topic, TrackingBoxArray)
+            Subscriber(params.perception_result_topic, TrackingBoxArray),
+            Subscriber(params.command_with_ground_truth_topic, TrackingBoxArray),
+            Subscriber(params.command_with_perception_topic, TrackingBoxArray),
+            Subscriber(params.dynamic_map_with_ground_truth_topic, TrackingBoxArray),
+            Subscriber(params.dynamic_map_with_perception_topic, TrackingBoxArray),
         ], 5, 0.1)
-        self._synced_subscriber.registerCallback(self.boxes_callback)
+        self._synced_subscriber.registerCallback(self.decision_callback)
 
-    def boxes_callback(self, gtbox, trbox):
+
+    def decision_callback(self, gtbox, trbox, gtcmd, percmd, gtdmap, perdmap):
         rospy.logdebug("Received synced result")
-        self._benchmark.add_frame(gtbox, trbox)
+        self._benchmark.add_frame(gtbox, trbox, gtcmd, percmd, gtdmap, perdmap)
+
 
     def save_results(self):
         with open("decision_results.json", "w") as jout:
