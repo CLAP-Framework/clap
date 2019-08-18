@@ -14,7 +14,7 @@ class MainDecision(object):
         self.dynamic_map = None
         self.longitudinal_model_instance = lon_decision
         self.lateral_model_instance = lat_decision
-
+        
     # Loop entry
     def generate_trajectory_with_speed(self, dynamic_map):
 

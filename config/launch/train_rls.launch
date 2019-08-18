@@ -31,11 +31,11 @@
         <param name="msg_type" value="ControlCommand" />
     </node>
 
-    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_objects" output="screen">
+    <!-- <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_objects" output="screen">
         <param name="input_topic" value="/carla/ego_vehicle/objects" />
         <param name="output_topic" value="/zzz/perception/objects_tracked" />
         <param name="msg_type" value="ObjectArray" />
-    </node>
+    </node> -->
 
     <!-- Camera Perception -->
     <!-- <node pkg="zzz_perception_detection_camera_detectors" type="yolo"

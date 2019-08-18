@@ -19,6 +19,9 @@ class RLSDecision(object):
         self._rule_based_longitudinal_model_instance = IDM()
         self._rule_based_lateral_model_instance = LaneUtility(self._rule_based_longitudinal_model_instance)
         self._buffer_size = recv_buffer
+        self._collision_signal = False
+        self._collision_times = 0
+        
 
         if mode == "client":
             rospy.loginfo("Connecting to RL server...")
@@ -39,14 +42,30 @@ class RLSDecision(object):
         # Following reference path in junction # TODO(Zhong):should be in cognition part
         if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or dynamic_map.mmap.target_lane_index == -1:
             # send done to OPENAI
+            collision = int(self._collision_signal)
+            self._collision_signal = False
+            leave_current_mmap = 1
+            sent_RL_msg = [0,0,100,0,12,-100,0,0,100,1,12,-100,1,0]
+            sent_RL_msg.append(collision)
+            sent_RL_msg.append(leave_current_mmap)
+            self.sock.sendall(msgpack.packb(sent_RL_msg))
+
             return -1, self._rule_based_longitudinal_model_instance.longitudinal_speed(-1)
 
         RL_state = self.wrap_state()
+        rospy.logdebug("sending state: ego_y:%.1f, ego_v:%.1f", RL_state[0],RL_state[1])
+        sent_RL_msg = RL_state
 
-        print(RL_state)
-        self.sock.sendall(msgpack.packb(RL_state))
+        collision = int(self._collision_signal)
+        self._collision_signal = False
+        leave_current_mmap = 0
+        sent_RL_msg.append(collision)
+        sent_RL_msg.append(leave_current_mmap)
+
+        self.sock.sendall(msgpack.packb(sent_RL_msg))
         RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
-        print(RLS_action)
+        # RLS_action = 0
+        rospy.logdebug("received action:%d", RLS_action)
 
         # discretize action # TODO(Zhong): continous action
         return self.get_decision_from_discrete_action(RLS_action)
@@ -60,8 +79,8 @@ class RLSDecision(object):
         # State space = 2+6*lane_num
 
         state = []
-        ego_y = 0
-        ego_v = 10
+        ego_y = self._dynamic_map.mmap.ego_mmap_y
+        ego_v = self._dynamic_map.mmap.ego_mmap_vx
         state.append(ego_y)
         state.append(ego_v)
         for i,lane in enumerate(self._dynamic_map.mmap.lanes):
@@ -95,7 +114,6 @@ class RLSDecision(object):
             return ego_y, current_speed
         
         if action == 4:
-            print("----------------using this action-----------------")
             return ego_y, current_speed-acc*decision_dt
         
         # left lane action
@@ -131,36 +149,44 @@ class RLSDecision(object):
                                 range_x = 100,
                                 range_vx = 50/3.6
                                 ):
-        if False: #len(lane.front_vehicles) > 0:
+        if len(lane.front_vehicles) > 0:
             fv = lane.front_vehicles[0]
+            fv_id = fv.uid
             fv_x = fv.mmap_x
             fv_y = fv.mmap_y
             fv_vx = fv.mmap_vx
-            fv_vy = fv.mmap_vy
+            # fv_vy = fv.mmap_vy # FIXME(zhong): should consider lane change speed
         else:
             # default fv # TODO(zhong): More reasonable default value
+            fv_id = 0
             fv_x = range_x
             fv_y = lane_index
             fv_vx = range_vx
-            fv_vy = 0
+            # fv_vy = 0
 
         state.append(fv_x)
         state.append(fv_y)
         state.append(fv_vx)
-        # state.append(fv_vy)
+        # state.append(fv_vy) 
         
-        if False: #len(lane.rear_vehicles) > 0:
+        if len(lane.rear_vehicles) > 0:
             rv = lane.rear_vehicles[0]
+            rv_id = rv.uid
             rv_x = rv.mmap_x # negative value
             rv_y = rv.mmap_y
             rv_vx = rv.mmap_vx
-            rv_vy = rv.mmap_vy
+            # rv_vy = rv.mmap_vy # FIXME(zhong): should consider lane change speed
         else:
+            rv_id = 0
             rv_x = -range_x
             rv_y = lane_index
             rv_vx = 0
-            rv_vy = 0
+            # rv_vy = 0
         state.append(rv_x)
         state.append(rv_y)
         state.append(rv_vx)
         # state.append(rv_vy)
+
+        rospy.logdebug("lane %d: (%d)fv_x:%.1f, fv_y:%.1f, fv_vx:%.1f,||(%d)rv_x:%.1f, rv_y:%.1f, rv_vx:%.1f", lane_index,
+                                        fv_id,fv_x,fv_y,fv_vx,rv_id,rv_x,rv_y,rv_vx)
+        
