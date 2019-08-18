@@ -10,3 +10,6 @@
 [submodule "src/tools/openai_baselines"]
 	path = src/tools/openai_baselines
 	url = https://github.com/cmpute/baselines.git
+[submodule "src/perception/detection/fused_detectors/src/frustum_pointnets"]
+	path = src/perception/detection/fused_detectors/src/frustum_pointnets
+	url = https://github.com/minghanz/frustum-pointnets.git
