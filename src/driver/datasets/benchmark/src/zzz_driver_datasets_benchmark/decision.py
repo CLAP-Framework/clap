@@ -12,7 +12,8 @@ class DecisionBenchmark:
         # TODO: implement
         self._reported = False
 
-    def add_frame(self, result, gt, cost="overlap", assign="hungarian" result_filter=None, gt_filter=None):
+    def add_frame(self, gtbox, trbox, gtcmd, percmd, gtdmap, perdmap,
+                cost="overlap", assign="hungarian" result_filter=None, gt_filter=None):
         pass
 
     def report(self):
@@ -32,3 +33,24 @@ class DecisionBenchmark:
             results = self.report()
             rospy.logwarn("Results haven't been saved yet!")
             rospy.logwarn("Current result: %s", json.dumps(results))
+
+    def surrounding_vehicle_state_error(self, gtdmap, perdmap):
+
+        # junction map
+
+        # multilan map
+
+        for lane_index, lane_gt in enumerate(gtdmap.mmap.lanes):
+            lane_per = perdmap.mmap.lanes[lane_index]
+            fvs_gt = lane_gt.front_vehicles
+            fvs_per = lane_per.front_vehicles
+            rvs_gt = lane_gt.rear_vehicles
+            rvs_per = lane_per.rear_vehicles
+
+
+
+        pass
+
+
+    def vehicles_in_lane_metric(self,vehicles_gt,vehicles_per,key_vehicle_num = 1):
+        pass
