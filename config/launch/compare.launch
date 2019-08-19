@@ -70,7 +70,7 @@
     </node>
 
     <!-- Camera Perception -->
-    <!-- <node pkg="zzz_perception_detection_camera_detectors" type="yolo"
+    <node pkg="zzz_perception_detection_camera_detectors" type="yolo"
           name="yolo_node" output="screen" ns="/zzz/perception">
           <env   name="PYTHONPATH"   value="$(env PYTHONPATH):/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages"/>
           <param name="input_topic"  value="/carla/ego_vehicle/camera/rgb/Center/image_color"/>
@@ -84,7 +84,7 @@
         <param name="input_topic" value="objects2d_detected"/>
         <param name="image_topic" value="/carla/ego_vehicle/camera/rgb/Center/image_color"/>
     </node>
-    <node pkg="zzz_perception_detection_camera_filters" type="ipm_projector"
+    <!-- <node pkg="zzz_perception_detection_camera_filters" type="ipm_projector"
           name="ipm" output="screen" ns="/zzz/perception">
         <param name="output_topic" value="objects_projected"/>
     </node>
@@ -92,17 +92,21 @@
           name="static2d_converter" output="screen" ns="/zzz/perception">
         <param name="input_topic" value="objects_projected"/>
         <param name="output_topic" value="objects_transformed"/>
-    </node>
-    <node pkg="zzz_visualization_rviz_box_visualizer" type="detection"
+    </node> -->
+    <!-- <node pkg="zzz_visualization_rviz_box_visualizer" type="detection"
           name="dbox_visualize" output="screen" ns="/zzz/perception">
-        <param name="input_topic" value="objects_projected"/>
+        <param name="input_topic" value="objects_detected_pseudo"/>
         <param name="marker_lifetime" value="0.5"/>
         <param name="box_max_size" value="9999999"/>
-    </node>
+    </node> -->
+    
     <node pkg="zzz_perception_detection_camera_filters" type="pseudo_lidar_generator"
           name="pseudo" output="screen" ns="/zzz/perception">
-        <env   name="PYTHONPATH"   value="$(env PYTHONPATH):/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages"/>
-    </node> -->
+        <env   name="PYTHONPATH"   value="$(env PYTHONPATH):/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages:/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages/torchvision-0.2.0-py2.7.egg"/>
+        <param name="input_topic_left"  value="/carla/ego_vehicle/camera/rgb/Left/image_color"/>
+        <param name="input_topic_right" value="/carla/ego_vehicle/camera/rgb/Center/image_color"/>
+        <param name="camera_info_left" value="/carla/ego_vehicle/camera/rgb/Left/camera_info"/>
+    </node>
 
     <!-- Lidar Perception -->
     <node pkg="zzz_perception_detection_lidar_filters" type="extrinsic"
@@ -146,9 +150,27 @@
         <param name="marker_lifetime" value="0.5"/>
         <param name="box_max_size" value="9999999"/>
     </node>
+    <!-- <node pkg="zzz_perception_detection_fused_detectors" type="frustum"
+          name="frustum_based" output="screen" ns="/zzz/perception">
+        <env   name="PYTHONPATH"   value="$(env PYTHONPATH):/home/carla/.conda/envs/tfpy2gpu/lib/python2.7/site-packages"/>
+        <param name="input_topic_detc_2d" value="objects2d_detected"/>
+        <param name="input_topic_left" value="/carla/ego_vehicle/camera/rgb/Center/image_color"/>
+        <param name="camera_info_left" value="/carla/ego_vehicle/camera/rgb/Center/camera_info"/>
+        <param name="input_topic_lidar" value="points_pseudo"/>
+        <param name="output_topic" value="objects_transformed"/>
+    </node> -->
 
     <!-- Carla viewer -->
     <!-- <node pkg="image_view" type="image_view" name="birds_eye_view">
         <remap from="image" to="/carla/ego_vehicle/camera/rgb/Sky/image_color" />
     </node> -->
+    <node pkg="zzz_visualization_web_dash" type="dashboard" name="dashboard">
+    </node>
+
+    <!-- Benchmarking -->
+    <node pkg="zzz_driver_datasets_benchmark" type="tracking" name="perception_benchmark" output="screen">
+        <param name="ground_truth_topic" value="/zzz/perception/objects_tracked_true"/>
+    </node>
+    <node pkg="zzz_driver_datasets_benchmark" type="decision" name="decision_benchmark" output="screen">
+    </node>
 </launch>

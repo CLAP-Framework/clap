@@ -20,11 +20,20 @@ from zzz_common.params import parse_private_args
 from zzz_driver_msgs.utils import get_speed
 from zzz_cognition_msgs.msg import MapState
 from zzz_control_msgs.msg import ControlCommand
-logging.getLogger('flask').addHandler(LogBridge())
+logging.getLogger('werkzeug').addHandler(LogBridge())
+
+from std_msgs.msg import Int32, Float32
 
 params = parse_private_args(
     dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
-    command_topic="/zzz/control/command"
+    command_topic="/zzz/control/command",
+
+    # FIXME: Change these benchmark topics
+    tp_topic="/zzz/benchmark/tp",
+    fn_topic="/zzz/benchmark/fn",
+    cost_topic="/zzz/benchmark/cost",
+    acc_err_topic="/zzz/benchmark/acc_err",
+    steer_err_topic="/zzz/benchmark/steer_err",
 )
 
 app = dash.Dash()
@@ -35,6 +44,12 @@ data_cache = EasyDict(
     ego_speed=collections.deque(maxlen=200),
     front_speed=collections.deque(maxlen=200),
     time=collections.deque(maxlen=200),
+
+    tp=0,
+    fn=0,
+    cost=0,
+    acc_err=0,
+    steer_err=0,
 )
 
 ####################### Style Settings #######################
@@ -48,7 +63,7 @@ colors = {
         'line-color': ['#E1DCD9', '#A7414A', '#A37C27'],
 }
 infotext_style = {
-    'font-size': '10pt',
+    'font-size': '16pt',
     'font-family': 'Calibri',
     'color': colors['text'],
     'margin-left': '16px',
@@ -56,7 +71,7 @@ infotext_style = {
     'margin-down': '0px',
 }
 infotext_time_style = {
-    'font-size': '16pt',
+    'font-size': '24pt',
     'font-family': 'Calibri',
     'color': colors['text'],
     'text-align': 'center'
@@ -78,7 +93,13 @@ app.layout = html.Div(
                     html.Div([
                             html.P('', id='server_time', style=infotext_time_style),
                             html.P('', id='acceleration', style=infotext_style),
-                            html.P('', id='steering', style=infotext_style)
+                            html.P('', id='steering', style=infotext_style),
+
+                            html.P('', id='tp', style=infotext_style),
+                            html.P('', id='fn', style=infotext_style),
+                            html.P('', id='cost', style=infotext_style),
+                            html.P('', id='acc_error', style=infotext_style),
+                            html.P('', id='steer_error', style=infotext_style),
                         ]),
                     ],
                     rowSpan=2,
@@ -131,6 +152,33 @@ def fresh_accel(niter):
              [Input('interval-component', 'n_intervals')])
 def fresh_steer(niter):
     return "Steering: %.2f" % data_cache.steer
+
+
+@app.callback(Output('tp', 'children'),
+             [Input('interval-component', 'n_intervals')])
+def fresh_tp(niter):
+    return "TP: %d" % data_cache.tp
+
+@app.callback(Output('fn', 'children'),
+             [Input('interval-component', 'n_intervals')])
+def fresh_fn(niter):
+    return "FN: %d" % data_cache.fn
+
+@app.callback(Output('cost', 'children'),
+             [Input('interval-component', 'n_intervals')])
+def fresh_cost(niter):
+    return "Cost: %.2f" % data_cache.cost
+
+@app.callback(Output('acc_error', 'children'),
+             [Input('interval-component', 'n_intervals')])
+def fresh_acc_error(niter):
+    return "Acceleration error: %.2f" % data_cache.acc_err
+
+@app.callback(Output('steer_error', 'children'),
+             [Input('interval-component', 'n_intervals')])
+def fresh_steer_error(niter):
+    return "Steering error: %.2f" % data_cache.steer_err
+
 
 @app.callback(Output('speed-graph', 'figure'),
              [Input('interval-component', 'n_intervals')])
@@ -221,6 +269,14 @@ if __name__ == "__main__":
 
     dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, dynamic_map_callback)
     command_subscriber = rospy.Subscriber(params.command_topic, ControlCommand, command_callback)
+
+    command_subscriber = rospy.Subscriber(params.command_topic, ControlCommand, command_callback)
+
+    tp_sub = rospy.Subscriber(params.tp_topic, Int32, lambda msg: data_cache.update({'tp': msg.data}))
+    fn_sub = rospy.Subscriber(params.fn_topic, Int32, lambda msg: data_cache.update({'fn': msg.data}))
+    cost_sub = rospy.Subscriber(params.cost_topic, Float32, lambda msg: data_cache.update({'cost': msg.data}))
+    acc_err_sub = rospy.Subscriber(params.acc_err_topic, Float32, lambda msg: data_cache.update({'acc_err': msg.data}))
+    steer_err_sub = rospy.Subscriber(params.steer_err_topic, Float32, lambda msg: data_cache.update({'steer_err': msg.data}))
 
     if 'ROS_IP' in os.environ:
         ip = os.environ['ROS_IP']

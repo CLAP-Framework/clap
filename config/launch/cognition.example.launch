@@ -118,7 +118,7 @@
         <param name="marker_lifetime" value="0.5"/>
         <param name="box_max_size" value="9999999"/>
     </node>
-    <!-- <node pkg="zzz_perception_detection_fused_detectors" type="frustum"
+    <node pkg="zzz_perception_detection_fused_detectors" type="frustum"
           name="frustum_based" output="screen" ns="/zzz/perception">
         <env   name="PYTHONPATH"   value="$(env PYTHONPATH):/home/carla/.conda/envs/tfpy2gpu/lib/python2.7/site-packages"/>
         <param name="input_topic_detc_2d" value="objects2d_detected"/>
@@ -126,7 +126,7 @@
         <param name="camera_info_left" value="/carla/ego_vehicle/camera/rgb/Center/camera_info"/>
         <param name="input_topic_lidar" value="points_pseudo"/>
         <param name="output_topic" value="objects_transformed"/>
-    </node> -->
+    </node>
 
     <!-- Carla viewer -->
     <!-- <node pkg="image_view" type="image_view" name="birds_eye_view">

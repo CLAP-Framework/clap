@@ -205,6 +205,9 @@ class TrackingBenchmark:
             cur_modp = cur_c / float(cur_tp)
         self._modps.append(cur_modp)
 
+        # Return a accumulate summary
+        return {'TP': self._tp, 'FN': self._fn, 'AVG_COST': self._total_cost}
+
     def doc(self):
         '''
         Get descriptions of the metrics
