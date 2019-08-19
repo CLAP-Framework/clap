@@ -16,6 +16,7 @@ import pseudo_lidar.preprocessing.cam_velo_utils as cam_velo_utils
 import os
 import numpy as np
 import pcl
+import time
 # import ros_numpy
 
 def msg_detections_2d_to_bbox_and_labels(message_detection_2d):
@@ -42,6 +43,8 @@ def msg_detections_2d_to_bbox_and_labels(message_detection_2d):
             cls_string = "Pedestrian"
         elif np.bitwise_and(cls_detect, 3):
             cls_string = "Cyclist"
+        else:
+            cls_string = "Car"
 
         labels.append(cls_string)
 
@@ -49,29 +52,30 @@ def msg_detections_2d_to_bbox_and_labels(message_detection_2d):
 
 def generate_3d_detection_msg(hs, ws, ls, txs, tys, tzs, rys, type_list):
     msg_detects_3d = DetectionBoxArray()
-    for i in len(hs):
+    msg_detects_3d.header.frame_id = "ego_vehicle"
+    for i in range(len(hs)):
         detect_3d = DetectionBox()
-        detect_3d.bbox.pose.position.x = txs[i]
-        detect_3d.bbox.pose.position.y = tys[i]
-        detect_3d.bbox.pose.position.z = tzs[i]
-        detect_3d.bbox.pose.orientation.x = 0
-        detect_3d.bbox.pose.orientation.y = 0
-        detect_3d.bbox.pose.orientation.z = np.sin(rys[i]/2.)
-        detect_3d.bbox.pose.orientation.w = np.cos(rys[i]/2.)
-        detect_3d.bbox.dimension.length_x = ws[i]
-        detect_3d.bbox.dimension.length_y = hs[i]
-        detect_3d.bbox.dimension.length_z = ls[i]
+        detect_3d.bbox.pose.pose.position.x = tzs[i]
+        detect_3d.bbox.pose.pose.position.y = -txs[i]
+        detect_3d.bbox.pose.pose.position.z = -tys[i]
+        detect_3d.bbox.pose.pose.orientation.x = 0
+        detect_3d.bbox.pose.pose.orientation.y = 0
+        detect_3d.bbox.pose.pose.orientation.z = -np.sin(rys[i]/2.)
+        detect_3d.bbox.pose.pose.orientation.w = np.cos(rys[i]/2.)
+        detect_3d.bbox.dimension.length_x = hs[i]
+        detect_3d.bbox.dimension.length_y = ls[i]
+        detect_3d.bbox.dimension.length_z = ws[i]
         obj_class = ObjectClass()
         if type_list[i] == "Car":
             obj_class.classid = 1
-        elif type_list[i] == "Pedestrian":
+        elif type_list[i] == "DetectionBoxArrayPedestrian":
             obj_class.classid = 2
         elif type_list[i] == "Cyclist":
             obj_class.classid = 3
         obj_class.comments = type_list[i]
         detect_3d.classes.append(obj_class)
 
-        msg_detects_3d.append(detect_3d)
+        msg_detects_3d.detections.append(detect_3d)
     return msg_detects_3d
 
         
@@ -90,9 +94,9 @@ class Detection3dOnLidar(object):
             output_topic="objects_detected",
             target_frame="base_link", # TODO: which frame
             gpu=0,
-            num_point=1024,
+            num_point=1024, # 1024
             model='frustum_pointnets_v1',
-            model_path='/home/carla/Carla/zzz/src/perception/detection/fused_detectors/src/frustum_pointnets/train/log_v1/model.ckpt',
+            model_path='/home/carla/Carla/zzz/src/perception/detection/fused_detectors/src/frustum_pointnets/train/log_v1_pseudo/model.ckpt',
             batch_size=32,
             output='test_results',
             from_rgb_detection=True,
@@ -133,18 +137,30 @@ class Detection3dOnLidar(object):
         # pcs_intensity = 0.3*pcs_color['r'] + 0.59 * pcs_color['g'] + 0.11 * pcs_color['b']
         # pcs_in = np.stack((pcs_xyz, pcs_intensity), axis=1)
 
-        cloud = np.array(pcl.PointCloud(msg_lidar)).transpose()
-        print(cloud)
-        pcs_in = np.stack((cloud, np.ones((cloud.shape[0], 1)) ), axis=1)
+        ori_cloud = pcl.PointCloud(msg_lidar)
+        cloud = ori_cloud.xyz # TODO: Fix this in pcl.py
 
+        arr = ori_cloud.to_ndarray()
+        ndtype = {'names':['rgb'], 'formats':['3u1'], 'offsets':[12], 'itemsize':arr.dtype.itemsize}
+        cloud_rgb = arr.view(ndtype)['rgb']
+        
+        cloud_intensity = 0.2989 * cloud_rgb[:,0] + 0.5870 * cloud_rgb[:,1] + 0.1140 * cloud_rgb[:,2]
+        # pcs_in = np.hstack((cloud, np.ones((cloud.shape[0], 1))))
+        pcs_in = np.hstack((cloud, cloud_intensity.reshape(-1,1)))
 
         boxes_2d, labels = msg_detections_2d_to_bbox_and_labels(message_detection_2d)
         
+        start_time = time.time()
         # run 3d detection given inputs
         hs, ws, ls, txs, tys, tzs, rys, type_list = \
             self.frustum_3d_detector.run(pcs_in, imgL_o, labels, boxes_2d, calib) # pcs_in is n*4 np array
+        print('time for 3d detection on pseudo lidar= %.2f' %(time.time() - start_time))
 
-        msg_detections_3d = generate_3d_detection_msg(hs, ws, ls, txs, tys, tzs, rys, type_list)
+        if len(hs) == 0:
+            msg_detections_3d = DetectionBoxArray()
+        else:
+            msg_detections_3d = generate_3d_detection_msg(hs, ws, ls, txs, tys, tzs, rys, type_list)
+
         msg_detections_3d.header = msg_image_left.header
 
         self._publisher.publish(msg_detections_3d)

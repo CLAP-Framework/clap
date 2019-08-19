@@ -17,6 +17,7 @@ from zzz_common.params import parse_private_args
 
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
+import time
 
 # YOLO imports
 import torch
@@ -25,6 +26,17 @@ from yolov3.models import Darknet, load_darknet_weights
 from yolov3.utils.datasets import letterbox
 from yolov3.utils.utils import non_max_suppression, scale_coords,\
     load_classes, torch_utils
+
+def conversion_class_id(names, id):
+    if names[int(id)] == "person":
+        id_in_msg = ObjectClass.HUMAN
+    elif names[int(id)] == "car" or names[int(id)] == "bus" or names[int(id)] == "truck":
+        id_in_msg = ObjectClass.VEHICLE
+    elif names[int(id)] == "bicycle" or names[int(id)] == "motorcycle":
+        id_in_msg = ObjectClass.CYCLIST
+    else:
+        return None
+    return id_in_msg
 
 class YoloDetect():
     def __init__(self, cfg,
@@ -72,10 +84,11 @@ class YoloDetect():
         img = torch.from_numpy(img).unsqueeze(0).to(self.device)
         pred, _ = self.model(img)
         detections = non_max_suppression(pred, self.conf_thres, self.nms_thres)[0]
-
+        
         if detections is not None and len(detections) > 0:
             # Rescale boxes from 416 to true image size
-            scale_coords([self.img_size, self.img_size], detections[:, :4], im0.shape).round()
+            # detections[:, :4] = scale_coords([self.img_size, self.img_size], detections[:, :4], im0.shape).round()
+            detections[:, :4] = scale_coords(img.shape[2:], detections[:, :4], im0.shape).round()
 
         return detections
 
@@ -112,7 +125,10 @@ class CameraProcessNode:
 
     def inferenceImg(self, img):
         array = np.ascontiguousarray(img[:, :, :3])
+
+        start_time = time.time()
         detections = self.yolo.run(array)
+        print('time for yolo 2d detection= %.2f' %(time.time() - start_time))
 
         msg_to_send = DetectionBox2DArray()
         msg_to_send.header = self.header
@@ -120,20 +136,26 @@ class CameraProcessNode:
             for x1, y1, x2, y2, obj_conf, cls_conf, cls_id in detections:
                 msg_single = DetectionBox2D()
                 msg_single.projection_type = DetectionBox2D.PROJECTION_HEV
-                msg_single.bbox.pose.x = (x1 + x2) / 2
-                msg_single.bbox.pose.y = (y1 + y2) / 2 # + 90 # BUG: Temporarily solution for 800*600, 800*800 we got correct result
+                msg_single.bbox.pose.x = (x1 + x2) / 2.
+                msg_single.bbox.pose.y = (y1 + y2) / 2. # + 90 # BUG: Temporarily solution for 800*600, 800*800 we got correct result
                 msg_single.bbox.pose.covariance = np.diag([1/obj_conf]*3).flatten().tolist()
                 msg_single.bbox.dimension.length_x = abs(x1 - x2)
                 msg_single.bbox.dimension.length_y = abs(y1 - y2)
                 msg_single.bbox.dimension.covariance = np.diag([1/obj_conf]*2).flatten().tolist()
 
-                msg_class = ObjectClass()
-                msg_class.comments = self.yolo.classes[int(cls_id)]
-                msg_class.classid = cls_id # TODO: Add conversion
-                msg_class.score = cls_conf
+                # msg_class = ObjectClass()
+                # msg_class.comments = self.yolo.classes[int(cls_id)]
+                # msg_class.classid = cls_id # TODO: Add conversion
+                # msg_class.score = cls_conf
+                id_in_rosmsg = conversion_class_id(self.yolo.classes, cls_id)
 
-                msg_single.classes.append(msg_class)
-                msg_to_send.detections.append(msg_single)
+                if id_in_rosmsg is not None: 
+                    msg_class = ObjectClass()
+                    msg_class.comments = self.yolo.classes[int(cls_id)]
+                    msg_class.classid = id_in_rosmsg
+                    msg_class.score = cls_conf
+                    msg_single.classes.append(msg_class)
+                    msg_to_send.detections.append(msg_single)
                 
             self.pub.publish(msg_to_send)
 
