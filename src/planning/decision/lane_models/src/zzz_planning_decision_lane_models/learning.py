@@ -21,7 +21,7 @@ class RLSDecision(object):
         self._buffer_size = recv_buffer
         self._collision_signal = False
         self._collision_times = 0
-        
+
 
         if mode == "client":
             rospy.loginfo("Connecting to RL server...")
@@ -72,7 +72,7 @@ class RLSDecision(object):
 
     def wrap_state(self):
 
-        # ego state: ego_y(0), ego_v(1) 
+        # ego state: ego_y(0), ego_v(1)
         # lane 0 : fv_x(2), fv_y(3), fv_v(4), rv_x(5), rv_y(6), rv_v(7)
         # lane 1 : fv_x(8), fv_y(9), fv_v(10), rv_x(11), rv_y(12), rv_v(13)
         # lane 2:...
@@ -85,37 +85,37 @@ class RLSDecision(object):
         state.append(ego_v)
         for i,lane in enumerate(self._dynamic_map.mmap.lanes):
             self.get_state_from_lane(lane,i,state)
-        
+
         return state
-    
+
     def RL_model_matching(self):
         pass
 
     def get_decision_from_discrete_action(self, action, acc = 2, decision_dt = 0.75, hard_brake = 4):
-        
+
         # TODO(Zhong): check if action is reasonable
-        
+
         # Rule-based action
         if action == 0:
             return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
-        
+
         current_speed = get_speed(self._dynamic_map.ego_state)
         ego_y = self._dynamic_map.mmap.ego_lane_index
 
-        # Hard-brake action 
+        # Hard-brake action
         if action == 1:
             return ego_y, current_speed-hard_brake*decision_dt
-        
+
         # ego lane action
         if action == 2:
             return ego_y, current_speed+acc*decision_dt
-        
+
         if action == 3:
             return ego_y, current_speed
-        
+
         if action == 4:
             return ego_y, current_speed-acc*decision_dt
-        
+
         # left lane action
         left_lane_index = ego_y+1
         if left_lane_index >= len(self._dynamic_map.mmap.lanes):
@@ -126,7 +126,7 @@ class RLSDecision(object):
 
         if action == 6:
             return left_lane_index, current_speed
-        
+
         if action == 7:
             return left_lane_index, current_speed-acc*decision_dt
 
@@ -137,10 +137,10 @@ class RLSDecision(object):
                 return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
         if action == 8:
             return right_lane_index, current_speed+acc*decision_dt
-        
+
         if action == 9:
             return right_lane_index, current_speed
-        
+
         if action == 10:
             return right_lane_index, current_speed-acc*decision_dt
 
@@ -167,8 +167,8 @@ class RLSDecision(object):
         state.append(fv_x)
         state.append(fv_y)
         state.append(fv_vx)
-        # state.append(fv_vy) 
-        
+        # state.append(fv_vy)
+
         if len(lane.rear_vehicles) > 0:
             rv = lane.rear_vehicles[0]
             rv_id = rv.uid
@@ -189,4 +189,3 @@ class RLSDecision(object):
 
         rospy.logdebug("lane %d: (%d)fv_x:%.1f, fv_y:%.1f, fv_vx:%.1f,||(%d)rv_x:%.1f, rv_y:%.1f, rv_vx:%.1f", lane_index,
                                         fv_id,fv_x,fv_y,fv_vx,rv_id,rv_x,rv_y,rv_vx)
-        
