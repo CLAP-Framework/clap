@@ -93,7 +93,7 @@ class Detection3dOnLidar(object):
             input_topic_detc_2d="", 
             output_topic="objects_detected",
             target_frame="base_link", # TODO: which frame
-            gpu=0,
+            gpu=1,
             num_point=1024, # 1024
             model='frustum_pointnets_v1',
             model_path='/home/carla/Carla/zzz/src/perception/detection/fused_detectors/src/frustum_pointnets/train/log_v1_pseudo/model.ckpt',

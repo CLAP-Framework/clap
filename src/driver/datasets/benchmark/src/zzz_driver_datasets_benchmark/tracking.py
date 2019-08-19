@@ -83,10 +83,16 @@ class TrackingBenchmark:
             box1 = self._bounding_box_to_bev_corner(box1.bbox)
             box2 = self._bounding_box_to_bev_corner(box2.bbox)
             return polygon_iou(box1, box2)
+        elif ctype == "euclidean":
+            dx = box1.bbox.pose.pose.position.x - box2.bbox.pose.pose.position.x
+            dy = box1.bbox.pose.pose.position.y - box2.bbox.pose.pose.position.y
+            dz = box1.bbox.pose.pose.position.z - box2.bbox.pose.pose.position.z
+            d = math.sqrt(dx*dx + dy*dy + dz*dz)
+            return d # TODO: parametrize threshold
         else:
             raise NotImplementedError("Other cost types haven't been implemented yet!")
 
-    def add_frame(self, result, gt, cost="overlap", assign="hungarian" result_filter=None, gt_filter=None):
+    def add_frame(self, result, gt, cost_type="overlap", assign="hungarian", result_filter=None, gt_filter=None):
         '''
         Add result from one frame. Result and GT field are expected to be type of zzz_perception_msgs.msg.TrackingBoxArray
 
@@ -117,7 +123,7 @@ class TrackingBenchmark:
             gtbox.fragmentation = 0
             cost_row = []
             for trbox in tr_boxes:
-                cost = self.cost(gtbox.trackbox, trbox.trackbox)
+                cost = self.cost(gtbox.trackbox, trbox.trackbox, ctype=cost_type)
                 # gating for boxoverlap
                 if cost <= self._max_cost:
                     cost_row.append(cost) # overlap == 1 is cost ==0
@@ -166,6 +172,7 @@ class TrackingBenchmark:
 
         cur_fn += len(gt_boxes) - len(association_matrix)
         cur_fp += len(tr_boxes) - cur_tp
+        # TODO: assign cur_fp to self._fp
 
         # sanity checks
         assert cur_tp >= 0, "cur_tp = %f < 0" % cur_tp

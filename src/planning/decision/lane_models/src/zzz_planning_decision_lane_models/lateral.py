@@ -51,6 +51,10 @@ class LaneUtility(object):
         else:
             right_lane_utility = self.lane_utility(self.dynamic_map.mmap.ego_lane_index - 1)
 
+        # FIXME(CAO): For Carla Challenge exit
+        if self.dynamic_map.mmap.target_lane_index == 0 and ego_lane_index == 0:
+            return ego_lane_index
+
         # TODO: target lane = -1?
         rospy.logdebug("left_utility = %f, ego_utility = %f, right_utility = %f",
             left_lane_utility, current_lane_utility, right_lane_utility)
@@ -69,7 +73,7 @@ class LaneUtility(object):
         exit_lane_index = self.dynamic_map.mmap.target_lane_index
         distance_to_end = self.dynamic_map.mmap.distance_to_junction
         # XXX: Change 260 to a adjustable parameter?
-        utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1)*3
+        utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1)*1.3
         # + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(260-distance_to_end))
         # FIXME: This utility is adjusted for roundabout
         return utility

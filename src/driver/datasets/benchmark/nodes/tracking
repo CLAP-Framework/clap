@@ -16,7 +16,7 @@ class TrackingBenchmarkNode(object):
             result_topic="/zzz/perception/objects_tracked"
         )
 
-        self._benchmark = TrackingBenchmark()
+        self._benchmark = TrackingBenchmark(max_cost=4)
         self._synced_subscriber = ApproximateTimeSynchronizer([
             Subscriber(params.ground_truth_topic, TrackingBoxArray),
             Subscriber(params.result_topic, TrackingBoxArray)
@@ -25,7 +25,7 @@ class TrackingBenchmarkNode(object):
 
     def boxes_callback(self, gtbox, trbox):
         rospy.logdebug("Received synced result")
-        self._benchmark.add_frame(gtbox, trbox)
+        self._benchmark.add_frame(gtbox, trbox, cost_type="euclidean")
 
     def save_results(self):
         with open("tracking_results.json", "w") as jout:

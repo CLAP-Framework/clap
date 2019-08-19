@@ -7,6 +7,7 @@ from zzz_planning_msgs.msg import DecisionTrajectory
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 from zzz_cognition_msgs.msg import MapState
+from zzz_driver_msgs.utils import get_speed, get_yaw
 
 # Make lat lon model as parameter
 
@@ -48,7 +49,7 @@ class MainDecision(object):
         ego_y = self.dynamic_map.ego_state.pose.pose.position.y
         target_lane = self.get_lane_by_index(target_lane_index)
 
-        central_path = self.convert_path_to_ndarray(lane.map_lane.central_path_points)
+        central_path = self.convert_path_to_ndarray(target_lane.map_lane.central_path_points)
 
         # if ego vehicle is on the target path
         # works for lane change, lane follow and reference path follow
@@ -122,7 +123,7 @@ class MainDecision(object):
         nearest_end_idx = nearest_point_to_polyline(end_point[0], end_point[1], target_lane_center_path)[1]
         end_point_direction = target_lane.map_lane.central_path_points[nearest_end_idx].tangent
 
-        start_tangent = np.array([np.cos(ego_direction),np.sin(ego_direction))])
+        start_tangent = np.array([np.cos(ego_direction),np.sin(ego_direction)])
         end_tangent = np.array([np.cos(end_point_direction),np.sin(end_point_direction)])
 
         lc_path = self.cubic_hermite_spline(p0 = start_point, p1 = end_point,
@@ -154,8 +155,8 @@ class MainDecision(object):
         h11 = (t*t*t-t*t).reshape(len(t),1) #m1
 
         p0 = p0.reshape(1,2)
-        p1 = p1,reshape(1,2)
-        m0 = m0,reshape(1,2)
-        m1 = m1,reshape(1,2)
+        p1 = p1.reshape(1,2)
+        m0 = m0.reshape(1,2)
+        m1 = m1.reshape(1,2)
 
         return np.matmul(h00,p0) + np.matmul(h10,m0) + np.matmul(h01,p1) + np.matmul(h11,m1)

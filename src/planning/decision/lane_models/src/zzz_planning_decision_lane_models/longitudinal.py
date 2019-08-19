@@ -115,6 +115,7 @@ class IDM(object):
 
 
     def neighbor_vehicle_is_cutting_in(self,neighbor_lane,ego_lane):
+        return False # FIXME: remove this after challenge
         if len(neighbor_lane.front_vehicles) == 0:
             return False
         

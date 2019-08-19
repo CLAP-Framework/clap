@@ -181,12 +181,12 @@ def pose_callback(msg, args):
     d_to_center = np.sqrt((ego_x-cx)*(ego_x-cx)+(ego_y-cy)*(ego_y-cy))
     ego_vehicle_angle = np.arctan2(ego_y-cy,ego_x-cx)
 
-    if d_to_center > 22.5 and d_to_center< 24.5 and ego_vehicle_angle < -0.1*np.pi and ego_vehicle_angle > -0.4*np.pi:
+    if d_to_center > 22.5 and d_to_center< 24.5 and ego_vehicle_angle < -0.1*np.pi and ego_vehicle_angle > -0.2*np.pi:
         ready_to_exit = True
     else:
         ready_to_exit = False
 
-    if True:#current_time-starting_time < 15:
+    if current_time-starting_time < 110:
         static_map = build_multilane_map(ego_x,ego_y,1)
         publisher_map.publish(static_map)
         build_reference_path(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane)
