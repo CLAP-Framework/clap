@@ -30,9 +30,9 @@ import os
 class detection3dPseudeLidarNode(object):
     def __init__(self):
         params = parse_private_args(
-            input_topic_left="/zzz/driver/image_raw",
-            input_topic_right="/zzz/driver/image_raw",
-            camera_info_left="/zzz/driver/camera_info",
+            input_topic_left="/zzz/drivers/image_raw",
+            input_topic_right="/zzz/drivers/image_raw",
+            camera_info_left="/zzz/drivers/camera_info",
             output_topic="points_pseudo",
             target_frame="base_link" # TODO: which frame
         )

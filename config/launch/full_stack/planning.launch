@@ -1,20 +1,24 @@
 <!-- Planning & Control -->
 <launch>
+    <arg name="odom_topic" default="/carla/ego_vehicle/odometry"/>
+    <arg name="waypoint_topic" default="/carla/ego_vehicle/waypoints"/>
+
     <node pkg="zzz_navigation_pose_reporter" type="manual"
           name="pose_reporter" output="screen" ns="/zzz/navigation">
         <param name="map_origin" value="[49,8,0]"/>
-        <param name="odom_input_topic" value="/carla/ego_vehicle/odometry"/>
+        <param name="odom_input_topic" value="$(arg odom_topic)"/>
     </node>
     <node pkg="zzz_navigation_map_provider_sumo" type="local_map_generator"
           name="static_map_builder" output="screen" ns="/zzz/navigation">
-        <param name="reference_path_topic" value="/carla/ego_vehicle/waypoints"/>
+        <param name="reference_path_topic" value="$(arg waypoint_topic)"/>
     </node>
     <node pkg="zzz_cognition_object_locator" type="nearest_locator"
           name="nearest_locator" output="screen" ns="/zzz/cognition">
+        <param name="objects_topic" value="/zzz/perception/objects_tracked"/>
     </node>
     <node pkg="zzz_cognition_reference_path" type="put_buffer"
           name="put_buffer" output="screen" ns="/zzz/cognition">
-        <param name="reference_path_topic" value="/carla/ego_vehicle/waypoints"/>
+        <param name="reference_path_topic" value="$(arg waypoint_topic)"/>
     </node>
     <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
           name="idm_lane_utility" output="screen" ns="/zzz/planning">

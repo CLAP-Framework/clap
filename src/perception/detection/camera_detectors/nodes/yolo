@@ -95,7 +95,7 @@ class YoloDetect():
 class CameraProcessNode:
     def __init__(self):
         params = parse_private_args(
-            input_topic="/zzz/driver/image_raw",
+            input_topic="/zzz/drivers/image_raw",
             output_topic="objects2d_detected",
             cfg_file="yolov3-spp.cfg",
             data_file="coco.data",

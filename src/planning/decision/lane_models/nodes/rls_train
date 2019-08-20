@@ -28,6 +28,7 @@ class RLSNode(object):
         self._last_decision_time = 0
 
     def dynamic_map_callback(self, msg, decision_dt = 0.75):
+        # TODO: decision frequency
         # current_time = rospy.Time.now().to_sec()
         # if current_time - self._last_decision_time < decision_dt:
         #     return

@@ -124,7 +124,7 @@ if __name__ == "__main__":
         pub = rospy.Publisher(params.output_topic, CarlaEgoVehicleControl, queue_size=1, latch=True)
         rospy.Subscriber(params.input_topic, ControlCommand, convert_ControlCommand, pub)
     elif params.msg_type == "VehicleStatus":
-        # By default, output_topic should be /zzz/driver/vehicle_report
+        # By default, output_topic should be /zzz/drivers/vehicle_report
         chassis_pub = rospy.Publisher(params.output_topic + "/chassis", ChassisReport, queue_size=1, latch=True)
         control_pub = rospy.Publisher(params.output_topic + "/control", ControlReport, queue_size=1, latch=True)
         rospy.Subscriber(params.input_topic, CarlaEgoVehicleStatus, convert_VehicleStatus, chassis_pub, control_pub)

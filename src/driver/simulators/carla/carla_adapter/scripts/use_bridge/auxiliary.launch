@@ -24,22 +24,4 @@
     <!-- Visualization -->
     <node pkg="zzz_visualization_web_dash" type="dashboard" name="dashboard">
     </node>
-    <node pkg="zzz_visualization_rviz_box_visualizer" type="detection2d"
-          name="dbox_visualize_img" output="screen" ns="/zzz/perception">
-        <param name="input_topic" value="objects2d_detected"/>
-        <param name="image_topic" value="/carla/ego_vehicle/camera/rgb/Center/image_color"/>
-    </node>
-    <node pkg="zzz_visualization_rviz_box_visualizer" type="detection"
-          name="dbox_visualize" output="screen" ns="/zzz/perception">
-        <param name="input_topic" value="objects_detected_pseudo"/>
-        <param name="marker_lifetime" value="0.5"/>
-        <param name="box_max_size" value="9999999"/>
-    </node>
-    <node pkg="zzz_visualization_rviz_box_visualizer" type="tracking"
-          name="box_visualize" output="screen" ns="/zzz/perception">
-        <param name="input_topic" value="objects_tracked"/>
-        <param name="output_topic" value="carla/debug_marker"/>
-        <param name="marker_lifetime" value="0.5"/>
-        <param name="box_max_size" value="9999999"/>
-    </node>
 </launch>
