@@ -6,8 +6,6 @@ import rospy
 from zzz_common.params import parse_private_args
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 
-from std_msgs.msg import Int32, Float32
-
 from zzz_perception_msgs.msg import TrackingBoxArray
 from zzz_driver_datasets_benchmark.tracking import TrackingBenchmark
 
@@ -15,10 +13,7 @@ class TrackingBenchmarkNode(object):
     def __init__(self):
         params = parse_private_args(
             ground_truth_topic="/kitti/tracklets",
-            result_topic="/zzz/perception/objects_tracked",
-            tp_topic="/zzz/benchmark/tp", # TODO: move benchmark to top level module (it contains corresponding message)
-            fn_topic="/zzz/benchmark/fn",
-            cost_topic="/zzz/benchmark/cost",
+            result_topic="/zzz/perception/objects_tracked"
         )
 
         self._benchmark = TrackingBenchmark(max_cost=4)
@@ -28,25 +23,9 @@ class TrackingBenchmarkNode(object):
         ], 5, 0.1)
         self._synced_subscriber.registerCallback(self.boxes_callback)
 
-        self._tp_publisher = rospy.Publisher(params.tp_topic, Int32, queue_size=1, latch=True)
-        self._fn_publisher = rospy.Publisher(params.fn_topic, Int32, queue_size=1, latch=True)
-        self._cost_publisher = rospy.Publisher(params.cost_topic, Float32, queue_size=1, latch=True)
-
     def boxes_callback(self, gtbox, trbox):
         rospy.logdebug("Received synced result")
-        summary = self._benchmark.add_frame(gtbox, trbox, cost_type="euclidean")
-
-        tp_msg = Int32()
-        tp_msg.data = summary['TP']
-        self._tp_publisher.publish(tp_msg)
-
-        fn_topic = Int32()
-        fn_topic.data = summary['FN']
-        self._fn_publisher.publish(fn_topic)
-
-        cost_topic = Float32()
-        cost_topic.data = summary['AVG_COST']
-        self._cost_publisher.publish(cost_topic)
+        self._benchmark.add_frame(gtbox, trbox, cost_type="euclidean")
 
     def save_results(self):
         with open("tracking_results.json", "w") as jout:

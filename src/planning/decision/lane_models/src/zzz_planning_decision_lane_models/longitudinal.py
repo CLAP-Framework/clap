@@ -71,7 +71,7 @@ class IDM(object):
                                          self.dynamic_map.ego_state.pose.pose.position.y])
 
         v = get_speed(self.dynamic_map.ego_state)
-        v0 = 50 / 3.6 # TODO: lane.speed_limit/3.6 FIXME: CARLA CHALLENGE
+        v0 = lane.speed_limit/3.6 
         if v < 5:
             a = self.a + (5 - v)/5*2
         else:
@@ -115,7 +115,6 @@ class IDM(object):
 
 
     def neighbor_vehicle_is_cutting_in(self,neighbor_lane,ego_lane):
-        return False # FIXME: remove this after challenge
         if len(neighbor_lane.front_vehicles) == 0:
             return False
         

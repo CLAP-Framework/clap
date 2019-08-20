@@ -20,8 +20,8 @@ class LaneUtility(object):
         if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or dynamic_map.mmap.target_lane_index == -1:
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
-        # if dynamic_map.distance_to_next_lane < close_to_junction:
-        #     return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
+        if dynamic_map.distance_to_next_lane < close_to_junction:
+            return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         # Case if cannot locate ego vehicle correctly
         if dynamic_map.mmap.ego_lane_index < 0 or dynamic_map.mmap.ego_lane_index > len(dynamic_map.mmap.lanes)-1:
@@ -30,7 +30,6 @@ class LaneUtility(object):
         target_index = self.generate_lane_change_index()
         # ego_lane = self.dynamic_map.mmap.lanes[0]
 
-        # target_speed = self.longitudinal_model_instance.longitudinal_speed(dynamic_map.mmap.ego_lane_index,traffic_light = True)
         target_speed = self.longitudinal_model_instance.longitudinal_speed(target_index,traffic_light = True)
         # TODO: More accurate speed
         
@@ -51,10 +50,6 @@ class LaneUtility(object):
         else:
             right_lane_utility = self.lane_utility(self.dynamic_map.mmap.ego_lane_index - 1)
 
-        # FIXME(CAO): For Carla Challenge exit
-        if self.dynamic_map.mmap.target_lane_index == 0 and ego_lane_index == 0:
-            return ego_lane_index
-
         # TODO: target lane = -1?
         rospy.logdebug("left_utility = %f, ego_utility = %f, right_utility = %f",
             left_lane_utility, current_lane_utility, right_lane_utility)
@@ -73,9 +68,7 @@ class LaneUtility(object):
         exit_lane_index = self.dynamic_map.mmap.target_lane_index
         distance_to_end = self.dynamic_map.mmap.distance_to_junction
         # XXX: Change 260 to a adjustable parameter?
-        utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1)*1.1
-        # + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(260-distance_to_end))
-        # FIXME: This utility is adjusted for roundabout
+        utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(260-distance_to_end))
         return utility
 
     def lane_change_safe(self, ego_lane_index, target_index):

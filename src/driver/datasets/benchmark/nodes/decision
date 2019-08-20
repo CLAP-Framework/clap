@@ -6,10 +6,8 @@ import rospy
 from zzz_common.params import parse_private_args
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 
-from std_msgs.msg import Float32
-
-from zzz_cognition_msgs.msg import MapState
 from zzz_control_msgs.msg import ControlCommand
+from zzz_cognition_msgs.msg import MapState
 from zzz_perception_msgs.msg import TrackingBoxArray
 from zzz_driver_datasets_benchmark.decision import DecisionBenchmark
 
@@ -18,8 +16,8 @@ class DecisionBenchmarkNode(object):
         params = parse_private_args(
             command_with_ground_truth_topic="/zzz/control/command_true",
             command_with_perception_topic="/zzz/control/command",
-            # dynamic_map_with_ground_truth_topic="/zzz/cognition/local_dynamic_map/map_with_ref_true",
-            # dynamic_map_with_perception_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
+            dynamic_map_with_ground_truth_topic="/zzz/cognition/local_dynamic_map/map_with_ref_true",
+            dynamic_map_with_perception_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
             acc_err_topic="/zzz/benchmark/acc_err", # TODO: move benchmark to top level module (it contains corresponding message)
             steer_err_topic="/zzz/benchmark/steer_err",
         )
@@ -28,25 +26,14 @@ class DecisionBenchmarkNode(object):
         self._synced_subscriber = ApproximateTimeSynchronizer([
             Subscriber(params.command_with_ground_truth_topic, ControlCommand),
             Subscriber(params.command_with_perception_topic, ControlCommand),
-            # Subscriber(params.dynamic_map_with_ground_truth_topic, MapState),
-            # Subscriber(params.dynamic_map_with_perception_topic, MapState),
+            Subscriber(params.dynamic_map_with_ground_truth_topic, MapState),
+            Subscriber(params.dynamic_map_with_perception_topic, MapState),
         ], 5, 0.1)
         self._synced_subscriber.registerCallback(self.decision_callback)
 
-        self._acc_err_publisher = rospy.Publisher(params.acc_err_topic, Float32, queue_size=1, latch=True)
-        self._steer_err_publisher = rospy.Publisher(params.steer_err_topic, Float32, queue_size=1, latch=True)
-
-
-    def decision_callback(self, gtcmd, percmd):
-        summary = self._benchmark.add_frame(gtcmd, percmd)
-
-        acc_err_msg = Float32()
-        acc_err_msg.data = summary['ACC_ERROR']
-        self._acc_err_publisher.publish(acc_err_msg)
-
-        steer_err_msg = Float32()
-        steer_err_msg.data = summary['STEERING_ERROR']
-        self._steer_err_publisher.publish(steer_err_msg)
+    def decision_callback(self, gtcmd, percmd, gtdmap, perdmap):
+        rospy.logdebug("Received synced result")
+        self._benchmark.add_frame(gtcmd, percmd, gtdmap, perdmap)
 
     def save_results(self):
         with open("decision_results.json", "w") as jout:

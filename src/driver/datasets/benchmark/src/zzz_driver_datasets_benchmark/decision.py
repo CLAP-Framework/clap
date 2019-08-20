@@ -3,6 +3,8 @@ import math
 import json
 from collections import namedtuple, defaultdict, OrderedDict
 
+from zzz_cognition_msgs.msg import MapState
+
 from scipy.optimize import linear_sum_assignment
 
 class DecisionBenchmark:
@@ -14,25 +16,19 @@ class DecisionBenchmark:
         self._accumulate_acc_error = 0
         self._accumulate_steering_error = 0
 
-        self._num_frames = 0
 
-    def add_frame(self, gtcmd, percmd):
+    def add_frame(self, gtcmd, percmd, gtdmap, perdmap):
 
-        self._num_frames += 1
-
-        acc_error, steering_error = self.cmd_effect_metric(gtcmd, percmd)
+        acc_error, steering_error = self.cmd_effect_metric(gtcmd,percmd)
         self._accumulate_acc_error += abs(acc_error)
         self._accumulate_steering_error += abs(steering_error)
 
-        # if gtdmap.model == MODEL_JUNCTION_MAP:
-        #     pass
-        # else:
-        #     front_d_error, rear_d_error, front_vehicle_false_nagetive, \
-        #     front_vehicle_false_positive, rear_vehicle_false_nagetive, \
-        #     rear_vehicle_false_positive = self.surrounding_vehicle_state_error(gtdmap, perdmap)
-
-        # Return a summary
-        return {"ACC_ERROR": self._accumulate_acc_error/float(self._num_frames), "STEERING_ERROR": self._accumulate_steering_error/float(self._num_frames)}
+        if gtdmap.model == MapState.MODEL_JUNCTION_MAP:
+            pass
+        else:
+            front_d_error, rear_d_error, front_vehicle_false_nagetive, \
+            front_vehicle_false_positive, rear_vehicle_false_nagetive, \
+            rear_vehicle_false_positive = self.surrounding_vehicle_state_error(gtdmap, perdmap)
 
 
     def report(self):

@@ -21,7 +21,6 @@ class LShapeFilter:
 
     def _fit_shape(self, target):
         cloud = pcl.PointCloud(target.source_cloud)
-        assert len(cloud.names) > 0 # FIXME: Remove this
         xyz = cloud.xyz
 
         pmax = np.max(xyz, axis=0)
