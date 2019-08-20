@@ -83,10 +83,16 @@ class TrackingBenchmark:
             box1 = self._bounding_box_to_bev_corner(box1.bbox)
             box2 = self._bounding_box_to_bev_corner(box2.bbox)
             return polygon_iou(box1, box2)
+        elif ctype == "euclidean":
+            dx = box1.bbox.pose.pose.position.x - box2.bbox.pose.pose.position.x
+            dy = box1.bbox.pose.pose.position.y - box2.bbox.pose.pose.position.y
+            dz = box1.bbox.pose.pose.position.z - box2.bbox.pose.pose.position.z
+            d = math.sqrt(dx*dx + dy*dy + dz*dz)
+            return d # TODO: parametrize threshold
         else:
             raise NotImplementedError("Other cost types haven't been implemented yet!")
 
-    def add_frame(self, result, gt, cost="overlap", assign="hungarian" result_filter=None, gt_filter=None):
+    def add_frame(self, result, gt, cost_type="overlap", assign="hungarian", result_filter=None, gt_filter=None):
         '''
         Add result from one frame. Result and GT field are expected to be type of zzz_perception_msgs.msg.TrackingBoxArray
 
@@ -95,7 +101,7 @@ class TrackingBenchmark:
 
         if result.header.stamp - gt.header.stamp > rospy.Duration.from_sec(0.1):
             raise ValueError("Frames added to benchmark should be synchronized in 0.1s!")
-            
+
         # Convert and filter tracking boxes
         gt_boxes = [GTBox(box, box.uid, 0, 0, 0) for box in gt.targets if (not gt_filter or gt_filter(box))]
         tr_boxes = [TRBox(box, box.uid, False) for box in result.targets if (not gt_filter or gt_filter(box))]
@@ -117,9 +123,9 @@ class TrackingBenchmark:
             gtbox.fragmentation = 0
             cost_row = []
             for trbox in tr_boxes:
-                cost = self.cost(gtbox.trackbox, trbox.trackbox)
+                cost = self.cost(gtbox.trackbox, trbox.trackbox, ctype=cost_type)
                 # gating for boxoverlap
-                if cost <= self._max_cost: 
+                if cost <= self._max_cost:
                     cost_row.append(cost) # overlap == 1 is cost ==0
                 else:
                     cost_row.append(INF_COST) # = 1e9
@@ -127,7 +133,7 @@ class TrackingBenchmark:
             # all ground truth trajectories are initially not associated
             # extend groundtruth trajectories lists (merge lists)
             self._seq_trajectories[gtbox.track_id].append(ID_UNTRACKED)
-            
+
         if len(gt.targets) is 0:
             cost_matrix=[[]]
         if assign == "hungarian":
@@ -143,7 +149,7 @@ class TrackingBenchmark:
         cur_fp = 0
         cur_fn = 0
         cur_c  = 0 # this will sum up the costs for all true positives
-        
+
         # mapping for tracker ids and ground truth ids
         for gtid, trid in association_matrix:
             # apply gating on cost
@@ -166,7 +172,8 @@ class TrackingBenchmark:
 
         cur_fn += len(gt_boxes) - len(association_matrix)
         cur_fp += len(tr_boxes) - cur_tp
-        
+        # TODO: assign cur_fp to self._fp
+
         # sanity checks
         assert cur_tp >= 0, "cur_tp = %f < 0" % cur_tp
         assert cur_fn >= 0, "cur_fn = %f < 0" % cur_fn
@@ -198,6 +205,9 @@ class TrackingBenchmark:
             cur_modp = cur_c / float(cur_tp)
         self._modps.append(cur_modp)
 
+        # Return a accumulate summary
+        return {'TP': self._tp, 'FN': self._fn, 'AVG_COST': self._total_cost}
+
     def doc(self):
         '''
         Get descriptions of the metrics
@@ -219,7 +229,7 @@ class TrackingBenchmark:
             MOTA="Multiple Object Tracking Accuracy",
             MODA="Multiple Object Detection Accuracy",
             MOTP="Multiple Object Tracking Precision (total error in estimated position for matched object-hypothesis pairs over all frames)",
-            MODP="Multiple Object Detection Precision"
+            MODP="Multiple Object Detection Precision",
             MOTAL="Multi-object tracking accuracy with log10(id-switches)",
             # TODO: Implement WER and "mme" criteria
             WER="N/A"
@@ -232,7 +242,7 @@ class TrackingBenchmark:
         if len(self._seq_trajectories) == 0:
             rospy.logerr("Didn't log any trajectories")
         results = OrderedDict(N=self._num_frames, TP=self._tp, FP=self._fp, FN=self._fn)
-            
+
         cur_mt = cur_ml = cur_pt = cur_id_switches = cur_fragments = 0
         for gtlist in self._seq_trajectories.values():
             # all frames of this gt trajectory are not assigned to any detections

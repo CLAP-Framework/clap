@@ -41,7 +41,8 @@ class LShapeFilter:
         x0, y0, _ = xyz[iend, :]
         dist2min = np.sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0))
         dist2max = np.sqrt((x2-x0)*(x2-x0) + (y2-y0)*(y2-y0))
-        assert dist2min != 0 and dist2max != 0
+        if dist2min == 0 and dist2max == 0:
+            rospy.logwarn("[LShape filter] Invalid shape!")
 
         if dist2max > dist2min:
             yaw = np.arctan2(y2-y0, x2-x0)

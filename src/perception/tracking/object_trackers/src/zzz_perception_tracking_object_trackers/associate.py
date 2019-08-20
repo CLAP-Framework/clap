@@ -35,12 +35,18 @@ class NearestNeighborFilter:
         '''
         if self._metric != "euclidean":
             raise ValueError("Only Euclidean distance nearest neighbor is currently supported")
+        if len(detections) == 0:
+            return []
+
         results = [float('nan')] * len(detections)
         tracker_locations = np.zeros((len(pose_trackers), 3))
         tracker_keymap = {}
         for keyidx_tr, idx_tr in enumerate(pose_trackers.keys()):
             tracker_locations[keyidx_tr, :] = pose_trackers[idx_tr].pose_state[:3]
             tracker_keymap[keyidx_tr] = idx_tr
+
+        if len(pose_trackers) == 0:
+            return results
         for idx_dt, dt in enumerate(detections):
             position = dt.bbox.pose.pose.position
             d = np.array([position.x, position.y, position.z]) - tracker_locations

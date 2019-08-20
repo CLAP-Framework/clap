@@ -4,7 +4,7 @@ import rospy
 
 from zzz_common.params import parse_private_args
 from zzz_perception_msgs.msg import DetectionBoxArray
-from zzz_perception_detection_lidar_filters.selectors import CriteriaFilter
+from zzz_perception_tracking_object_filters.selectors import CriteriaFilter
 
 class FilterNode():
     def __init__(self):

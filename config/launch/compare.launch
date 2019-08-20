@@ -1,0 +1,176 @@
+<launch>
+    <node pkg="zzz_navigation_pose_reporter" type="manual"
+          name="pose_reporter" output="screen" ns="/zzz/navigation">
+        <param name="map_origin" value="[49,8,0]"/>
+        <param name="odom_input_topic" value="/carla/ego_vehicle/odometry"/>
+    </node>
+    <node pkg="zzz_driver_simulators_carla_challenge" type="generate"
+          name="static_map_builder" output="screen" ns="/zzz/navigation">
+    </node>
+
+    <!-- Planning with ground truth -->
+    <node pkg="zzz_cognition_object_locator" type="nearest_locator"
+          name="nearest_locator_true" output="screen" ns="/zzz/cognition">
+        <param name="objects_topic" value="/zzz/perception/objects_tracked_true"/>
+        <param name="map_input_topic" value="/zzz/navigation/local_static_map"/>
+        <param name="map_output_topic" value="local_dynamic_map/map_with_objects_true"/>
+        <param name="pose_topic" value="/zzz/navigation/ego_pose"/>
+    </node>
+    <node pkg="zzz_cognition_reference_path" type="put_buffer"
+          name="put_buffer_true" output="screen" ns="/zzz/cognition">
+        <param name="map_input_topic" value="local_dynamic_map/map_with_objects_true"/>
+        <param name="map_output_topic" value="local_dynamic_map/map_with_ref_true"/>
+    </node>
+    <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
+          name="idm_lane_utility_true" output="screen" ns="/zzz/planning">
+        <param name="dynamic_map_topic" value="/zzz/cognition/local_dynamic_map/map_with_ref_true"/>
+        <param name="decision_trajectory_topic" value="decision_trajectory_true"/>
+    </node>
+    <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
+          name="safeguard_true" output="screen" ns="/zzz/planning">
+        <param name="decision_trajectory_topic" value="decision_trajectory_true"/>
+        <param name="safeguard_trajectory_topic" value="safeguard_trajectory_true"/>
+        <param name="dynamic_map_topic" value="/zzz/cognition/local_dynamic_map/map_with_ref_true"/>
+    </node>
+    <node pkg="zzz_control_latlon_controllers" type="pure_persuit"
+          name="latlon_controller_true" output="screen" ns="/zzz/control">
+        <param name="control_topic" value="command_true"/>
+        <param name="trajectory_topic" value="/zzz/planning/safeguard_trajectory_true"/>
+    </node>
+
+    <!-- Planning with perception -->
+    <node pkg="zzz_cognition_object_locator" type="nearest_locator"
+          name="nearest_locator" output="screen" ns="/zzz/cognition">
+    </node>
+    <node pkg="zzz_cognition_reference_path" type="put_buffer"
+          name="put_buffer" output="screen" ns="/zzz/cognition">
+        <param name="reference_path_topic" value="/zzz/navigation/reference_path"/> 
+    </node>
+    <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
+          name="idm_lane_utility" output="screen" ns="/zzz/planning">
+    </node>
+    <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
+          name="safeguard" output="screen" ns="/zzz/planning">
+    </node>
+    <node pkg="zzz_control_latlon_controllers" type="pure_persuit"
+          name="latlon_controller" output="screen" ns="/zzz/control">
+    </node>
+   
+    <!-- Command converter -->
+    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_command" output="screen">
+        <param name="input_topic" value="/zzz/control/command" />
+        <param name="output_topic" value="/carla/ego_vehicle/vehicle_control_cmd" />
+        <param name="msg_type" value="ControlCommand" />
+    </node>
+
+    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_objects" output="screen">
+        <param name="input_topic" value="/carla/ego_vehicle/objects" />
+        <param name="output_topic" value="/zzz/perception/objects_tracked_true" />
+        <param name="msg_type" value="ObjectArray" />
+    </node>
+
+    <!-- Camera Perception -->
+    <node pkg="zzz_perception_detection_camera_detectors" type="yolo"
+          name="yolo_node" output="screen" ns="/zzz/perception">
+          <env   name="PYTHONPATH"   value="$(env PYTHONPATH):/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages"/>
+          <param name="input_topic"  value="/carla/ego_vehicle/camera/rgb/Center/image_color"/>
+          <param name="cfg_file"     value="$(find zzz_perception_detection_camera_detectors)/src/yolov3/cfg/yolov3-spp.cfg"/>
+          <param name="data_file"    value="$(find zzz_perception_detection_camera_detectors)/src/yolov3/data/coco.data"/>
+          <param name="weights_file" value="$(find zzz_perception_detection_camera_detectors)/src/yolov3/weights/yolov3-spp.weights"/>
+          <param name="names_file"   value="$(find zzz_perception_detection_camera_detectors)/src/yolov3/data/coco.names"/>
+    </node>
+    <node pkg="zzz_visualization_rviz_box_visualizer" type="detection2d"
+          name="dbox_visualize_img" output="screen" ns="/zzz/perception">
+        <param name="input_topic" value="objects2d_detected"/>
+        <param name="image_topic" value="/carla/ego_vehicle/camera/rgb/Center/image_color"/>
+    </node>
+    <!-- <node pkg="zzz_perception_detection_camera_filters" type="ipm_projector"
+          name="ipm" output="screen" ns="/zzz/perception">
+        <param name="output_topic" value="objects_projected"/>
+    </node>
+    <node pkg="zzz_perception_tracking_object_filters" type="to_static"
+          name="static2d_converter" output="screen" ns="/zzz/perception">
+        <param name="input_topic" value="objects_projected"/>
+        <param name="output_topic" value="objects_transformed"/>
+    </node> -->
+    <!-- <node pkg="zzz_visualization_rviz_box_visualizer" type="detection"
+          name="dbox_visualize" output="screen" ns="/zzz/perception">
+        <param name="input_topic" value="objects_detected_pseudo"/>
+        <param name="marker_lifetime" value="0.5"/>
+        <param name="box_max_size" value="9999999"/>
+    </node> -->
+    
+    <node pkg="zzz_perception_detection_camera_filters" type="pseudo_lidar_generator"
+          name="pseudo" output="screen" ns="/zzz/perception">
+        <env   name="PYTHONPATH"   value="$(env PYTHONPATH):/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages:/home/carla/.conda/envs/torchpy2/lib/python2.7/site-packages/torchvision-0.2.0-py2.7.egg"/>
+        <param name="input_topic_left"  value="/carla/ego_vehicle/camera/rgb/Left/image_color"/>
+        <param name="input_topic_right" value="/carla/ego_vehicle/camera/rgb/Center/image_color"/>
+        <param name="camera_info_left" value="/carla/ego_vehicle/camera/rgb/Left/camera_info"/>
+    </node>
+
+    <!-- Lidar Perception -->
+    <node pkg="zzz_perception_detection_lidar_filters" type="extrinsic"
+          name="extrinsic_filter" output="screen" ns="/zzz/perception">
+        <param name="input_topic" value="/carla/ego_vehicle/lidar/Lidar/point_cloud"/>
+        <param name="output_topic" value="points_transformed"/>
+        <param name="target_frame" value="ego_vehicle"/>
+    </node>
+    <node pkg="zzz_perception_detection_lidar_detectors" type="euclidean_cluster"
+          name="euclidean_detector" output="screen" ns="/zzz/perception">
+        <param name="input_topic" value="points_transformed"/>
+        <param name="output_topic" value="objects_detected"/>
+    </node>
+    <node pkg="zzz_perception_detection_lidar_filters" type="lshape"
+          name="euclidean_lshape" output="screen" ns="/zzz/perception">
+        <param name="input_topic" value="objects_detected"/>
+        <param name="output_topic" value="objects_lshape"/>
+    </node>
+    <node pkg="zzz_perception_tracking_object_filters" type="criteria"
+          name="euclidean_criteria" output="screen" ns="/zzz/perception">
+        <param name="input_topic" value="objects_lshape"/>
+        <param name="output_topic" value="objects_filtered"/>
+        <param name="min_length_x" value="0.1"/>
+        <param name="min_length_y" value="0.1"/>
+        <param name="min_length_z" value="0.1"/>
+    </node>
+    <node pkg="zzz_perception_tracking_object_filters" type="to_static"
+          name="static_converter" output="screen" ns="/zzz/perception">
+        <param name="input_topic" value="objects_filtered"/>
+        <param name="output_topic" value="objects_transformed"/>
+    </node>
+    <node pkg="zzz_perception_tracking_object_trackers" type="box_tracker"
+          name="box_tracker" output="screen" ns="/zzz/perception">
+        <param name="detection_topic" value="objects_transformed"/>
+        <param name="tracking_topic" value="objects_tracked"/>
+    </node>
+    <node pkg="zzz_visualization_rviz_box_visualizer" type="tracking"
+          name="box_visualize" output="screen" ns="/zzz/perception">
+        <param name="input_topic" value="objects_tracked"/>
+        <param name="output_topic" value="carla/debug_marker"/>
+        <param name="marker_lifetime" value="0.5"/>
+        <param name="box_max_size" value="9999999"/>
+    </node>
+    <!-- <node pkg="zzz_perception_detection_fused_detectors" type="frustum"
+          name="frustum_based" output="screen" ns="/zzz/perception">
+        <env   name="PYTHONPATH"   value="$(env PYTHONPATH):/home/carla/.conda/envs/tfpy2gpu/lib/python2.7/site-packages"/>
+        <param name="input_topic_detc_2d" value="objects2d_detected"/>
+        <param name="input_topic_left" value="/carla/ego_vehicle/camera/rgb/Center/image_color"/>
+        <param name="camera_info_left" value="/carla/ego_vehicle/camera/rgb/Center/camera_info"/>
+        <param name="input_topic_lidar" value="points_pseudo"/>
+        <param name="output_topic" value="objects_transformed"/>
+    </node> -->
+
+    <!-- Carla viewer -->
+    <!-- <node pkg="image_view" type="image_view" name="birds_eye_view">
+        <remap from="image" to="/carla/ego_vehicle/camera/rgb/Sky/image_color" />
+    </node> -->
+    <node pkg="zzz_visualization_web_dash" type="dashboard" name="dashboard">
+    </node>
+
+    <!-- Benchmarking -->
+    <node pkg="zzz_driver_datasets_benchmark" type="tracking" name="perception_benchmark" output="screen">
+        <param name="ground_truth_topic" value="/zzz/perception/objects_tracked_true"/>
+    </node>
+    <node pkg="zzz_driver_datasets_benchmark" type="decision" name="decision_benchmark" output="screen">
+    </node>
+</launch>

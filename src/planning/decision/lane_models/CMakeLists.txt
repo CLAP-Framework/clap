@@ -8,4 +8,5 @@ catkin_python_setup()
 
 catkin_install_python(PROGRAMS
   nodes/idm_lane_utility
+  nodes/rls_train
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

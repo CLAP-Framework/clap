@@ -8,7 +8,6 @@ catkin_package()
 catkin_python_setup()
 
 catkin_install_python(PROGRAMS
-  nodes/criteria
   nodes/extrinsic
   nodes/lshape
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

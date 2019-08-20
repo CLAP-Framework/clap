@@ -47,6 +47,9 @@ class PIDLongitudinalController():
         self._integ += _e * self._dt
         self._e_buffer.append(_e)
 
+        if current_speed < 2:
+            self._integ = 0
+
         if len(self._e_buffer) >= 2:
             _de = (self._e_buffer[-1] - self._e_buffer[-2]) / self._dt
             _ie = self._integ

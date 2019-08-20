@@ -8,5 +8,6 @@ catkin_python_setup()
 
 catkin_install_python(PROGRAMS
   nodes/tracking
+  nodes/decision
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

@@ -9,7 +9,7 @@ from scipy.special import fresnel
 
 def wrap_angle(theta):
     '''
-    Normalize the angle to [-pi/2, pi/2]
+    Normalize the angle to [-pi, pi]
     '''
     return (theta + np.pi) % (2*np.pi) - np.pi
 

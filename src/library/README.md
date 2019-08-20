@@ -2,6 +2,8 @@
 
 This directory contains the `zzz_common` package that is commonly used. It also imports other common dependencies like tensor operation library, build configurations, etc.
 
+TODO: This library should be finally written in C++ or Cython.
+
 # Reference
 
 Motion Models:
