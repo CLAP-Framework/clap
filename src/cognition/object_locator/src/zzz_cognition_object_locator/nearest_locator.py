@@ -317,6 +317,7 @@ class NearestLocator:
             self._ego_vehicle_state.state.pose.pose.position.x, self._ego_vehicle_state.state.pose.pose.position.y, lane)
             for lane in self._static_map_lane_path_array])  
         dist_list = np.abs(dist_list)
+        # TODO: Check if there's only two lanes
         closest_lane, second_closest_lane = dist_list[:, 0].argsort()[:2]
         closest_lane_dist, second_closest_lane_dist = dist_list[closest_lane, 0], dist_list[second_closest_lane, 0]
         closest_idx = int(dist_list[closest_lane, 1])

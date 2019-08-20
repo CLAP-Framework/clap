@@ -1,30 +1,26 @@
 # This is a example session file for tmux (load this using tmuxp)
+# [Note] Recommend to run roscore outside
+# [Note] create carla docker container before use:
+#    docker create -p 2000-2002:2000-2002 --gpus all --name dcarla carlasim/carla /bin/bash CarlaUE4.sh [args]
+
 session_name: 'carla'
 windows:
-- window_name: ros
-  start_directory: /home/jacobz/carla_server/bridge
+- window_name: server
+  layout: main-vertical
+  start_directory: /mnt/storage/carla/carla_server/bridge # Note: Change to your carla ros-bridge location
   shell_command_before:
     - export ROS_MASTER_URI=http://172.16.0.1:11311
     - export ROS_IP=172.16.0.1
     - source devel/setup.bash
-    - export PYTHONPATH=$PYTHONPATH:/home/jacobz/carla_server/python-api/carla:/home/jacobz/carla_server/python-api/carla/dist/carla-0.9.6-py2.7-linux-x86_64.egg
-  panes:
-  # [Note] Run roscore first
-  - null # workspace
-  - sleep 4s && roslaunch ../server.launch
-- window_name: carla
-  layout: main-vertical
-  start_directory: /home/jacobz/carla_server/python-api
-  shell_command_before:
-    - source /opt/env-anaconda.sh
-    - conda activate carla
+    - export CARLA_ROOT=/mnt/storage/carla/carla_server # Note: Change to your carla binary location
+    - export CARLA_VERSION=0.9.6
+    - export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla:$CARLA_ROOT/PythonAPI/carla/dist/carla-$CARLA_VERSION-py2.7-linux-x86_64.egg
   panes:
   - null # workspace
-  # [Note] Create container first: docker create -p 2000-2002:2000-2002 --gpus all --name dcarla carlasim/carla /bin/bash CarlaUE4.sh
   - docker start -a dcarla
-  - sleep 6s && python ../spawn_agent.py
+  - sleep 4s && roslaunch server.launch
 - window_name: ws
   focus: 'true'
-  start_directory: /home/jacobz/carla_server
+  start_directory: /mnt/storage/carla/carla_server
   panes:
   - sleep 8s
