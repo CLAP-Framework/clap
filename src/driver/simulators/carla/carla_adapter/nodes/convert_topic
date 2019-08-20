@@ -9,14 +9,15 @@ from zzz_driver_msgs.msg import ChassisReport, ControlReport
 from zzz_navigation_msgs.msg import MapString
 from zzz_control_msgs.msg import ControlCommand
 from zzz_perception_msgs.msg import TrackingBoxArray, TrackingBox, ObjectClass
-from carla_msgs.msg import CarlaMapInfo, CarlaEgoVehicleControl, CarlaEgoVehicleStatus
+from carla_msgs.msg import CarlaWorldInfo, CarlaEgoVehicleControl, CarlaEgoVehicleStatus
 from nav_msgs.msg import Path
 from derived_object_msgs.msg import ObjectArray, Object
 
-def convert_CarlaMapInfo(msg, pub):
-    assert type(msg) == CarlaMapInfo
+def convert_CarlaWorldInfo(msg, pub):
+    assert type(msg) == CarlaWorldInfo
     new_msg = MapString()
-    new_msg.header = msg.header
+    new_msg.header.stamp = rospy.Time.now()
+    new_msg.header.frame_id = 'map'
     new_msg.map_type = MapString.MAP_OPENDRIVE
     new_msg.content = msg.opendrive
     pub.publish(new_msg)
@@ -116,9 +117,9 @@ if __name__ == "__main__":
         rospy.logerr("Not enought parameters!")
         sys.exit(-1)
 
-    if params.msg_type == "CarlaMapInfo":
+    if params.msg_type == "CarlaWorldInfo":
         pub = rospy.Publisher(params.output_topic, MapString, queue_size=1, latch=True)
-        rospy.Subscriber(params.input_topic, CarlaMapInfo, convert_CarlaMapInfo, pub)
+        rospy.Subscriber(params.input_topic, CarlaWorldInfo, convert_CarlaWorldInfo, pub)
     elif params.msg_type == "ControlCommand":
         pub = rospy.Publisher(params.output_topic, CarlaEgoVehicleControl, queue_size=1, latch=True)
         rospy.Subscriber(params.input_topic, ControlCommand, convert_ControlCommand, pub)

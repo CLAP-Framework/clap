@@ -88,8 +88,8 @@ class NearestLocator:
         self._dynamic_map.jmap.obstacles = []
         if self._surrounding_object_list == None:
             return
-        for obj in self._surrounding_object_list.targets:
-            self._dynamic_map.jmap.obstacles.append(convert_tracking_box(obj))
+        for obj in self._surrounding_object_list:
+            self._dynamic_map.jmap.obstacles.append(obj)
 
     # ========= For in lane =========
 
@@ -128,8 +128,8 @@ class NearestLocator:
 
         # TODO: separate vehicle and other objects?
         if self._surrounding_object_list is not None:
-            for vehicle_idx, vehicle in enumerate(self._surrounding_object_list.targets):
-                dist_list = np.array([dist_from_point_to_polyline(vehicle.bbox.pose.pose.position.x, vehicle.bbox.pose.pose.position.y, lane)
+            for vehicle_idx, vehicle in enumerate(self._surrounding_object_list):
+                dist_list = np.array([dist_from_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
                     for lane in self._static_map_lane_path_array])
                 dist_list = np.abs(dist_list)
                 closest_lane = np.argmin(dist_list[:, 0])

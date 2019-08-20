@@ -1,0 +1,9 @@
+<launch>
+    <!-- TODO: extract all Carla related topic names into separate args using 'remap' and 'include' tags -->
+    <include file="$(dirname)/perception.launch">
+        <arg name="enable_camera" default="false"/>
+        <arg name="enable_lidar" default="true"/>
+    </include>
+    <include file="$(dirname)/planning.launch"/>
+    <include file="$(dirname)/auxiliary.launch"/>
+</launch>
