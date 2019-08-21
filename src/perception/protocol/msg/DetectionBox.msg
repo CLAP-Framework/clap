@@ -7,8 +7,10 @@
 sensor_msgs/PointCloud2 source_cloud
 
 # The 2D data in the same area for fusion purpose
-# TODO(zyxin): How do we actually use this field?
 sensor_msgs/Image source_img
+
+# The frame id of source_img
+string source_frame
 
 # ---------------- Properties --------------------
 

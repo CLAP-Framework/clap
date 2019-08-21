@@ -108,13 +108,13 @@ class LocalMap(object):
 
     def convert_to_map_XY(self, x, y):
         map_x = x + self._offset_x
-        map_y = -y + self._offset_y
+        map_y = y + self._offset_y
 
         return map_x, map_y
 
     def convert_to_origin_XY(self, map_x, map_y):
         x = map_x - self._offset_x
-        y = -(map_y - self._offset_y)
+        y = map_y - self._offset_y
         return x,y
 
     def receive_new_pose(self, x, y):
@@ -182,7 +182,7 @@ class LocalMap(object):
         '''
         
         map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
-        lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self.lane_search_radius,includeJunctions=False)
+        lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self.lane_search_radius, includeJunctions=False)
         if len(lanes) > 0:
             self.static_local_map.in_junction = False
 

@@ -1,21 +1,36 @@
 #!/usr/bin/env python
 
 import rospy
+from zzz_common.params import parse_private_args
 from zzz_cognition_msgs.msg import MapState
+from zzz_planning_decision_lane_models.longitudinal import IDM
+from zzz_planning_decision_lane_models.lateral import LaneUtility
 from zzz_planning_decision_lane_models import MainDecision
 from zzz_planning_msgs.msg import DecisionTrajectory
 
 class DecisionNode(object):
-    def __init__(self,
-        decision_trajectory_topic="decision_trajectory",
-        dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref"):
+    def __init__(self):
 
-        self._dynamic_map_subscriber = rospy.Subscriber(dynamic_map_topic, MapState, self.dynamic_map_callback)
-        self._decision_trajectory_publisher = rospy.Publisher(decision_trajectory_topic, DecisionTrajectory, queue_size=1)
+        params = parse_private_args(
+            decision_trajectory_topic="decision_trajectory",
+            dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref"
+        )
 
-        self._decision_instance = MainDecision()
+        self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self.dynamic_map_callback)
+        self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
 
-    def dynamic_map_callback(self, msg):
+        model_lon = IDM()
+        model_lat = LaneUtility(model_lon)
+        self._decision_instance = MainDecision(lon_decision=model_lon, lat_decision=model_lat)
+        self._last_decision_time = 0
+
+    def dynamic_map_callback(self, msg, decision_dt = 0.75):
+        current_time = rospy.Time.now().to_sec()
+        if current_time - self._last_decision_time < decision_dt:
+            return
+        self._last_decision_time = current_time
+
+        rospy.logdebug("Current_time: %f",self._last_decision_time)
         publish_msg = self._decision_instance.generate_trajectory_with_speed(msg)
         rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
             len(publish_msg.trajectory.poses), publish_msg.desired_speed)

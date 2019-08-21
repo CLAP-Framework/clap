@@ -1,0 +1,21 @@
+<launch>
+    <include file="/home/carla/Carla/zzz/config/launch/full_stack/perception.launch">
+        <arg name="enable_camera" value="false"/>
+        <arg name="enable_lidar" value="true"/>
+        <arg name="lidar_topic" value="/carla/ego_vehicle/lidar/Lidar/point_cloud"/>
+    </include>
+    <include file="/home/carla/Carla/zzz/config/launch/full_stack/planning.launch">
+        <arg name="objects_topic" value="/carla/ego_vehicle/objects"/>
+    </include>
+
+    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_map" output="screen">
+        <param name="input_topic" value="/carla/world_info" />
+        <param name="output_topic" value="/zzz/navigation/static_map" />
+        <param name="msg_type" value="CarlaWorldInfo" />
+    </node>
+    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_command" output="screen">
+        <param name="input_topic" value="/zzz/control/command" />
+        <param name="output_topic" value="/carla/ego_vehicle/vehicle_control_cmd" />
+        <param name="msg_type" value="ControlCommand" />
+    </node>
+</launch>

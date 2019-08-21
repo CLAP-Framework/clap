@@ -8,5 +8,6 @@ catkin_python_setup()
 
 catkin_install_python(PROGRAMS
   nodes/ipm_projector
+  nodes/pseudo_lidar_generator
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

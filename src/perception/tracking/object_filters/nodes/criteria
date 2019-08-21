@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+
+import rospy
+
+from zzz_common.params import parse_private_args
+from zzz_perception_msgs.msg import DetectionBoxArray
+from zzz_perception_tracking_object_filters.selectors import CriteriaFilter
+
+class FilterNode():
+    def __init__(self):
+        params = parse_private_args(
+            input_topic="objects_detected",
+            output_topic="objects_filtered",
+            max_length_x=10.,
+            min_length_x=.3,
+            max_length_y=4.,
+            min_length_y=.3,
+            max_length_z=3.,
+            min_length_z=.3
+        )
+
+        self._subscriber = rospy.Subscriber(params.pop("input_topic"), DetectionBoxArray, self.callback)
+        self._publisher = rospy.Publisher(params.pop("output_topic"), DetectionBoxArray, queue_size=1)
+        self._filter = CriteriaFilter(**params)
+
+    def callback(self, msg):
+        self._publisher.publish(self._filter.filter(msg))
+
+if __name__ == "__main__":
+    rospy.init_node("criteria_filter")
+    node = FilterNode()
+    rospy.spin()

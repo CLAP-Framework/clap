@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+
+import json
+
+import rospy
+from zzz_common.params import parse_private_args
+from message_filters import ApproximateTimeSynchronizer, Subscriber
+
+from zzz_control_msgs.msg import ControlCommand
+from zzz_cognition_msgs.msg import MapState
+from zzz_perception_msgs.msg import TrackingBoxArray
+from zzz_driver_datasets_benchmark.decision import DecisionBenchmark
+
+class DecisionBenchmarkNode(object):
+    def __init__(self):
+        params = parse_private_args(
+            command_with_ground_truth_topic="/zzz/control/command_true",
+            command_with_perception_topic="/zzz/control/command",
+            dynamic_map_with_ground_truth_topic="/zzz/cognition/local_dynamic_map/map_with_ref_true",
+            dynamic_map_with_perception_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
+            acc_err_topic="/zzz/benchmark/acc_err", # TODO: move benchmark to top level module (it contains corresponding message)
+            steer_err_topic="/zzz/benchmark/steer_err",
+        )
+
+        self._benchmark = DecisionBenchmark()
+        self._synced_subscriber = ApproximateTimeSynchronizer([
+            Subscriber(params.command_with_ground_truth_topic, ControlCommand),
+            Subscriber(params.command_with_perception_topic, ControlCommand),
+            Subscriber(params.dynamic_map_with_ground_truth_topic, MapState),
+            Subscriber(params.dynamic_map_with_perception_topic, MapState),
+        ], 5, 0.1)
+        self._synced_subscriber.registerCallback(self.decision_callback)
+
+    def decision_callback(self, gtcmd, percmd, gtdmap, perdmap):
+        rospy.logdebug("Received synced result")
+        self._benchmark.add_frame(gtcmd, percmd, gtdmap, perdmap)
+
+    def save_results(self):
+        with open("decision_results.json", "w") as jout:
+            json.dump(dict(report=self._benchmark.report(), desc=self._benchmark.doc()),
+                jout, sort_keys=True)
+
+if __name__ == "__main__":
+
+    rospy.init_node("decision", log_level=rospy.DEBUG)
+    node = DecisionBenchmarkNode()
+    rospy.on_shutdown(node.save_results)
+    rospy.spin()

@@ -1,6 +1,15 @@
-[submodule "src/driver/simluators/carla/carla-bridge"]
-	path = src/driver/simluators/carla/carla-bridge
-	url = https://github.com/carla-simulator/ros-bridge.git
 [submodule "src/perception/detection/camera_detectors/src/yolov3"]
 	path = src/perception/detection/camera_detectors/src/yolov3
 	url = https://github.com/cmpute/zzz_yolov3.git
+[submodule "src/perception/detection/camera_filters/src/pseudo_lidar"]
+	path = src/perception/detection/camera_filters/src/pseudo_lidar
+	url = https://github.com/minghanz/pseudo_lidar.git
+[submodule "src/tools/openai_baselines"]
+	path = src/tools/openai_baselines
+	url = https://github.com/cmpute/baselines.git
+[submodule "src/perception/detection/fused_detectors/src/frustum_pointnets"]
+	path = src/perception/detection/fused_detectors/src/frustum_pointnets
+	url = https://github.com/minghanz/frustum-pointnets.git
+[submodule "src/driver/simulators/carla/carla_bridge"]
+	path = src/driver/simulators/carla/carla_bridge
+	url = https://github.com/carla-simulator/ros-bridge.git

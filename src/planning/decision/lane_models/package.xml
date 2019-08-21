@@ -1,6 +1,6 @@
 <package format="2">
   <name>zzz_planning_decision_lane_models</name>
-  <version>0.0.3</version>
+  <version>0.1.0</version>
   <description>
     The main decision part
   </description>

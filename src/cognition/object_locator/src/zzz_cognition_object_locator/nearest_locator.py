@@ -6,9 +6,12 @@ from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import Map, Lane
 from zzz_navigation_msgs.utils import get_lane_array
 from zzz_cognition_msgs.msg import MapState, LaneState, RoadObstacle
-from zzz_cognition_msgs.utils import default_msg as cognition_default
+from zzz_cognition_msgs.utils import convert_tracking_box, default_msg as cognition_default
 from zzz_perception_msgs.msg import TrackingBoxArray, TrafficLightDetection, TrafficLightDetectionArray
 from zzz_common.geometry import dist_from_point_to_polyline, nearest_point_to_polyline
+from zzz_common.dynamic_models import wrap_angle
+
+from zzz_driver_msgs.utils import get_speed, get_yaw
 
 class NearestLocator:
     def __init__(self):
@@ -20,8 +23,8 @@ class NearestLocator:
         self._ego_vehicle_state = None
         self._traffic_light_detection = None
         
-        self._ego_vehicle_distance_to_lane_head = 0 # distance from vehicle to lane start
-        self._ego_vehicle_distance_to_lane_tail = 0 # distance from vehicle to lane end
+        self._ego_vehicle_distance_to_lane_head = [] # distance from vehicle to lane start
+        self._ego_vehicle_distance_to_lane_tail = [] # distance from vehicle to lane end
 
     @property
     def dynamic_map(self):
@@ -39,23 +42,27 @@ class NearestLocator:
 
     def receive_object_list(self, object_list):
         assert type(object_list) == TrackingBoxArray
-        self._surrounding_object_list = object_list
+        if self._ego_vehicle_state != None:
+            self._surrounding_object_list = convert_tracking_box(object_list, self._ego_vehicle_state)
 
     def receive_ego_state(self, state):
         assert type(state) == RigidBodyStateStamped
-        self._ego_vehicle_state = state.state
+        self._ego_vehicle_state = state
 
     def receive_traffic_light_detection(self, detection):
         assert type(detection) == TrafficLightDetectionArray
         self._traffic_light_detection = detection
 
     # ====== Data Updator =======
-    # TODO: edit following implementations
     
     def update(self):
         self._dynamic_map = cognition_default(MapState)
-        self._dynamic_map.ego_state = self._ego_vehicle_state
+        self._dynamic_map.header.frame_id = "map"
+        self._dynamic_map.header.stamp = rospy.Time.now()
+
+        self._dynamic_map.ego_state = self._ego_vehicle_state.state
         if self._static_map.in_junction or len(self._static_map.lanes) == 0:
+            rospy.logdebug("In junction due to state map report junction location")
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             self._dynamic_map.jmap.drivable_area = self._static_map.drivable_area
         else:
@@ -71,6 +78,7 @@ class NearestLocator:
         if self._dynamic_map.model == MapState.MODEL_MULTILANE_MAP:
             self.locate_ego_vehicle_in_lanes()
             self.locate_surrounding_vehicle_in_lanes()
+            self.vehicles_mmap_y_in_jmap()
             self.locate_stop_sign_in_lanes()
             self.locate_speed_limit_in_lanes()
 
@@ -81,82 +89,108 @@ class NearestLocator:
         self._dynamic_map.jmap.obstacles = []
         if self._surrounding_object_list == None:
             return
-        for obj in self._surrounding_object_list.targets:
-            obstacle = RoadObstacle()
-            obstacle.uid = obj.uid
-            obstacle.state.pose = obj.bbox.pose
-            obstacle.state.twist = obj.twist
-            obstacle.state.acces = obj.accel
-            obstacle.cls = obj.classes[0]
-            # TODO: Convert obstacle shape
-            self._dynamic_map.jmap.obstacles.append(obstacle)
+        for obj in self._surrounding_object_list:
+            self._dynamic_map.jmap.obstacles.append(obj)
 
     # ========= For in lane =========
 
     def locate_ego_vehicle_in_lanes(self, lane_end_dist_thres=2, lane_dist_thres=5): 
-        dist_list = np.array([dist_from_point_to_polyline(
-            self._ego_vehicle_state.pose.pose.x, self._ego_vehicle_state.pose.pose.y, lane)
-            for lane in self._static_map_lane_path_array])  
-        closest_lane = np.argmin(dist_list[:, 0])
+        if self._static_map_lane_path_array == None:
+            return
 
+        dist_list = np.array([dist_from_point_to_polyline(
+            self._ego_vehicle_state.state.pose.pose.position.x, self._ego_vehicle_state.state.pose.pose.position.y, lane)
+            for lane in self._static_map_lane_path_array])  
+        dist_list = np.abs(dist_list)
+        closest_lane = np.argmin(dist_list[:, 0])
         if dist_list[closest_lane, 0] > lane_dist_thres:
+            rospy.logdebug("In junction due to far away from a lane")
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             return
 
-        self._ego_vehicle_distance_to_lane_head = dist_list[closest_lane, 1]
-        self._ego_vehicle_distance_to_lane_tail = dist_list[closest_lane, 2]
+        self._ego_vehicle_distance_to_lane_head = dist_list[:, 1]
+        self._ego_vehicle_distance_to_lane_tail = dist_list[:, 2]
         
-        if self._ego_vehicle_distance_to_lane_tail <= lane_end_dist_thres:
+        if self._ego_vehicle_distance_to_lane_tail[closest_lane] <= lane_end_dist_thres:
             # Drive into junction, wait until next map # TODO: change the condition
+            rospy.logdebug("In junction due to close to intersection")
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             return
         else:
             self._dynamic_map.model = MapState.MODEL_MULTILANE_MAP
             self._dynamic_map.mmap.ego_lane_index = self._static_map.lanes[closest_lane].index
-            self._dynamic_map.mmap.distance_to_junction = self._ego_vehicle_distance_to_lane_tail
+            self._dynamic_map.mmap.distance_to_junction = self._ego_vehicle_distance_to_lane_tail[closest_lane]
+            # FIXME(frenet):For ego state
+            self._get_ego_vehicle_frenet_coordinate()
+           
 
-    def locate_surrounding_vehicle_in_lanes(self, lane_dist_thres=2):
+    def locate_surrounding_vehicle_in_lanes(self, lane_dist_thres=3):
+        surround_vehicles = self._surrounding_object_list # Prevent data update during processing XXX: use a better mechanism?
         lane_front_vehicle_list = [[] for _ in self._static_map.lanes]
         lane_rear_vehicle_list = [[] for _ in self._static_map.lanes]
 
         # TODO: separate vehicle and other objects?
-        for vehicle_idx, vehicle in enumerate(self._surrounding_object_list):
-            dist_list = np.array([dist_from_point_to_polyline(vehicle.obstacle_pos_x, vehicle.obstacle_pos_y, lane)
-                for lane in self._static_map_lane_path_array])
-            dist_list = np.abs(dist_list)
-            closest_lane = np.argmin(dist_list[:, 0])
-
-            # Determine if the vehicle is close to lane enough
-            if dist_list[closest_lane, 0] > lane_dist_thres:
-                continue 
-            if dist_list[closest_lane, 1] < self._ego_vehicle_distance_to_lane_head:
-                # The vehicle is behind if its distance to lane start is smaller
-                lane_rear_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,1]))
-            if dist_list[closest_lane, 2] < self._ego_vehicle_distance_to_lane_tail:
-                # The vehicle is ahead if its distance to lane end is smaller
-                lane_front_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane,2]))
+        if self._surrounding_object_list is not None:
+            for vehicle_idx, vehicle in enumerate(self._surrounding_object_list):
+                dist_list = np.array([dist_from_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
+                    for lane in self._static_map_lane_path_array])
+                dist_list = np.abs(dist_list)
+                closest_lane = np.argmin(dist_list[:, 0])
+                
+                # Determine if the vehicle is close to lane enough
+                if dist_list[closest_lane, 0] > lane_dist_thres:
+                    continue 
+                if dist_list[closest_lane, 1] < self._ego_vehicle_distance_to_lane_head[closest_lane]:
+                    # The vehicle is behind if its distance to lane start is smaller
+                    lane_rear_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane, 1]))
+                if dist_list[closest_lane, 2] < self._ego_vehicle_distance_to_lane_tail[closest_lane]:
+                    # The vehicle is ahead if its distance to lane end is smaller
+                    lane_front_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane, 2]))
         
+        # Put the vehicles onto lanes
         for lane_id in range(len(self._static_map.lanes)):
             front_vehicles = np.array(lane_front_vehicle_list[lane_id])
             rear_vehicles = np.array(lane_rear_vehicle_list[lane_id])
-            if len(front_vehicles) > 0:
-                # Select vehicle ahead with maximum distance to lane start as front vehicle
-                front_vehicle_idx = int(front_vehicles[np.argmax(front_vehicles[:,1]), 0])
-                self._dynamic_map.mmap.lanes[lane_id].have_front_vehicle = True
-                self._dynamic_map.mmap.lanes[lane_id].front_vehicle = self._surrounding_object_list[front_vehicle_idx]
-                rospy.logdebug("Lane index: %d, Front vehicle id: %d", lane_id, self._dynamic_map.mmap.lanes[lane_id].front_vehicle.uid)                
-            else:
-                self._dynamic_map.mmap.lanes[lane_id].have_front_vehicle = False
 
+            if len(front_vehicles) > 0:
+                for vehicle_row in reversed(front_vehicles[:,1].argsort()):
+
+                    # FIXME: Here only two vehicles are calculated because the speed is too slow
+                    if len(self._dynamic_map.mmap.lanes[lane_id].front_vehicles) > 1:
+                        continue
+
+                    front_vehicle_idx = int(front_vehicles[vehicle_row, 0])
+                    front_vehicle = surround_vehicles[front_vehicle_idx]
+                    front_vehicle.mmap_x = self._ego_vehicle_distance_to_lane_tail[lane_id] - front_vehicles[vehicle_row, 1]
+                    front_vehicle.mmap_y = self.vehicle_mmap_y(front_vehicle)
+                    front_vehicle.mmap_vx = get_speed(front_vehicle.state)
+                    front_vehicle.mmap_vy = 0
+                    front_vehicle.behavior = self.predict_vehicle_behavior(front_vehicle)
+                    self._dynamic_map.mmap.lanes[lane_id].front_vehicles.append(front_vehicle)
+                    rospy.logdebug("Lane index: %d, Front vehicle id: %d, behavior: %d, mmap_x:%.1f, mmap_y:%.1f, x:%.1f, y:%.1f", 
+                                    lane_id, front_vehicle.uid, front_vehicle.behavior,
+                                    front_vehicle.mmap_x, front_vehicle.mmap_y,
+                                    front_vehicle.state.pose.pose.position.x,front_vehicle.state.pose.pose.position.y)
 
             if len(rear_vehicles) > 0:
-                # Select vehicle behine with maximum distance to lane start as rear vehicle
-                rear_vehicle_idx  = int(rear_vehicles [np.argmax(rear_vehicles[:,1]), 0])
-                self._dynamic_map.mmap.lanes[lane_id].have_rear_vehicle = True
-                self._dynamic_map.mmap.lanes[lane_id].rear_vehicle  = self._surrounding_object_list[rear_vehicle_idx]
-                rospy.logdebug("Lane index: %d, Rear vehicle id: %d", lane_id, self._dynamic_map.mmap.lanes[lane_id].rear_vehicle.uid) 
-            else:
-                self._dynamic_map.mmap.lanes[lane_id].have_rear_vehicle = False
+                for vehicle_row in reversed(rear_vehicles[:,1].argsort()):
+
+                    # FIXME: Here only two vehicles are calculated because the speed is too slow
+                    if len(self._dynamic_map.mmap.lanes[lane_id].rear_vehicles) > 1:
+                        continue
+
+                    rear_vehicle_idx = int(rear_vehicles[vehicle_row, 0])
+                    rear_vehicle = surround_vehicles[rear_vehicle_idx]
+                    rear_vehicle.mmap_x = rear_vehicles[vehicle_row, 1] - self._ego_vehicle_distance_to_lane_head[lane_id] #negative value
+                    rear_vehicle.mmap_y = self.vehicle_mmap_y(rear_vehicle)
+                    rear_vehicle.mmap_vx = get_speed(rear_vehicle.state)
+                    rear_vehicle.mmap_vy = 0
+                    rear_vehicle.behavior = self.predict_vehicle_behavior(rear_vehicle)
+                    self._dynamic_map.mmap.lanes[lane_id].rear_vehicles.append(rear_vehicle)
+                    rospy.logdebug("Lane index: %d, Rear vehicle id: %d, behavior: %d, mmap_x:%.1f, mmap_y:%.1f, x:%.1f, y:%.1f", 
+                                    lane_id, rear_vehicle.uid, rear_vehicle.behavior, 
+                                    rear_vehicle.mmap_x, rear_vehicle.mmap_y,
+                                    rear_vehicle.state.pose.pose.position.x,rear_vehicle.state.pose.pose.position.y)
 
     def locate_traffic_light_in_lanes(self):
         # TODO: Currently it's a very simple rule to locate the traffic lights
@@ -203,3 +237,130 @@ class NearestLocator:
         Put stop sign detections into lanes
         '''
         pass
+
+    # TODO: Move this function into separate prediction module
+    def predict_vehicle_behavior(self, vehicle, lane_change_thres = 0.2):
+        '''
+        Detect the behaviors of surrounding vehicles
+        '''
+
+        dist_list = np.array([nearest_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
+            for lane in self._static_map_lane_path_array])
+        dist_list = np.abs(dist_list)
+        closest_lane = dist_list[:, 0].argsort()[0]
+        closest_idx = int(dist_list[closest_lane, 1])
+        closest_point = self._dynamic_map.mmap.lanes[closest_lane].map_lane.central_path_points[closest_idx]
+
+        vehicle_driving_direction = get_yaw(vehicle.state)
+        lane_direction = closest_point.tangent
+        d_theta = vehicle_driving_direction - lane_direction
+        d_theta = wrap_angle(d_theta)
+
+        rospy.logdebug("id:%d, vehicle_direction:%.2f, lane_direction:%.2f, mmap_y: %.2f",vehicle.uid,vehicle_driving_direction,lane_direction,vehicle.mmap_y)
+        if abs(d_theta) > lane_change_thres:
+            if d_theta > 0:
+                behavior = RoadObstacle.BEHAVIOR_MOVING_LEFT
+            else:
+                behavior = RoadObstacle.BEHAVIOR_MOVING_RIGHT
+        else:
+            behavior = RoadObstacle.BEHAVIOR_FOLLOW
+        
+        return behavior
+
+    # TODO: Combine this into locate_surrounding_vehicle_in_lanes
+    def vehicle_mmap_y(self, vehicle, in_lane_thres = 0.9,lane_dist_thres = 3):
+
+        dist_list = np.array([nearest_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
+            for lane in self._static_map_lane_path_array])
+        dist_list = np.abs(dist_list)
+        
+        # Check if there's only two lanes
+        if len(self._dynamic_map.mmap.lanes) < 2:
+            closest_lane = second_closest_lane = 0
+        else:
+            closest_lane, second_closest_lane = dist_list[:, 0].argsort()[:2]
+
+        closest_lane_dist, second_closest_lane_dist = dist_list[closest_lane, 0], dist_list[second_closest_lane, 0]
+        closest_idx = int(dist_list[closest_lane, 1])
+        closest_point = self._dynamic_map.mmap.lanes[closest_lane].map_lane.central_path_points[closest_idx]
+        second_closest_idx = int(dist_list[second_closest_lane, 1])
+        second_closest_point = self._dynamic_map.mmap.lanes[second_closest_lane].map_lane.central_path_points[second_closest_idx]
+
+        if closest_lane_dist > lane_dist_thres:
+            mmap_y = -1
+            return mmap_y
+
+        # XXX: This is a naive method to detect whether the vehicle is outsize of the edge, could use signed distance to determine
+        if abs(second_closest_lane_dist-closest_lane_dist) > ((closest_point.width/2)+(second_closest_point.width/2))*in_lane_thres:
+            mmap_y = closest_lane
+        else:
+            a = closest_lane
+            la = closest_lane_dist
+            b = second_closest_lane
+            lb = second_closest_lane_dist
+            mmap_y = (b*la+a*lb)/(lb+la)
+            
+        return mmap_y
+    
+
+    def vehicles_mmap_y_in_jmap(self):
+        
+        if self._dynamic_map.model == MapState.MODEL_JUNCTION_MAP:
+            return
+
+        if self._static_map_lane_path_array == None:
+            return
+
+        for vehicle_idx, vehicle in enumerate(self._dynamic_map.jmap.obstacles):
+            mmap_y = self.vehicle_mmap_y(vehicle)
+            self._dynamic_map.jmap.obstacles[vehicle_idx].mmap_y = mmap_y
+
+
+    def _get_ego_vehicle_frenet_coordinate(self, lane_end_dist_thres=2, lane_dist_thres=5, in_lane_thres = 0.9):
+
+        # ego_mmap_x is always 0
+        ego_mmap_x = 0
+
+        # for ego_mmap_y
+        dist_list = np.array([dist_from_point_to_polyline(
+            self._ego_vehicle_state.state.pose.pose.position.x, self._ego_vehicle_state.state.pose.pose.position.y, lane)
+            for lane in self._static_map_lane_path_array])  
+        dist_list = np.abs(dist_list)
+
+        # Check if there's only two lanes
+        if len(self._dynamic_map.mmap.lanes) < 2:
+            closest_lane = second_closest_lane = 0
+        else:
+            closest_lane, second_closest_lane = dist_list[:, 0].argsort()[:2]
+
+        closest_lane_dist, second_closest_lane_dist = dist_list[closest_lane, 0], dist_list[second_closest_lane, 0]
+        closest_idx = int(dist_list[closest_lane, 1])
+        closest_point = self._dynamic_map.mmap.lanes[closest_lane].map_lane.central_path_points[closest_idx]
+        second_closest_idx = int(dist_list[second_closest_lane, 1])
+        second_closest_point = self._dynamic_map.mmap.lanes[second_closest_lane].map_lane.central_path_points[second_closest_idx]
+
+        ego_vehicle_driving_direction = get_yaw(self._ego_vehicle_state.state)
+        lane_direction = closest_point.tangent
+        d_theta = ego_vehicle_driving_direction - lane_direction
+        d_theta = wrap_angle(d_theta)
+
+        ego_speed = get_speed(self._ego_vehicle_state.state)
+
+        # XXX: This is a naive method to detect whether the vehicle is outsize of the edge, could use signed distance to determine
+        if abs(second_closest_lane_dist-closest_lane_dist) > ((closest_point.width/2)+(second_closest_point.width/2))*in_lane_thres:
+            ego_mmap_y = closest_lane
+            ego_mmap_vx = ego_speed
+            ego_mmap_vy = 0
+        else:
+            a = closest_lane
+            la = closest_lane_dist
+            b = second_closest_lane
+            lb = second_closest_lane_dist
+            ego_mmap_y = (b*la+a*lb)/(lb+la)
+            ego_mmap_vx = ego_speed*np.cos(d_theta)
+            ego_mmap_vy = ego_speed*np.sin(d_theta)/closest_point.width
+
+        self._dynamic_map.mmap.ego_mmap_x = ego_mmap_x
+        self._dynamic_map.mmap.ego_mmap_y = ego_mmap_y
+        self._dynamic_map.mmap.ego_mmap_vx = ego_mmap_vx
+        self._dynamic_map.mmap.ego_mmap_vy = ego_mmap_vy

@@ -13,3 +13,5 @@ uint8 BOUNDARY_SOLID_YELLOW = 4  # neighbour lane has different direction, not a
 uint8 BOUNDARY_SOLID_YELLOW_TURN = 5  # neighbour lane has different direction, not allowed to change lane unless turning.
 uint8 BOUNDARY_CURB = 6          # neighbour is road shoulder
 
+# Confidence of the lane boundary classification
+float32 confidence

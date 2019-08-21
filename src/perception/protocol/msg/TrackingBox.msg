@@ -19,10 +19,6 @@ ObjectSignals signal
 # Current 3D bounding box.
 BoundingBox bbox
 
-# Detemine that whether the tracking result is in relative frame (vehicle attached coordinate)
-# Tracker may need absolute velocity to better estimate vehicle state
-bool relative
-
 # Estimated 3D velocity and accelaration
 geometry_msgs/TwistWithCovariance twist
 geometry_msgs/AccelWithCovariance accel

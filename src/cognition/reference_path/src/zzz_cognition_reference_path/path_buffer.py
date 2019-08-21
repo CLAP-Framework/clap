@@ -75,12 +75,10 @@ class PathBuffer:
         self._dynamic_map.jmap.reference_path.map_lane.index = -1
 
         # Calculate vehicles on the reference path
+        # TODO: find all vehicles near enough on reference_path
         front_vehicle = self.get_front_vehicle_on_reference_path()
-        if front_vehicle is None:
-            self._dynamic_map.jmap.reference_path.have_front_vehicle = False
-        else:
-            self._dynamic_map.jmap.reference_path.have_front_vehicle = True
-            self._dynamic_map.jmap.reference_path.front_vehicle = front_vehicle
+        if front_vehicle is not None:
+            self._dynamic_map.jmap.reference_path.front_vehicles = [front_vehicle]
 
         self._dynamic_map.jmap.reference_path.map_lane.speed_limit = 30
 
@@ -126,8 +124,8 @@ class PathBuffer:
                 continue
 
             d = np.linalg.norm([
-                vehicle.state.pose.pose.position.x - self._dynamic_map.ego_state.pose.pose.x,
-                vehicle.state.pose.pose.position.y - self._dynamic_map.ego_state.pose.pose.y])
+                vehicle.state.pose.pose.position.x - self._dynamic_map.ego_state.pose.pose.position.x,
+                vehicle.state.pose.pose.position.y - self._dynamic_map.ego_state.pose.pose.position.y])
 
             if d < nearest_dis:
                 front_vehicle = vehicle
