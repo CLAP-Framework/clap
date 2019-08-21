@@ -17,5 +17,4 @@ class LongitudinalCalibration():
         if self.last_speed is not None:
             acc = (current_speed - self.last_speed)/dt
             # save file
-        self.
         control = 0.1

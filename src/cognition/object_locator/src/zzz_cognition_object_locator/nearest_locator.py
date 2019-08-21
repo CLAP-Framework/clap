@@ -62,6 +62,7 @@ class NearestLocator:
 
         self._dynamic_map.ego_state = self._ego_vehicle_state.state
         if self._static_map.in_junction or len(self._static_map.lanes) == 0:
+            rospy.logdebug("In junction due to state map report junction location")
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             self._dynamic_map.jmap.drivable_area = self._static_map.drivable_area
         else:
@@ -103,6 +104,7 @@ class NearestLocator:
         dist_list = np.abs(dist_list)
         closest_lane = np.argmin(dist_list[:, 0])
         if dist_list[closest_lane, 0] > lane_dist_thres:
+            rospy.logdebug("In junction due to far away from a lane")
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             return
 
@@ -111,6 +113,7 @@ class NearestLocator:
         
         if self._ego_vehicle_distance_to_lane_tail[closest_lane] <= lane_end_dist_thres:
             # Drive into junction, wait until next map # TODO: change the condition
+            rospy.logdebug("In junction due to close to intersection")
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             return
         else:
@@ -244,7 +247,7 @@ class NearestLocator:
         dist_list = np.array([nearest_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
             for lane in self._static_map_lane_path_array])
         dist_list = np.abs(dist_list)
-        closest_lane, _ = dist_list[:, 0].argsort()[:2]
+        closest_lane = dist_list[:, 0].argsort()[0]
         closest_idx = int(dist_list[closest_lane, 1])
         closest_point = self._dynamic_map.mmap.lanes[closest_lane].map_lane.central_path_points[closest_idx]
 
@@ -270,7 +273,13 @@ class NearestLocator:
         dist_list = np.array([nearest_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
             for lane in self._static_map_lane_path_array])
         dist_list = np.abs(dist_list)
-        closest_lane, second_closest_lane = dist_list[:, 0].argsort()[:2]
+        
+        # Check if there's only two lanes
+        if len(self._dynamic_map.mmap.lanes) < 2:
+            closest_lane = second_closest_lane = 0
+        else:
+            closest_lane, second_closest_lane = dist_list[:, 0].argsort()[:2]
+
         closest_lane_dist, second_closest_lane_dist = dist_list[closest_lane, 0], dist_list[second_closest_lane, 0]
         closest_idx = int(dist_list[closest_lane, 1])
         closest_point = self._dynamic_map.mmap.lanes[closest_lane].map_lane.central_path_points[closest_idx]
@@ -317,8 +326,13 @@ class NearestLocator:
             self._ego_vehicle_state.state.pose.pose.position.x, self._ego_vehicle_state.state.pose.pose.position.y, lane)
             for lane in self._static_map_lane_path_array])  
         dist_list = np.abs(dist_list)
-        # TODO: Check if there's only two lanes
-        closest_lane, second_closest_lane = dist_list[:, 0].argsort()[:2]
+
+        # Check if there's only two lanes
+        if len(self._dynamic_map.mmap.lanes) < 2:
+            closest_lane = second_closest_lane = 0
+        else:
+            closest_lane, second_closest_lane = dist_list[:, 0].argsort()[:2]
+
         closest_lane_dist, second_closest_lane_dist = dist_list[closest_lane, 0], dist_list[second_closest_lane, 0]
         closest_idx = int(dist_list[closest_lane, 1])
         closest_point = self._dynamic_map.mmap.lanes[closest_lane].map_lane.central_path_points[closest_idx]

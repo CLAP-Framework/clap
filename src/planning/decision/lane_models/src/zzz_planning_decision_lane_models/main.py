@@ -97,7 +97,7 @@ class MainDecision(object):
         return msg
 
     def generate_smoothen_lane_change_trajectory(self, target_lane, rectify_dt, desired_speed,
-                                                        lc_dt = 1.5, rectify_min_d = 4, resolution=0.5, time_ahead=5, distance_ahead=10):
+                                                        lc_dt = 1.5, rectify_min_d = 6, resolution=0.5, time_ahead=5, distance_ahead=10):
 
         target_lane_center_path = self.convert_path_to_ndarray(target_lane.map_lane.central_path_points)
 

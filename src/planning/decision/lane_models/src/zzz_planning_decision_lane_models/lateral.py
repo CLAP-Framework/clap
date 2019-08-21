@@ -20,7 +20,7 @@ class LaneUtility(object):
         if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or dynamic_map.mmap.target_lane_index == -1:
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
-        if dynamic_map.distance_to_next_lane < close_to_junction:
+        if dynamic_map.mmap.distance_to_junction < close_to_junction:
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         # Case if cannot locate ego vehicle correctly
