@@ -1,7 +1,7 @@
 <launch>
     <include file="/home/carla/Carla/zzz/config/launch/full_stack/perception.launch">
-        <arg name="enable_camera" default="false"/>
-        <arg name="enable_lidar" default="true"/>
+        <arg name="enable_camera" value="false"/>
+        <arg name="enable_lidar" value="true"/>
     </include>
     <include file="/home/carla/Carla/zzz/config/launch/full_stack/planning.launch"/>
     <include file="$(dirname)/auxiliary.launch"/>

@@ -2,6 +2,7 @@
 <launch>
     <arg name="odom_topic" default="/carla/ego_vehicle/odometry"/>
     <arg name="waypoint_topic" default="/carla/ego_vehicle/waypoints"/>
+    <arg name="objects_topic" default="/zzz/perception/objects_tracked"/>
 
     <node pkg="zzz_navigation_pose_reporter" type="manual"
           name="pose_reporter" output="screen" ns="/zzz/navigation">
@@ -14,7 +15,7 @@
     </node>
     <node pkg="zzz_cognition_object_locator" type="nearest_locator"
           name="nearest_locator" output="screen" ns="/zzz/cognition">
-        <param name="objects_topic" value="/zzz/perception/objects_tracked"/>
+        <param name="objects_topic" value="$(arg objects_topic)"/>
     </node>
     <node pkg="zzz_cognition_reference_path" type="put_buffer"
           name="put_buffer" output="screen" ns="/zzz/cognition">
