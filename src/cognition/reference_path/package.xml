@@ -1,6 +1,6 @@
 <package format="2">
   <name>zzz_cognition_reference_path</name>
-  <version>0.0.4</version>
+  <version>0.1.0</version>
   <description>
     Get dynamic local map
   </description>
