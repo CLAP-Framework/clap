@@ -322,7 +322,7 @@ class NearestLocator:
         ego_mmap_x = 0
 
         # for ego_mmap_y
-        dist_list = np.array([dist_from_point_to_polyline(
+        dist_list = np.array([nearest_point_to_polyline(
             self._ego_vehicle_state.state.pose.pose.position.x, self._ego_vehicle_state.state.pose.pose.position.y, lane)
             for lane in self._static_map_lane_path_array])  
         dist_list = np.abs(dist_list)
