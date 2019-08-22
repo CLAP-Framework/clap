@@ -58,8 +58,7 @@ class MainDecision(object):
 
         if nearest_dis > rectify_thres:
             if self.dynamic_map.model == MapState.MODEL_MULTILANE_MAP and target_lane_index != -1:
-                ego_mmap_y = self.dynamic_map.mmap.ego_mmap_y
-                rectify_dt = abs(ego_mmap_y - target_lane_index)*lc_dt
+                rectify_dt = abs(self.dynamic_map.mmap.ego_lane_index - target_lane_index)*lc_dt
             else:
                 rectify_dt = nearest_dis/lc_v
             return self.generate_smoothen_lane_change_trajectory(target_lane,rectify_dt,desired_speed)

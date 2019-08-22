@@ -8,12 +8,8 @@ float32 distance_to_junction
 # all lane info
 LaneState[] lanes
 
-# the lane that ego vehicle drives on #FIXME(frenet)
-int8 ego_lane_index
-float32 ego_mmap_x # always 0
-float32 ego_mmap_y
-float32 ego_mmap_vx
-float32 ego_mmap_vy
+# the lane that ego vehicle drives on
+float32 ego_lane_index
 
 # target lane index (0 refer to right-most lane in right-side driving situation)
 # TODO: Change to list

@@ -13,10 +13,13 @@ zzz_perception_msgs/ObjectClass cls
 
 # Estimated kinematic properties
 zzz_driver_msgs/RigidBodyState state
+# Kinematic properties in Frenet Frame
+FrenetSerretState2D ffstate
+float32 lane_index
 
 bool static # A flag to mark whether the object is static
 
-# TODO: Add history trajectories
+# XXX: Do we need history trajectories?
 
 # ----- Physical Boundary (Optional) -----
 uint8 shape_type
@@ -46,10 +49,3 @@ uint8 PRIORITY_UNKNOWN = 0
 uint8 PRIORITY_NORMAL = 1
 uint8 PRIORITY_CAUTIOUS = 2 # You can move when this obstacle is far away
 uint8 PRIORITY_STOP = 3 # Should let this vehicle to go and then you can move
-
-# -------Multilane Coordinate (Translator) Frenet Formulas----- TODO
-
-float32 mmap_x
-float32 mmap_y
-float32 mmap_vx
-float32 mmap_vy

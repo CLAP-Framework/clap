@@ -122,7 +122,7 @@ class IDM(object):
                             and neighbor_lane.front_vehicles[0].behavior is not RoadObstacle.BEHAVIOR_MOVING_RIGHT:
             return False
         
-        mmap_y = neighbor_lane.front_vehicles[0].mmap_y
+        mmap_y = neighbor_lane.front_vehicles[0].ffstate.d
 
         ego_idx = ego_lane.map_lane.index
         neighbor_idx = neighbor_lane.map_lane.index
