@@ -7,7 +7,7 @@ from zzz_perception_msgs.msg import ObjectClass
 from zzz_driver_msgs.utils import get_speed, get_yaw
 from zzz_cognition_msgs.msg import MapState
 from intervaltree import Interval, IntervalTree
-from zzz_common.geometry import dist_from_point_to_polyline, nearest_point_to_polyline
+from zzz_common.geometry import dist_from_point_to_polyline2d
 
 class ReachableSet(object):
 
@@ -103,7 +103,7 @@ class ReachableSet(object):
 
             if min_d < collision_thres:
                 nearest_idx = np.argmin(dist)
-                surrounding_vehicle_distance_before_collision = dist_from_point_to_polyline(wp[0],wp[1],pred_trajectory)[1]
+                surrounding_vehicle_distance_before_collision = dist_from_point_to_polyline(wp[0],wp[1],pred_trajectory,True)[2]
                 collision_time = surrounding_vehicle_distance_before_collision/surrounding_vehicle_speed
                 # rospy.logdebug("considering vehicle:%d, dis_to_collision:%d, col_time:%.2f, speed:%.2f col_index:%d(%d)",vehicle.uid,
                 #                                                     surrounding_vehicle_distance_before_collision,

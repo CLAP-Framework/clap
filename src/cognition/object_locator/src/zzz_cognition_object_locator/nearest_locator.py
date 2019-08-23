@@ -8,7 +8,7 @@ from zzz_navigation_msgs.utils import get_lane_array
 from zzz_cognition_msgs.msg import MapState, LaneState, RoadObstacle
 from zzz_cognition_msgs.utils import convert_tracking_box, default_msg as cognition_default
 from zzz_perception_msgs.msg import TrackingBoxArray, TrafficLightDetection, TrafficLightDetectionArray
-from zzz_common.geometry import dist_from_point_to_polyline, nearest_point_to_polyline
+from zzz_common.geometry import dist_from_point_to_polyline2d
 from zzz_common.dynamic_models import wrap_angle
 
 from zzz_driver_msgs.utils import get_speed, get_yaw
@@ -94,8 +94,9 @@ class NearestLocator:
         if self._static_map_lane_path_array == None: # TODO: This should not happen 
             return
 
-        dist_list = np.array([dist_from_point_to_polyline(
-            self._ego_vehicle_state.state.pose.pose.position.x, self._ego_vehicle_state.state.pose.pose.position.y, lane)
+        dist_list = np.array([dist_from_point_to_polyline2d(
+            self._ego_vehicle_state.state.pose.pose.position.x, self._ego_vehicle_state.state.pose.pose.position.y,
+            lane, return_end_distance=True)
             for lane in self._static_map_lane_path_array])  
         dist_list = np.abs(dist_list)
         closest_lane = np.argmin(dist_list[:, 0])
@@ -126,8 +127,9 @@ class NearestLocator:
         ego_mmap_x = 0
 
         # for ego_mmap_y
-        dist_list = np.array([dist_from_point_to_polyline(
-            self._ego_vehicle_state.state.pose.pose.position.x, self._ego_vehicle_state.state.pose.pose.position.y, lane)
+        dist_list = np.array([dist_from_point_to_polyline2d(
+            self._ego_vehicle_state.state.pose.pose.position.x, self._ego_vehicle_state.state.pose.pose.position.y,
+            lane, return_end_distance=True)
             for lane in self._static_map_lane_path_array])  
         dist_list = np.abs(dist_list)
 
@@ -178,7 +180,8 @@ class NearestLocator:
         # TODO: separate vehicle and other objects?
         if self._surrounding_object_list is not None:
             for vehicle_idx, vehicle in enumerate(self._surrounding_object_list):
-                dist_list = np.array([dist_from_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
+                dist_list = np.array([dist_from_point_to_polyline2d(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y,
+                    lane, return_end_distance=True)
                     for lane in self._static_map_lane_path_array])
                 dist_list = np.abs(dist_list)
                 closest_lane = np.argmin(dist_list[:, 0])
@@ -288,7 +291,7 @@ class NearestLocator:
         Detect the behaviors of surrounding vehicles
         '''
 
-        dist_list = np.array([nearest_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
+        dist_list = np.array([dist_from_point_to_polyline2d(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
             for lane in self._static_map_lane_path_array])
         dist_list = np.abs(dist_list)
         closest_lane = dist_list[:, 0].argsort()[0]
@@ -314,7 +317,7 @@ class NearestLocator:
     # TODO: Combine this into locate_surrounding_vehicle_in_lanes
     def vehicle_mmap_y(self, vehicle, in_lane_thres = 0.9,lane_dist_thres = 3):
 
-        dist_list = np.array([nearest_point_to_polyline(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
+        dist_list = np.array([dist_from_point_to_polyline2d(vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y, lane)
             for lane in self._static_map_lane_path_array])
         dist_list = np.abs(dist_list)
         

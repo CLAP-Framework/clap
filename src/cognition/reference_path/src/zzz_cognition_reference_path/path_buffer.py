@@ -7,7 +7,7 @@ from zzz_cognition_msgs.msg import MapState
 from zzz_cognition_msgs.utils import default_msg
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import LanePoint
-from zzz_common.geometry import dist_from_point_to_polyline, nearest_point_to_polyline
+from zzz_common.geometry import dist_from_point_to_polyline2d
 from nav_msgs.msg import Path
 
 class PathBuffer:
@@ -50,7 +50,7 @@ class PathBuffer:
         """
 
         if self._reference_path_buffer:
-            _, nearest_idx = nearest_point_to_polyline(
+            _, nearest_idx = dist_from_point_to_polyline2d(
                 self._ego_vehicle_state.pose.pose.position.x,
                 self._ego_vehicle_state.pose.pose.position.y,
                 np.array(self._reference_path_buffer)
