@@ -12,6 +12,8 @@ from zzz_cognition_msgs.msg import MapState
 from zzz_cognition_reference_path import PathBuffer
 from nav_msgs.msg import Path
 
+# TODO: move this node into same package with nearest_locator
+
 class Node(object):
     def __init__(self,):
         params = parse_private_args(

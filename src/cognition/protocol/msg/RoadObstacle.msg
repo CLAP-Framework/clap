@@ -14,10 +14,13 @@ zzz_perception_msgs/ObjectClass cls
 # Estimated kinematic properties
 zzz_driver_msgs/RigidBodyState state
 # Kinematic properties in Frenet Frame
-FrenetSerretState2D ffstate
+zzz_driver_msgs/FrenetSerretState2D ffstate
+
+# Continuous lane index, for prediction or locating
 float32 lane_index
 
-bool static # A flag to mark whether the object is static
+# A flag to mark whether the object is static
+bool static
 
 # XXX: Do we need history trajectories?
 

@@ -3,15 +3,10 @@ This module gives implementations of motion models and observation models.
 '''
 
 import numpy as np
+from zzz_common.geometry import wrap_angle
 from scipy.special import fresnel
 
 ########## Motion models for tracking where inputs are unknown ##########
-
-def wrap_angle(theta):
-    '''
-    Normalize the angle to [-pi, pi]
-    '''
-    return (theta + np.pi) % (2*np.pi) - np.pi
 
 def motion_BR(state, dt):
     '''

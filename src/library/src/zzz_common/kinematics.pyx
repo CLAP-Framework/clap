@@ -1,7 +1,10 @@
+import math
 import numpy as np
+cimport numpy as np
 from geometry_msgs.msg import AccelWithCovariance
 from nav_msgs.msg import Odometry
-from zzz_driver_msgs.msg import RigidBodyState, RigidBodyStateStamped
+from zzz_driver_msgs.msg import RigidBodyState, RigidBodyStateStamped, FrenetSerretState2D
+from zzz_common.geometry import dist_from_point_to_polyline2d
 
 import tf.transformations as tft
 import tf2_ros as tf2
@@ -10,7 +13,7 @@ import tf2_ros as tf2
 #   this could be written by us, but is there any existing one?
 # TODO: Let this function support various input: pose + pose, pose + state, state + state, pose + odom, etc.
 
-def get_absolute_state(relative_state, base_state, check_frame=True):
+def RigidBodyStateStamped get_absolute_state(relative_state, base_state, check_frame=True):
     '''
     Calculate absolute rigid body state.
     
@@ -106,3 +109,59 @@ def get_absolute_state(relative_state, base_state, check_frame=True):
     state.state.accel.accel.linear.z = a_abs[2]
 
     return state
+
+cpdef FrenetSerretState2D get_frenet_state(cartesian_state, np.ndarray polyline, tangents):
+    '''
+    cartesian_state should be RigidBodyStateStamped
+    Line array should contain (x, y)
+
+    TODO(zyxin): Use more precise conversion described here:
+        https://blog.csdn.net/davidhopper/article/details/79162385
+    '''
+    cdef:
+        float dist, psi
+        int nearest_idx, nearest_type
+
+    dist, nearest_idx, nearest_type, dist_start, dist_end = dist_from_point_to_polyline2d(
+        cartesian_state.pose.pose.position.x,
+        cartesian_state.pose.pose.position.y,
+        polyline, return_end_distance=True)
+
+    if nearest_type == 1:
+        psi = math.atan2(
+            polyline[nearest_idx+1, 1] - polyline[nearest_idx, 1],
+            polyline[nearest_idx+1, 0] - polyline[nearest_idx, 0])
+    elif nearest_type == -1:
+        psi = math.atan2(
+            polyline[nearest_idx, 1] - polyline[nearest_idx-1, 1],
+            polyline[nearest_idx, 0] - polyline[nearest_idx-1, 0],
+        )
+    else:
+        psi = tangents[nearest_idx]
+
+    rot = np.array([
+        [math.cos(psi), math.sin(psi)],
+        [-math.sin(psi), math.cos(psi)]
+    ])
+
+    ori = cartesian_state.state.pose.pose.orientation
+    _,_,yaw = tf.transformations.euler_from_quaternion([ori.x, ori.y, ori.z, ori.w])
+
+    frenet = FrenetSerretState2D()
+    frenet.s = dist_start
+    frenet.d = dist
+    frenet.psi = wrap_angle(yaw - psi)
+
+    v = np.array([
+        cartesian_state.state.twist.twist.linear.x,
+        cartesian_state.state.twist.twist.linear.y])
+    frenet.vs, frenet.vd = v.dot(rot.T)
+    frenet.omega = cartesian_state.state.twist.twist.angular.z
+    
+    a = np.array([
+        cartesian_state.state.accel.accel.linear.x,
+        cartesian_state.state.accel.accel.linear.y])
+    frenet.sa, frenet.ad = a.dot(rot.T)
+    frenet.epsilon = cartesian_state.state.accel.accel.angular.z
+
+    return frenet

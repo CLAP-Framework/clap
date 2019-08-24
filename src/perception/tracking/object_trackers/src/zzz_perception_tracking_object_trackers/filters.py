@@ -17,6 +17,7 @@ import sys
 import rospy
 
 import zzz_common.dynamic_models as dm
+from zzz_common.geometry import wrap_angle
 from zzz_perception_msgs.msg import DetectionBoxArray, DetectionBox, ObjectClass
 from zzz_perception_msgs.msg import TrackingBoxArray, TrackingBox
 from geometry_msgs.msg import Pose
@@ -261,7 +262,7 @@ class Pose_UKF_CTRA:
 
     def _state_diff(self, x, y):
         d = x - y
-        d[2] = dm.wrap_angle(d[2])
+        d[2] = wrap_angle(d[2])
         return d
 
     def predict(self, dt):
@@ -283,7 +284,7 @@ class Pose_UKF_CTRA:
         _,_,rz = tf.transformations.euler_from_quaternion([ori.x, ori.y, ori.z, ori.w])
         R = np.array(box.bbox.pose.covariance, dtype='f8').reshape(6, 6)
         assert isPD(R), "Covariance matrix should be positive definite"
-        rz = dm.wrap_angle(rz)
+        rz = wrap_angle(rz)
         if not self._inited:
             self._filter.x = np.array([
                 box.bbox.pose.pose.position.x,
@@ -303,7 +304,7 @@ class Pose_UKF_CTRA:
                 box.bbox.pose.pose.position.y,
                 rz
             ], dtype='f8'), R=R[np.ix_([0,1,5], [0,1,5])])
-            self._filter.x[2] = dm.wrap_angle(self._filter.x[2])
+            self._filter.x[2] = wrap_angle(self._filter.x[2])
             
     @property
     def pose_state(self):

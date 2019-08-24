@@ -4,7 +4,7 @@ Header header
 
 # Ego Vehicle Info
 zzz_driver_msgs/RigidBodyState ego_state
-FrenetSerretState2D ego_ffstate
+zzz_driver_msgs/FrenetSerretState2D ego_ffstate
 
 # ----- Map Model indicator -----
 

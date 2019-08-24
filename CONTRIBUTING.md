@@ -6,6 +6,7 @@
 # Package structure
 A package contains several essential folders:
 
+- **doc**: folder to store essential documentation files
 - **cfg**: dynamically reconfigurable parameters
 - **include**: code for headers (*.hpp, *.pyd, *.pyi)
 - **src**: code for implementations (*.cpp, *.py, *.pyx)

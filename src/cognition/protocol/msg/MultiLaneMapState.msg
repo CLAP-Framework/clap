@@ -5,7 +5,7 @@
 float32 distance_to_junction
 
 # -------- Multi-lanes info --------
-# all lane info
+# all lane info, lanes must be ordered from right most lane
 LaneState[] lanes
 
 # the lane that ego vehicle drives on

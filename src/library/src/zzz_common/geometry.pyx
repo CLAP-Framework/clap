@@ -7,6 +7,12 @@ import numpy.linalg as npl
 
 from shapely.geometry import Polygon
 
+cpdef wrap_angle(float theta):
+    '''
+    Normalize the angle to [-pi, pi]
+    '''
+    return (theta + np.pi) % (2*np.pi) - np.pi
+
 cpdef dist_from_point_to_line2d(float x0, float y0, float x1, float y1, float x2, float y2):
     '''
     Calculate distance to the endpoint line (https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points)
@@ -25,45 +31,90 @@ cpdef dist_from_point_to_line2d(float x0, float y0, float x1, float y1, float x2
 cpdef dist_from_point_to_polyline2d(float x0, float y0, np.ndarray line, bint return_end_distance=False):
     """
     line: In shape of Nx2 point array
-    Return: distance_to_line, closest_point_index
+    Return: distance_to_line, closest_point_index, closest_point_type
         (if return_end_distance: line_head_to_foot_point, foot_point_to_line_end)
     Note: all returned distance are signed
     """
 
-    cdef np.ndarray dist_pc = npl.norm(line - [x0, y0], axis=1) # dist from current point (x0, y0) to line points
-    cdef int idx_pc = np.argmin(dist_pc) # index of closet point
-    
-    cdef float distp_pc, distp_pp, distp_pn, distn_pc, distn_pp, distn_pn
-    distp_pc = distp_pp = distp_pn = float('inf') # distance from point to previous line, previous line header, previous line end
-    distn_pc = distn_pp = distn_pn = float('inf') # distance from point to next line, next line header, next line end
+    if len(line) < 2:
+        raise ValueError("Cannot calculate distance to an empty line or a single point!")
+
+    cdef:
+        np.ndarray dist_line = npl.norm(line - [x0, y0], axis=1) # dist from current point (x0, y0) to line points
+        int closest_idx = np.argmin(dist_line) # index of closet point
+
+        int length = len(line)
+        int closest_type = 0 # 0: closest point, 1: next line of closest point, -1: previous line of closest point
+        float dist_closest # The actual closest distance from point to polyline
+        float dist_previous, dist_previous_head, dist_previous_tail # distance from point to previous line, previous line head, previous line tail
+        float dist_next, dist_next_head, dist_next_tail # distance from point to next line, next line head, next line tail
+        float dist_start, dist_end # distance to polyline start and polyline end
 
     # Calculate distances mentioned above
-    if idx_pc != 0:
-        distp_pc, distp_pp, distp_pn = dist_from_point_to_line2d(x0, y0,
-            line[idx_pc-1, 0], line[idx_pc-1, 1],
-            line[idx_pc, 0], line[idx_pc, 1])
-    if idx_pc != len(line) - 1:
-        distn_pc, distn_pp, distn_pn = dist_from_point_to_line2d(x0, y0,
-            line[idx_pc, 0], line[idx_pc, 1],
-            line[idx_pc+1, 0], line[idx_pc+1, 1])
+    if closest_idx == 0: # When this point is at line start
+        dist_next, dist_next_head, dist_next_tail = dist_from_point_to_line2d(x0, y0,
+            line[0,0], line[0,1], line[1,0], line[1,1])
+        if dist_next_head < 0: # case 1
+            dist_closest = dist_line[closest_idx]
+        else: # case 2
+            dist_closest = dist_next
+            closest_type = 1
+    elif closest_idx == length - 1: # When this point is at end
+        dist_previous, dist_previous_head, dist_previous_tail = dist_from_point_to_line2d(x0, y0,
+            line[length-2, 0], line[length-2, 1], line[length-1, 0], line[length-1, 1])
+        if dist_previous_tail < 0: # case 3
+            dist_closest = dist_line[closest_idx]
+        else: # case 4
+            dist_closest = dist_previous
+            closest_type = -1
+    else:
+        dist_previous, dist_previous_head, dist_previous_tail = dist_from_point_to_line2d(x0, y0,
+            line[closest_idx-1, 0], line[closest_idx-1, 1],
+            line[closest_idx, 0], line[closest_idx, 1])
+        dist_next, dist_next_head, dist_next_tail = dist_from_point_to_line2d(x0, y0,
+            line[closest_idx, 0], line[closest_idx, 1],
+            line[closest_idx+1, 0], line[closest_idx+1, 1])
+        if dist_previous_tail < 0 and dist_next_head < 0: # case 5
+            dist_closest = dist_line[closest_idx]
+            # sign determination
+            if dist_from_point_to_line2d(
+                line[closest_idx+1, 0], line[closest_idx+1, 1],
+                line[closest_idx-1, 0], line[closest_idx-1, 1],
+                line[closest_idx, 0], line[closest_idx, 1])[0] > 0:
+                dist_closest *= -1
+        elif dist_previous_tail < 0: # case 6
+            dist_closest = dist_next
+            closest_type = 1
+        elif dist_next_head < 0: # case 7
+            dist_closest = dist_previous
+            closest_type = -1
+        else: # case 8
+            if abs(dist_next) > abs(dist_previous):
+                dist_closest = dist_previous
+                closest_type = -1
+            else:
+                dist_closest = dist_next
+                closest_type = 1
 
     # Return early if total distance is not needed
-    cdef float dist_pline = min(distp_pc, distn_pc)
     if not return_end_distance:
-        return (dist_pline, idx_pc)
+        return (dist_closest, closest_idx, closest_type)
 
-    cdef float dist_pstart, dist_pend
-    if distp_pc > distn_pc:
+    # Calculate accumulated distance
+    if closest_type == 1:
         # closer to next line segment
-        dist_pstart = distn_pp + np.sum(npl.norm(np.diff(line[:idx_pc+1], axis=0), axis=1))
-        dist_pend = distn_pn + np.sum(npl.norm(np.diff(line[idx_pc+1:], axis=0), axis=1))
-    else:
+        dist_start = dist_next_head + np.sum(npl.norm(np.diff(line[:closest_idx+1], axis=0), axis=1))
+        dist_end = dist_next_tail + np.sum(npl.norm(np.diff(line[closest_idx+1:], axis=0), axis=1))
+    elif closest_type == -1:
         # closer to previous line segment
-        dist_pstart = distp_pp + np.sum(npl.norm(np.diff(line[:idx_pc], axis=0), axis=1))
-        dist_pend = distp_pn + np.sum(npl.norm(np.diff(line[idx_pc:], axis=0), axis=1))
-    
-    # If the point is away from polyline area, dist_pstart and dist_pend will be negative
-    return dist_pline, idx_pc, dist_pstart, dist_pend
+        dist_pstart = dist_previous_head + np.sum(npl.norm(np.diff(line[:closest_idx], axis=0), axis=1))
+        dist_pend = dist_previous_tail + np.sum(npl.norm(np.diff(line[closest_idx:], axis=0), axis=1))
+    else:
+        # closer to current point
+        dist_pstart = np.sum(npl.norm(np.diff(line[:closest_idx+1], axis=0), axis=1))
+        dist_pend = np.sum(npl.norm(np.diff(line[closest_idx:], axis=0), axis=1))
+
+    return dist_closest, closest_idx, closest_type, dist_pstart, dist_pend
 
 def dense_polyline2d(np.ndarray line, float resolution, str interp="linear"):
     """

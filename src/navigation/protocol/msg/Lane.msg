@@ -2,6 +2,7 @@
 
 # ----- Basic properties -----
 # the rightest lane is 0, reference lane is -1
+# TODO: remove this field
 int16 index
 
 # Speed limit (km/h)

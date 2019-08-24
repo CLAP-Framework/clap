@@ -8,6 +8,10 @@ add_cython_target(geometry CXX)
 add_library(geometry MODULE ${geometry})
 python_extension_module(geometry)
 
-set_target_properties(geometry
+add_cython_target(kinematics CXX)
+add_library(kinematics MODULE ${geometry})
+python_extension_module(kinematics)
+
+set_target_properties(geometry kinematics
   PROPERTIES LIBRARY_OUTPUT_DIRECTORY
   ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_PYTHON_DESTINATION})
