@@ -81,9 +81,9 @@
           name="euclidean_criteria" output="screen" ns="/zzz/perception">
         <param name="input_topic" value="objects_lshape"/>
         <param name="output_topic" value="objects_filtered"/>
-        <param name="min_length_x" value="0.1"/>
-        <param name="min_length_y" value="0.1"/>
-        <param name="min_length_z" value="0.1"/>
+        <param name="min_length_x" value="0.2"/>
+        <param name="min_length_y" value="0.2"/>
+        <param name="min_length_z" value="0.2"/>
     </node>
     <node pkg="zzz_perception_tracking_object_filters" type="to_static"
           name="static_converter" output="screen" ns="/zzz/perception">

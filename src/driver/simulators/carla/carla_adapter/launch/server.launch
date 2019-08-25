@@ -12,7 +12,7 @@
     <group if="$(eval ego_spawn)">
         <node pkg="carla_ego_vehicle" type="carla_ego_vehicle.py" name="carla_ego_vehicle_$(arg ego_actor)" output="screen">
         <param name="sensor_definition_file" value="$(arg vehicle_sensors_file)" />
-        <param name="vehicle_filter" value="vehicle.*" />
+        <param name="vehicle_filter" value="vehicle.lincoln.mkz2017" />
         <param name="spawn_point" value="$(arg ego_spawn_point)" />
         <param name="role_name" value="$(arg ego_actor)" />
         </node>

@@ -48,6 +48,7 @@ class PathBuffer:
                 self._reference_path[-1][1] == wp.pose.position.y:
                 continue
             self._reference_path.append((wp.pose.position.x, wp.pose.position.y))
+        rospy.loginfo("Received reference path, length:%d", len(reference_path.poses))
 
     def update_reference_path_buffer(self):
         """
@@ -62,7 +63,7 @@ class PathBuffer:
             )
             # Remove passed waypoints
             for _ in range(nearest_idx):
-                self._reference_path_buffer.popleft()
+                rospy.logdebug("Removed waypoint: %s, remaining count: %d", str(self._reference_path_buffer.popleft()), len(self._reference_path_buffer))
 
         # Choose points from reference path to buffer
         while self._reference_path and len(self._reference_path_buffer) < self._buffer_size:
