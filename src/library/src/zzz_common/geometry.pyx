@@ -19,10 +19,11 @@ cpdef dist_from_point_to_line2d(float x0, float y0, float x1, float y1, float x2
     Return: distance_to_line, point1_to_foot_point, foot_point_to_point2, the value is signed (i.e. minus if obtuse angle)
     Note: the distance is negative if the point is at left hand side of the direction of line (p1 -> p2)
     '''
-    cdef float l = math.sqrt((y2-y1)*(y2-y1) + (x2-x1)*(x2-x1))
-    cdef float dl = ((y2-y1)*x0 - (x2-x1)*y0 + x2*y1 - x1*y2) / l
-    cdef float d1 = (x1*x1+x0*(x2-x1)-x1*x2 + y1*y1+y0*(y2-y1)-y1*y2) / l
-    cdef float d2 = (x2*x2-x0*(x2-x1)-x1*x2 + y2*y2-y0*(y2-y1)-y1*y2) / l
+    cdef float l, dl, d1, d2
+    l = math.sqrt((y2-y1)*(y2-y1) + (x2-x1)*(x2-x1))
+    dl = ((y2-y1)*x0 - (x2-x1)*y0 + x2*y1 - x1*y2) / l
+    d1 = (x1*x1+x0*(x2-x1)-x1*x2 + y1*y1+y0*(y2-y1)-y1*y2) / l
+    d2 = (x2*x2-x0*(x2-x1)-x1*x2 + y2*y2-y0*(y2-y1)-y1*y2) / l
     
     return dl, d1, d2
 
@@ -107,14 +108,14 @@ cpdef dist_from_point_to_polyline2d(float x0, float y0, np.ndarray line, bint re
         dist_end = dist_next_tail + np.sum(npl.norm(np.diff(line[closest_idx+1:], axis=0), axis=1))
     elif closest_type == -1:
         # closer to previous line segment
-        dist_pstart = dist_previous_head + np.sum(npl.norm(np.diff(line[:closest_idx], axis=0), axis=1))
-        dist_pend = dist_previous_tail + np.sum(npl.norm(np.diff(line[closest_idx:], axis=0), axis=1))
+        dist_start = dist_previous_head + np.sum(npl.norm(np.diff(line[:closest_idx], axis=0), axis=1))
+        dist_end = dist_previous_tail + np.sum(npl.norm(np.diff(line[closest_idx:], axis=0), axis=1))
     else:
         # closer to current point
-        dist_pstart = np.sum(npl.norm(np.diff(line[:closest_idx+1], axis=0), axis=1))
-        dist_pend = np.sum(npl.norm(np.diff(line[closest_idx:], axis=0), axis=1))
+        dist_start = np.sum(npl.norm(np.diff(line[:closest_idx+1], axis=0), axis=1))
+        dist_end = np.sum(npl.norm(np.diff(line[closest_idx:], axis=0), axis=1))
 
-    return dist_closest, closest_idx, closest_type, dist_pstart, dist_pend
+    return dist_closest, closest_idx, closest_type, dist_start, dist_end
 
 def dense_polyline2d(np.ndarray line, float resolution, str interp="linear"):
     """

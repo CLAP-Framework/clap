@@ -2,7 +2,7 @@
 
 import rospy
 import numpy as np
-from zzz_common.geometry import dense_polyline, dist_from_point_to_polyline2d
+from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from zzz_planning_msgs.msg import DecisionTrajectory
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
@@ -53,7 +53,7 @@ class MainDecision(object):
 
         # if ego vehicle is on the target path
         # works for lane change, lane follow and reference path follow
-        dense_centrol_path = dense_polyline(central_path, resolution)
+        dense_centrol_path = dense_polyline2d(central_path, resolution)
         nearest_dis, nearest_idx, _ = dist_from_point_to_polyline2d(ego_x, ego_y, dense_centrol_path)
         nearest_dis = abs(nearest_dis)
 
@@ -74,10 +74,8 @@ class MainDecision(object):
 
         if lane_index == -1:
             return self.dynamic_map.jmap.reference_path
-
-        for lane in self.dynamic_map.mmap.lanes:
-            if lane.map_lane.index == lane_index:
-                return lane
+        else:
+            return self.dynamic_map.mmap.lanes[int(lane_index)]
 
         return None
 
@@ -109,7 +107,7 @@ class MainDecision(object):
         # Considering if the ego_vehicle is in a lane Change
         lc_dis = max(rectify_dt*desired_speed,rectify_min_d)
 
-        dense_target_centrol_path = dense_polyline(target_lane_center_path, resolution)
+        dense_target_centrol_path = dense_polyline2d(target_lane_center_path, resolution)
         _, nearest_idx, _ = dist_from_point_to_polyline2d(ego_x, ego_y, dense_target_centrol_path)
         front_path = dense_target_centrol_path[nearest_idx:]
         dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path, axis=0), axis = 1))

@@ -14,7 +14,7 @@ execute_process(COMMAND "${PYTHON_EXECUTABLE}"
     ERROR_QUIET
 )
 if(NOT _skbuild_status EQUAL 0)
-    message(FATAL_ERROR "Error when finding scikit-build, which is required for building.")
+    message(FATAL_ERROR "Error when finding scikit-build, which is required for building. Please install scikit-build with pip.")
 endif()
 
 get_filename_component(_skbuild_dir ${_skbuild_init} DIRECTORY)

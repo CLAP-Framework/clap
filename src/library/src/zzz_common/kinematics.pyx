@@ -4,7 +4,7 @@ cimport numpy as np
 from geometry_msgs.msg import AccelWithCovariance
 from nav_msgs.msg import Odometry
 from zzz_driver_msgs.msg import RigidBodyState, RigidBodyStateStamped, FrenetSerretState2D
-from zzz_common.geometry import dist_from_point_to_polyline2d
+from zzz_common.geometry import dist_from_point_to_polyline2d, wrap_angle
 
 import tf.transformations as tft
 import tf2_ros as tf2
@@ -13,7 +13,7 @@ import tf2_ros as tf2
 #   this could be written by us, but is there any existing one?
 # TODO: Let this function support various input: pose + pose, pose + state, state + state, pose + odom, etc.
 
-def RigidBodyStateStamped get_absolute_state(relative_state, base_state, check_frame=True):
+def get_absolute_state(relative_state, base_state, check_frame=True):
     '''
     Calculate absolute rigid body state.
     
@@ -110,7 +110,7 @@ def RigidBodyStateStamped get_absolute_state(relative_state, base_state, check_f
 
     return state
 
-cpdef FrenetSerretState2D get_frenet_state(cartesian_state, np.ndarray polyline, tangents):
+cpdef get_frenet_state(cartesian_state, np.ndarray polyline, tangents):
     '''
     cartesian_state should be RigidBodyStateStamped
     Line array should contain (x, y)
@@ -121,6 +121,9 @@ cpdef FrenetSerretState2D get_frenet_state(cartesian_state, np.ndarray polyline,
     cdef:
         float dist, psi
         int nearest_idx, nearest_type
+
+    if type(cartesian_state) == RigidBodyStateStamped:
+        cartesian_state = cartesian_state.state
 
     dist, nearest_idx, nearest_type, dist_start, dist_end = dist_from_point_to_polyline2d(
         cartesian_state.pose.pose.position.x,
@@ -144,8 +147,8 @@ cpdef FrenetSerretState2D get_frenet_state(cartesian_state, np.ndarray polyline,
         [-math.sin(psi), math.cos(psi)]
     ])
 
-    ori = cartesian_state.state.pose.pose.orientation
-    _,_,yaw = tf.transformations.euler_from_quaternion([ori.x, ori.y, ori.z, ori.w])
+    ori = cartesian_state.pose.pose.orientation
+    _,_,yaw = tft.euler_from_quaternion([ori.x, ori.y, ori.z, ori.w])
 
     frenet = FrenetSerretState2D()
     frenet.s = dist_start
@@ -153,15 +156,15 @@ cpdef FrenetSerretState2D get_frenet_state(cartesian_state, np.ndarray polyline,
     frenet.psi = wrap_angle(yaw - psi)
 
     v = np.array([
-        cartesian_state.state.twist.twist.linear.x,
-        cartesian_state.state.twist.twist.linear.y])
+        cartesian_state.twist.twist.linear.x,
+        cartesian_state.twist.twist.linear.y])
     frenet.vs, frenet.vd = v.dot(rot.T)
-    frenet.omega = cartesian_state.state.twist.twist.angular.z
+    frenet.omega = cartesian_state.twist.twist.angular.z
     
     a = np.array([
-        cartesian_state.state.accel.accel.linear.x,
-        cartesian_state.state.accel.accel.linear.y])
+        cartesian_state.accel.accel.linear.x,
+        cartesian_state.accel.accel.linear.y])
     frenet.sa, frenet.ad = a.dot(rot.T)
-    frenet.epsilon = cartesian_state.state.accel.accel.angular.z
+    frenet.epsilon = cartesian_state.accel.accel.angular.z
 
     return frenet

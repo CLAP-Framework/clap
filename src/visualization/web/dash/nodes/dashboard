@@ -204,9 +204,8 @@ def get_dist(state1, state2):
 def dynamic_map_callback(msg):
     data_cache.time.append(msg.header.stamp.to_sec())
     data_cache.ego_speed.append(get_speed(msg.ego_state))
-    print(msg.mmap.ego_lane_index)
-    if msg.model == MapState.MODEL_MULTILANE_MAP and len(msg.mmap.lanes[msg.mmap.ego_lane_index].front_vehicles) > 0:
-        vehicle = msg.mmap.lanes[msg.mmap.ego_lane_index].front_vehicles[0]
+    if msg.model == MapState.MODEL_MULTILANE_MAP and len(msg.mmap.lanes[int(msg.mmap.ego_lane_index)].front_vehicles) > 0:
+        vehicle = msg.mmap.lanes[int(msg.mmap.ego_lane_index)].front_vehicles[0]
         data_cache.front_speed.append(get_speed(vehicle.state))
         data_cache.front_dist.append(get_dist(msg.ego_state, vehicle.state))
     else:

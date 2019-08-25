@@ -42,6 +42,11 @@ class PathBuffer:
 
         self._reference_path.clear()
         for wp in reference_path.poses:
+            # Skip duplicate path points if possible
+            if len(self._reference_path) > 0 and \
+                self._reference_path[-1][0] == wp.pose.position.x and \
+                self._reference_path[-1][1] == wp.pose.position.y:
+                continue
             self._reference_path.append((wp.pose.position.x, wp.pose.position.y))
 
     def update_reference_path_buffer(self):
@@ -49,8 +54,8 @@ class PathBuffer:
         Delete the passed point and add more point to the reference path
         """
 
-        if self._reference_path_buffer:
-            _, nearest_idx = dist_from_point_to_polyline2d(
+        if len(self._reference_path_buffer) > 0:
+            _, nearest_idx, _ = dist_from_point_to_polyline2d(
                 self._ego_vehicle_state.pose.pose.position.x,
                 self._ego_vehicle_state.pose.pose.position.y,
                 np.array(self._reference_path_buffer)

@@ -3,7 +3,7 @@ import math
 import numpy as np
 import tf
 
-from zzz_common.geometry import dense_polyline
+from zzz_common.geometry import dense_polyline2d
 
 class PurePersuitLateralController():
     """
@@ -39,7 +39,7 @@ class PurePersuitLateralController():
 
         trajectory_array = self.convert_trajectory_to_ndarray(trajectory)
 
-        trajectory_dense = dense_polyline(trajectory_array, resolution)
+        trajectory_dense = dense_polyline2d(trajectory_array, resolution)
 
         end_idx = self.get_next_idx(ego_loc, trajectory_dense, control_target_distance)
         wp_loc = trajectory_dense[end_idx]

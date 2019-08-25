@@ -7,7 +7,7 @@ from zzz_navigation_msgs.msg import Map, Lane
 from zzz_navigation_msgs.utils import get_lane_array
 from zzz_cognition_msgs.msg import MapState, LaneState, RoadObstacle
 from zzz_cognition_msgs.utils import convert_tracking_box, default_msg as cognition_default
-from zzz_perception_msgs.msg import TrackingBoxArray, TrafficLightDetection, TrafficLightDetectionArray
+from zzz_perception_msgs.msg import TrackingBoxArray, DetectionBoxArray, ObjectSignals
 from zzz_common.geometry import dist_from_point_to_polyline2d, wrap_angle
 from zzz_common.kinematics import get_frenet_state
 
@@ -40,7 +40,7 @@ class NearestLocator:
 
         self._static_map = static_map
         self._static_map_lane_path_array = get_lane_array(static_map.lanes)
-        self._static_map_lane_tangets = [[point.tanget for point in lane.central_path_points] for lane in static_map.lanes]
+        self._static_map_lane_tangets = [[point.tangent for point in lane.central_path_points] for lane in static_map.lanes]
         rospy.loginfo("Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
             len(self._static_map.lanes), int(self._static_map.in_junction), self._static_map.target_lane_index)
 
@@ -54,7 +54,7 @@ class NearestLocator:
         self._ego_vehicle_state = state
 
     def receive_traffic_light_detection(self, detection):
-        assert type(detection) == TrafficLightDetectionArray
+        assert type(detection) == DetectionBoxArray
         self._traffic_light_detection = detection
 
     # ====== Data Updator =======
@@ -67,7 +67,7 @@ class NearestLocator:
         # Create dynamic maps and add static map elements
         self._dynamic_map.ego_state = self._ego_vehicle_state.state
         if self._static_map.in_junction or len(self._static_map.lanes) == 0:
-            rospy.logdebug("In junction due to state map report junction location")
+            rospy.logdebug("In junction due to static map report junction location")
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             self._dynamic_map.jmap.drivable_area = self._static_map.drivable_area
         else:
@@ -89,7 +89,7 @@ class NearestLocator:
             self.locate_stop_sign_in_lanes()
             self.locate_speed_limit_in_lanes()
 
-        rospy.logdebug("Updated Dynamic Map: lanes_num = %d, in_junction = %d, ego_y = %d, distance_to_end = %f",
+        rospy.logdebug("Updated Dynamic Map: lanes_num = %d, in_junction = %d, lane_index = %d, distance_to_end = %f",
             len(self._static_map.lanes), int(self._static_map.in_junction), self._dynamic_map.mmap.ego_lane_index, self._dynamic_map.mmap.distance_to_junction)
 
     # ========= For in lane =========
@@ -144,7 +144,7 @@ class NearestLocator:
             self._ego_vehicle_state.state.pose.pose.position.x, self._ego_vehicle_state.state.pose.pose.position.y,
             lane, return_end_distance=True)
             for lane in self._static_map_lane_path_array])  
-        ego_lane_index = self. locate_object_in_lane(self._ego_vehicle_state.state)
+        ego_lane_index = self.locate_object_in_lane(self._ego_vehicle_state.state)
 
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 2]
         self._ego_vehicle_distance_to_lane_tail = dist_list[:, 3]
@@ -157,7 +157,7 @@ class NearestLocator:
             return
         else:
             self._dynamic_map.model = MapState.MODEL_MULTILANE_MAP
-            self._dynamic_map.ego_ffstate = get_frenet_state(self._dynamic_map.mmap.ego_state, 
+            self._dynamic_map.ego_ffstate = get_frenet_state(self._ego_vehicle_state, 
                 self._static_map_lane_path_array[int(ego_lane_index)],
                 self._static_map_lane_tangets[int(ego_lane_index)])
             self._dynamic_map.mmap.ego_lane_index = ego_lane_index
@@ -236,30 +236,30 @@ class NearestLocator:
         total_lane_num = len(self._static_map.lanes)
         if len(lights) == 1:
             for i in range(total_lane_num):
-                if lights[0].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_RED:
+                if lights[0].signal == ObjectSignals.TRAFFIC_LIGHT_RED:
                     self._dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_STOP
-                elif lights[0].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_YELLOW:
-                    self._dynamic_map.mmap.lanes[i].traffic_light_state = Lane.STOP_STATE_YIELD
-                elif lights[0].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_GREEN:
-                    self._dynamic_map.mmap.lanes[i].traffic_light_state = Lane.STOP_STATE_THRU
+                elif lights[0].signal == ObjectSignals.TRAFFIC_LIGHT_YELLOW:
+                    self._dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_YIELD
+                elif lights[0].signal == ObjectSignals.TRAFFIC_LIGHT_GREEN:
+                    self._dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_THRU
         elif len(lights) > 1 and len(lights) == total_lane_num:
             for i in range(total_lane_num):
-                if lights[i].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_RED:
-                    self._dynamic_map.mmap.lanes[i].traffic_light_state = Lane.STOP_STATE_STOP
-                elif lights[i].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_YELLOW:
-                    self._dynamic_map.mmap.lanes[i].traffic_light_state = Lane.STOP_STATE_YIELD
-                elif lights[i].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_GREEN:
-                    self._dynamic_map.mmap.lanes[i].traffic_light_state = Lane.STOP_STATE_THRU
+                if lights[i].signal == ObjectSignals.TRAFFIC_LIGHT_RED:
+                    self._dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_STOP
+                elif lights[i].signal == ObjectSignals.TRAFFIC_LIGHT_YELLOW:
+                    self._dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_YIELD
+                elif lights[i].signal == ObjectSignals.TRAFFIC_LIGHT_GREEN:
+                    self._dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_THRU
         elif len(lights) > 1 and len(lights) != total_lane_num:
             red = True
             for i in range(len(lights)):
-                if lights[i].traffic_light_state == TrafficLightDetection.TRAFFIC_LIGHT_GREEN:
+                if lights[i].signal == ObjectSignals.TRAFFIC_LIGHT_GREEN:
                     red = False
             for i in range(total_lane_num):
                 if red:
-                    self._dynamic_map.mmap.lanes[i].traffic_light_state = Lane.STOP_STATE_STOP
+                    self._dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_STOP
                 else:
-                    self._dynamic_map.mmap.lanes[i].traffic_light_state = Lane.STOP_STATE_THRU
+                    self._dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_THRU
         
     def locate_stop_sign_in_lanes(self):
         '''

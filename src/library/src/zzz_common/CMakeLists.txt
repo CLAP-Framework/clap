@@ -9,7 +9,7 @@ add_library(geometry MODULE ${geometry})
 python_extension_module(geometry)
 
 add_cython_target(kinematics CXX)
-add_library(kinematics MODULE ${geometry})
+add_library(kinematics MODULE ${kinematics})
 python_extension_module(kinematics)
 
 set_target_properties(geometry kinematics

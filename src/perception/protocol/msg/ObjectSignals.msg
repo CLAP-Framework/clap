@@ -18,7 +18,8 @@ uint16 TRAFFIC_LIGHT                    = 2     # 0x02
 uint16 TRAFFIC_LIGHT_RED                = 18    # 0x12
 uint16 TRAFFIC_LIGHT_YELLOW             = 34    # 0x22
 uint16 TRAFFIC_LIGHT_GREEN              = 50    # 0x32
-uint16 TRAFFIC_LIGHT_GREEN_TURN         = 66    # 0x42
+uint16 TRAFFIC_LIGHT_GREEN_LEFT_TURN    = 66    # 0x42
+uint16 TRAFFIC_LIGHT_GREEN_RIGHT_TURN   = 66    # 0x42
 
 # Confidence of the signal detection
 float32 score
