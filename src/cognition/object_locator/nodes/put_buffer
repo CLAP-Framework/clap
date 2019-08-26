@@ -9,10 +9,8 @@ from zzz_common.params import parse_private_args
 
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_cognition_msgs.msg import MapState
-from zzz_cognition_reference_path import PathBuffer
+from zzz_cognition_object_locator.path_buffer import PathBuffer
 from nav_msgs.msg import Path
-
-# TODO: move this node into same package with nearest_locator
 
 class Node(object):
     def __init__(self,):
