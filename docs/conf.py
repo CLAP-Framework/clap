@@ -11,11 +11,15 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import os.path as osp
 import sys
 
 # Insert path for generated python files
-sys.path.append(os.path.abspath('../devel/lib/python2.7/dist-packages'))
-sys.path.append('/home/jacobz/Downloads/zzz/src/library/src')
+libpath = osp.abspath('../devel/lib') # Install directory: '../install/lib'
+for folder in os.listdir(libpath):
+    if folder.startswith('zzz_'):
+        sys.path.append(osp.join(libpath, folder))
+sys.path.append(osp.join(libpath, 'python2.7', 'dist-packages'))
 
 
 # -- Project information -----------------------------------------------------

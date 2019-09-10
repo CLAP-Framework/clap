@@ -1,6 +1,8 @@
-cimport cython
+#cython: embedsignature=True, annotation_typing=False
 
-import math
+cimport cython
+from libc.math cimport sqrt, ceil
+
 import numpy as np
 cimport numpy as np
 import numpy.linalg as npl
@@ -10,17 +12,32 @@ from shapely.geometry import Polygon
 cpdef wrap_angle(float theta):
     '''
     Normalize the angle to [-pi, pi]
+
+    :param float theta: angle to be wrapped
+    :return: wrapped angle
+    :rtype: float
     '''
+
     return (theta + np.pi) % (2*np.pi) - np.pi
 
 cpdef dist_from_point_to_line2d(float x0, float y0, float x1, float y1, float x2, float y2):
     '''
-    Calculate distance to the endpoint line (https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points)
-    Return: distance_to_line, point1_to_foot_point, foot_point_to_point2, the value is signed (i.e. minus if obtuse angle)
+    Calculate `distance from point to a oriented line <https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points>` (2D)
+
+    :param (x0,y0): target point
+    :type (x0,y0): float, float
+    :param (x1,y1): start point of the line
+    :type (x1,y1): float, float
+    :param (x2,y2): end point of the line
+    :type (x2,y2): float, float
+    :return: (distance_to_line, point1_to_foot_point, foot_point_to_point2)
+    :rtype: (float, float, float), the values are signed (i.e. minus if obtuse angle)
+
     Note: the distance is negative if the point is at left hand side of the direction of line (p1 -> p2)
     '''
+
     cdef float l, dl, d1, d2
-    l = math.sqrt((y2-y1)*(y2-y1) + (x2-x1)*(x2-x1))
+    l = sqrt((y2-y1)*(y2-y1) + (x2-x1)*(x2-x1))
     dl = ((y2-y1)*x0 - (x2-x1)*y0 + x2*y1 - x1*y2) / l
     d1 = (x1*x1+x0*(x2-x1)-x1*x2 + y1*y1+y0*(y2-y1)-y1*y2) / l
     d2 = (x2*x2-x0*(x2-x1)-x1*x2 + y2*y2-y0*(y2-y1)-y1*y2) / l
@@ -31,10 +48,14 @@ cpdef dist_from_point_to_line2d(float x0, float y0, float x1, float y1, float x2
 @cython.wraparound(False)
 cpdef dist_from_point_to_polyline2d(float x0, float y0, np.ndarray line, bint return_end_distance=False):
     """
-    line: In shape of Nx2 point array
-    Return: distance_to_line, closest_point_index, closest_point_type
-        (if return_end_distance: line_head_to_foot_point, foot_point_to_line_end)
-    Note: all returned distance are signed
+    Calculate distance from point to a polyline (2D)
+
+    :param (x0,y0): target point
+    :type (x0,y0): float, float
+    :param line: target polyline
+    :type line: np.ndarray, a Nx2 point array
+    :return: (distance_to_line, closest_point_index, closest_point_type); if return_end_distance, then also return (line_head_to_foot_point, foot_point_to_line_end)
+    :rtype: float, all returned distances are signed
     """
 
     if len(line) < 2:
@@ -121,10 +142,9 @@ def dense_polyline2d(np.ndarray line, float resolution, str interp="linear"):
     """
     Dense a polyline by linear interpolation.
 
-    resolution: The gap between each point <= resolution
-    interp: The interpolation method
-
-    Return: The densed polyline 
+    :param resolution: the gap between each point should be lower than this resolution
+    :param interp: the interpolation method
+    :return: the densed polyline
     """
     if line is None or len(line) == 0:
         raise ValueError("Line input is null")
@@ -135,7 +155,7 @@ def dense_polyline2d(np.ndarray line, float resolution, str interp="linear"):
     cdef np.ndarray s
     s = np.cumsum(npl.norm(np.diff(line, axis=0), axis=1))
     s = np.concatenate([[0],s])
-    cdef int num = math.ceil(s[-1]/resolution)
+    cdef int num = <int>ceil(s[-1]/resolution)
 
     cdef np.ndarray s_space = np.linspace(0,s[-1],num = num)
     cdef np.ndarray x = np.interp(s_space,s,line[:,0])
@@ -147,6 +167,7 @@ def polygon_iou(p1, p2):
     """
     Intersection area / Union area of two polygons
     """
+
     p1, p2 = Polygon(p1), Polygon(p2)
     pi = p1.intersection(p2).area
     pu = p1.area + p2.area - pi
@@ -157,6 +178,7 @@ def box_to_corners_2d(xy, wh, yaw):
     Convert a oriented box to corners on 2d plane.
     Returned box is in counterclock order
     """
+
     rot_yaw = np.array([
         [ np.cos(yaw), np.sin(yaw)],
         [-np.sin(yaw), np.cos(yaw)]

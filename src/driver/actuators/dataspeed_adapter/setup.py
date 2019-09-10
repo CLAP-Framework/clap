@@ -4,7 +4,7 @@ from distutils.core import setup
 from catkin_pkg.python_setup import generate_distutils_setup
 
 d = generate_distutils_setup(
-    packages=['zzz_driver_msgs'],
+    packages=['zzz_driver_actuators_dataspeed_adapter'],
     package_dir={'': 'src'}
 )
 

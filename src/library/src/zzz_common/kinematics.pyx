@@ -1,3 +1,5 @@
+#cython: embedsignature=True, annotation_typing=False
+
 import math
 import numpy as np
 cimport numpy as np
@@ -15,17 +17,17 @@ import tf2_ros as tf2
 
 def get_absolute_state(relative_state, base_state, check_frame=True):
     '''
-    Calculate absolute rigid body state.
+    Calculate absolute rigid body state from relative frame with information of base frame
     
-    Parameters:
-    relative_state ('rel' relative to 'base'): state in relative coordinate
-        be in type RigidBodyStateStamped
-    base_state ('base' relative to 'static'): state of the relative coordinate,
-        be in type RigidBodyStateStamped or Odometry
-
-    Return:
-    absolute_state ('rel' relative to 'static'): be in type RigidBodyStateStamped
+    :param relative_state: state in relative coordinate ('rel' relative to 'base')
+    :type relative_state: RigidBodyStateStamped
+    :param base_state: state of the relative coordinate ('base' relative to 'static')
+    :type base_state: RigidBodyStateStamped or Odometry
+    :param check_frame: whether to check if the message frame_id is consistent
+    :return: absolute_state ('rel' relative to 'static')
+    :rtype: RigidBodyStateStamped
     '''
+
     if type(relative_state) == RigidBodyStateStamped:
         rel_pose  = relative_state.state.pose
         rel_twist = relative_state.state.twist
@@ -112,12 +114,16 @@ def get_absolute_state(relative_state, base_state, check_frame=True):
 
 cpdef get_frenet_state(cartesian_state, np.ndarray polyline, tangents):
     '''
-    cartesian_state should be RigidBodyStateStamped
-    Line array should contain (x, y)
+    Convert state from cartesian coordinate to frenet state of a polyline.
 
-    TODO(zyxin): Use more precise conversion described here:
-        https://blog.csdn.net/davidhopper/article/details/79162385
+    :param cartesian_state: state in cartesian system
+    :type cartesian_state: RigidBodyStateStamped
+    :param polyline: the polyline that frenet coordinate is based on
+    :type polyline: np.ndarray, should in form Nx2 from line start to line end
+
+    TODO(zyxin): Use more precise conversion described here: https://blog.csdn.net/davidhopper/article/details/79162385
     '''
+
     cdef:
         float dist, psi
         int nearest_idx, nearest_type
