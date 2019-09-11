@@ -22,6 +22,9 @@ class PathBuffer:
 
         self._judge_lane_change_threshold = 3
 
+        self._rerouting_required = False
+        self._rerouting_requirement_sent = False
+
     def receive_static_map(self, map_input):
         assert type(map_input) == MapState
 
@@ -42,15 +45,12 @@ class PathBuffer:
 
         self._reference_path.clear()
         for wp in reference_path.poses:
-            # Skip duplicate path points if possible
-            if len(self._reference_path) > 0 and \
-                self._reference_path[-1][0] == wp.pose.position.x and \
-                self._reference_path[-1][1] == wp.pose.position.y:
-                continue
             self._reference_path.append((wp.pose.position.x, wp.pose.position.y))
         rospy.loginfo("Received reference path, length:%d", len(reference_path.poses))
+        
+        self._rerouting_requirement_sent = False
 
-    def update_reference_path_buffer(self):
+    def update_reference_path_buffer(self, required_reference_path_length = 10):
         """
         Delete the passed point and add more point to the reference path
         """
@@ -64,6 +64,11 @@ class PathBuffer:
             # Remove passed waypoints
             for _ in range(nearest_idx):
                 rospy.logdebug("Removed waypoint: %s, remaining count: %d", str(self._reference_path_buffer.popleft()), len(self._reference_path_buffer))
+
+        # current reference path is too short, require a new reference path
+        if len(self._reference_path) < required_reference_path_length and not self._rerouting_requirement_sent:
+            self._rerouting_required = True
+            self._rerouting_requirement_sent = True
 
         # Choose points from reference path to buffer
         while self._reference_path and len(self._reference_path_buffer) < self._buffer_size:
