@@ -9,7 +9,7 @@ uint8 MODULE_PERCEPTION_CAMERA = 2
 
 string module_method
 
-int module_status
+int8 module_status
 int8 STATUS_DISABLED = 0
 int8 STATUS_ENABLED = 1
 int8 STATUS_FINISHED = 2

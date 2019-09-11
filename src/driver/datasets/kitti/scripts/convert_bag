@@ -272,7 +272,7 @@ def save_gps_vel_data(bag, kitti, gps_frame_id, topic):
         twist_msg.twist.angular.z = oxts.packet.wu
         bag.write(topic, twist_msg, t=twist_msg.header.stamp)
 
-def main():
+def arg_parser():
     parser = argparse.ArgumentParser(description="Convert KITTI dataset to ROS bag file the easy way!")
     parser.add_argument("type", choices=["sync", "extract", "odometry"], help=\
         "KITTI dataset type")
@@ -286,7 +286,9 @@ def main():
         "Compression algorithm for the bag. No compression is performed by default")
     parser.add_argument("-l", "--labels", action='store_true', help=\
         "Load tracklets into rosbag. This requires zzz_perception_msgs and only work for {raw sync, object} dataset")
-    args = parser.parse_args()
+
+def main():
+    args = arg_parser().parse_args()
 
     # Compression type
     if args.compression == "none":
