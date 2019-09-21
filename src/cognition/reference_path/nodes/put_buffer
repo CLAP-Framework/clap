@@ -23,7 +23,7 @@ class Node(object):
             map_file_type = "opendrive",
             pose_topic = "/zzz/navigation/ego_pose",
             reference_path_topic = "/zzz/navigation/reference_path",
-            rerouting_requried_topic = "/zzz/navigation/rerouting_required"
+            rerouting_requried_topic = "/zzz/navigation/rerouting_required" # TODO: Add separate support for rerouting
         )
 
         self._map_trigger = threading.Event()
@@ -35,6 +35,7 @@ class Node(object):
         self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.pose_callback)
         self._reference_path_subscriber = rospy.Subscriber(params.reference_path_topic, Path, self.reference_callback)
         self._output_map_publisher = rospy.Publisher(params.map_output_topic, MapState, queue_size=1)
+        self._rerouting_required_publisher = rospy.Publisher(params.rerouting_requried_topic, Bool, queue_size=1)
 
         # TODO: we need a separate mission module to deal with rerouting requirement
         self._rerouting_required_publisher = rospy.Publisher(params.rerouting_requried_topic, Bool, queue_size=1)

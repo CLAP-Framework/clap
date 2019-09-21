@@ -63,7 +63,12 @@ class PathBuffer:
             )
             # Remove passed waypoints
             for _ in range(nearest_idx):
-                rospy.logdebug("Removed waypoint: %s, remaining count: %d", str(self._reference_path_buffer.popleft()), len(self._reference_path_buffer))
+                rospy.logdebug("Removed waypoint: %s, remaining count: %d", str(self._reference_path_buffer.popleft()), len(self._reference_path))
+
+        # current reference path is too short, require a new reference path
+        if len(self._reference_path) < required_reference_path_length and not self._rerouting_requirement_sent:
+            self._rerouting_required = True
+            self._rerouting_requirement_sent = True
 
         # current reference path is too short, require a new reference path
         if len(self._reference_path) < required_reference_path_length and not self._rerouting_requirement_sent:
