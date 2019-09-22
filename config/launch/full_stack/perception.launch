@@ -2,7 +2,7 @@
     <arg name="enable_camera" default="true"/>
     <arg name="enable_lidar" default="true"/>
 
-    <arg name="left_camera_topic" default="/carla/ego_vehicle/camera/rgb/Left"/>
+    <arg name="left_camera_topic" default="/carla/ego_vehicle/camera/rgb/Center"/>
     <arg name="right_camera_topic" default="/carla/ego_vehicle/camera/rgb/Right"/>
     <arg name="lidar_topic" default="/carla/ego_vehicle/lidar/Lidar/point_cloud"/>
 

@@ -133,7 +133,10 @@ class NearestLocator:
         if self._surrounding_object_list == None:
             return
         for obj in self._surrounding_object_list:
-            obj.lane_index = self.locate_object_in_lane(obj.state)
+            if self._dynamic_map.model == MapState.MODEL_MULTILANE_MAP:
+                obj.lane_index = self.locate_object_in_lane(obj.state)
+            else:
+                obj.lane_index = -1
             self._dynamic_map.jmap.obstacles.append(obj)
 
     def locate_ego_vehicle_in_lanes(self, lane_end_dist_thres=2, lane_dist_thres=5):

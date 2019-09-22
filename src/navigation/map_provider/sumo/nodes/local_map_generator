@@ -58,7 +58,6 @@ class MapProvider(object):
 
     def pose_callback(self, msg):
         # Note: Here we actually assume that pose is updating at highest frequency
-        self._map_trigger.wait()
         self._reference_path_trigger.wait()
 
         new_static_map = self._map_instance.receive_new_pose(msg.state.pose.pose.position.x, msg.state.pose.pose.position.y)
