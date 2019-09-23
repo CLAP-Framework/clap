@@ -17,7 +17,7 @@
           name="nearest_locator" output="screen" ns="/zzz/cognition">
         <param name="objects_topic" value="$(arg objects_topic)"/>
     </node>
-    <node pkg="zzz_cognition_reference_path" type="put_buffer"
+    <node pkg="zzz_cognition_object_locator" type="put_buffer"
           name="put_buffer" output="screen" ns="/zzz/cognition">
         <param name="reference_path_topic" value="$(arg waypoint_topic)"/>
     </node>

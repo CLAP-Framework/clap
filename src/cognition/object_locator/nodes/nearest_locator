@@ -9,7 +9,7 @@ from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import Map
 from zzz_cognition_msgs.msg import MapState
 from zzz_perception_msgs.msg import DetectionBoxArray, TrackingBoxArray
-from zzz_cognition_object_locator import NearestLocator
+from zzz_cognition_object_locator.obstacle_locator import NearestLocator
 
 
 class LocatorNode(object):

@@ -11,6 +11,7 @@ add_message_files(DIRECTORY msg FILES
     AuxiliaryReport.msg
     ChassisReport.msg
     ControlReport.msg
+    FrenetSerretState.msg
     FrenetSerretState2D.msg
     ResourceReport.msg
     RigidBodyState.msg
