@@ -54,11 +54,15 @@ Frames definition
 
 Each sensor has an attached frame, and the extrinsic calibration result should be published to `/tf` as TransformStamped between the sensors. Then some common frames are defined listed below:
 
-- `base_link`: attached at geometry center of ego vehicle with FLU coordinate. The transform between frame of other sensors and `base_link` is usually static. (published as `tf_static`)
+- `base_link`: attached at somewhere (e.g. the geometry center) of ego vehicle body with FLU coordinate. The transform between frame of other sensors and `base_link` is usually static. (published as `tf_static`)
+- `base_chassis`: attached at rear axis center of ego vehicle with FLU coordinate. Since this frame is attached under suspension, the transform between `base_link` and `base_body` is actualy dynamic, but we usually ignore it.
+- `base_footprint`: attached at the projection of rear axis center on ground with projected FLU coordinate, which is a FLU coordinate projected on ground. X-Y plane of the projected coordinate is aligned with tangent plane of the road.
 - `odom`: a coordinate originated at the start point of the vehicle (both position and orientation is fixed to). The transform between `base_link` and `odom` will be updated whenever a new odometry estimation is performed.
 - `map`: frame with a assigned origin and the axis should be aligned with the ground coordinate (ENU). The transform between `odom` and `map` will be updated when the map area is updated or odometry drift is corrected.
 
 So the transform between sensors and between `map` and `odom` are almost static, while the transform between `odom` and `base_link` are frequently updated with `nav_msgs/Odometry` messages from perception module. Transform between `map` and `odom` will being compensated by a perception or navigation module regularly. If needed, the sensor transform could also be adjusted online regularly.
+
+Also note that the coordinate attached to the cameras follows [standard definition of ROS](http://wiki.ros.org/image_pipeline/CameraInfo)
 
 
 ROS Namespaces
