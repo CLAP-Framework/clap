@@ -64,11 +64,18 @@ So the transform between sensors and between `map` and `odom` are almost static,
 
 Also note that the coordinate attached to the cameras follows [standard definition of ROS](http://wiki.ros.org/image_pipeline/CameraInfo)
 
+ROS System
+##########
 
 ROS Namespaces
-##############
+**************
 
 All node name, topic name, param name and frame name should be relative by default (that means the name is not a absolute name with specified namespace). All the namespace should be managed by roslaunch file.
+
+ROS Packages
+************
+
+In all the nodes, code in `lib` (for C++) and `src` (for Python) should contain codes that can be run without ROS. We will provide unified interface for logging, parameter passing and data structure generation.
 
 Other principles
 ################

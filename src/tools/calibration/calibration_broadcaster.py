@@ -87,12 +87,13 @@ import rospy
 import tf.transformations as tft
 import tf2_ros as tf2
 
+from zzz_common.params import StaticCameraInfoBroadcaster
 from sensor_msgs.msg import CameraInfo
 from geometry_msgs.msg import TransformStamped
 
 ############## NOTE: Change you settings here ###############
 calib_file = "demo.calib.json" # calibration file location
-caminfo_topic = "/caminfo" # this topic is used to contain aggregated intrinsics of camera, its behavior is like '/tf'
+caminfo_topic = "/intri_static" # this topic is used to contain aggregated intrinsics of camera, its behavior is like '/tf'
 pub_rate = 5 # frequency of publishing calibration data, unit is Hz
 #############################################################
 
@@ -132,8 +133,8 @@ if __name__ == '__main__':
         calib_params = json.load(fin)
 
     rospy.init_node('calib_broadcast', anonymous=True)
-    tfreporter = tf2.TransformBroadcaster()
-    camreporter = rospy.Publisher("/caminfo", CameraInfo)
+    tfreporter = tf2.StaticTransformBroadcaster()
+    camreporter = StaticCameraInfoBroadcaster()
 
     rate = rospy.Rate(pub_rate)
     while True:
@@ -141,7 +142,7 @@ if __name__ == '__main__':
             for extri in calib_params['extrinsics']:
                 tfreporter.sendTransform(create_transform(extri))
             for intri in calib_params['intrinsics']:
-                camreporter.publish(create_camera_info(intri))
+                camreporter.sendCameraInfo(create_camera_info(intri))
 
             rate.sleep()
         except rospy.exceptions.ROSTimeMovedBackwardsException:

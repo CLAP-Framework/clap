@@ -6,20 +6,19 @@ import threading
 
 from sensor_msgs.msg import CameraInfo
 from zzz_perception_msgs.msg import DetectionBox2DArray, DetectionBoxArray, DetectionBox, DetectionBox2D
-from zzz_common.params import parse_private_args
+from zzz_common.params import parse_private_args, IntrinsicListener
 from zzz_perception_detection_camera_filters.projection import InversePerspectiveMapping
 
 class IPMNode():
     def __init__(self):
         params = parse_private_args(
             input_topic="objects2d_detected",
-            camera_info_topic="camera_info",
             output_topic="objects_projected",
             camera_height=1.27, # FIXME: read height from extrinsics. Need a way to associate height from any of the frames
         )
 
         self._sub = rospy.Subscriber(params.input_topic, DetectionBox2DArray, self.obj_callback)
-        self._sub = rospy.Subscriber(params.camera_info_topic, CameraInfo, self.caminfo_callback)
+        self._intri_buffer = IntrinsicListener()
         self._pub = rospy.Publisher(params.output_topic, DetectionBoxArray, queue_size=1)
 
         self._default_height = 2
@@ -30,17 +29,13 @@ class IPMNode():
         self._mapping = InversePerspectiveMapping(height=params.camera_height)
         self._intri_received = False
 
-    def caminfo_callback(self, msg):
-        # TODO: create a tfbuffer like API to store caminfo
-        if np.sum(msg.K) == 0:
-            rospy.logwarn("The intrinsics of the camera is not correctly set! Please check your camera manager!")
-
-        self._mapping.setIntrinsics(cx=msg.K[2], cy=msg.K[5], fx=msg.K[0], fy=msg.K[4])
-        self._intri_received = True
-
     def obj_callback(self, detections):
-        if not self._intri_received:
+        # Look up camera intrinsics
+        intri = self._intri_buffer.lookupCameraInfo(detections.header.frame_id)
+        if not intri:
+            rospy.logdebug("Skipped frame since no camera intrinsics is received.")
             return
+        self._mapping.setIntrinsics(cx=intri.K[2], cy=intri.K[5], fx=intri.K[0], fy=intri.K[4])
 
         array = DetectionBoxArray()
         for det in detections.detections:
