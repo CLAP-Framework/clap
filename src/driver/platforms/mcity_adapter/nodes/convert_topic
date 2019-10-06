@@ -7,13 +7,40 @@ import tf.transformations as tft
 from zzz_common.params import parse_private_args
 from zzz_control_msgs.msg import ControlCommand
 from zzz_perception_msgs.msg import TrackingBoxArray, TrackingBox
+from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_driver_actuators_dataspeed_adapter.mkz import \
     to_mkz_throttle, to_mkz_brake, to_mkz_steering, to_mkz_gear, to_mkz_turn_signal
-from zzz_driver_platforms_mcity_adapter.msg import BSMVec, Control
+from mcity_msg.msg import BSM, BSMVec, Control, VehicleState
 
 control_counter = 0
 
-def convert_BSMVec(msg, pub):
+def convert_from_VehicleState(msg, pub):
+    assert type(msg) == VehicleState
+
+    new_msg = RigidBodyStateStamped()
+    new_msg.header.stamp = rospy.Time.from_sec(msg.timestamp)
+    new_msg.state.child_frame_id = "odom"
+
+    new_msg.state.pose.pose.position.x = msg.x
+    new_msg.state.pose.pose.position.y = msg.y
+    new_msg.state.pose.pose.position.z = msg.z
+    new_msg.state.twist.twist.linear.x = msg.speed_x
+    new_msg.state.twist.twist.linear.y = msg.speed_y
+    new_msg.state.twist.twist.linear.z = msg.speed_z
+    new_msg.state.accel.accel.linear.x = msg.acc_x
+    new_msg.state.accel.accel.linear.y = msg.acc_y
+    new_msg.state.accel.accel.linear.z = msg.acc_z
+
+    q = tft.quaternion_from_euler(0, 0, msg.heading)
+    new_msg.state.pose.pose.orientation.x = q[0]
+    new_msg.state.pose.pose.orientation.x = q[1]
+    new_msg.state.pose.pose.orientation.x = q[2]
+    new_msg.state.pose.pose.orientation.x = q[3]
+    new_msg.state.twist.twist.angular.z = msg.yaw_rate
+
+    pub.publish(new_msg)
+
+def convert_from_BSMVec(msg, pub):
     assert type(msg) == BSMVec
     
     new_msg = TrackingBoxArray()
@@ -25,12 +52,11 @@ def convert_BSMVec(msg, pub):
         new_obj.bbox.dimension.length_y = obj.size_y
         new_obj.bbox.dimension.length_z = obj.size_z
 
-        # XXX: Use xyz or use gps coordinate?
         new_obj.bbox.pose.pose.position.x = obj.x
         new_obj.bbox.pose.pose.position.y = obj.y
         new_obj.bbox.pose.pose.position.z = obj.z
 
-        q = tft.quaternion_from_euler(0, 0, msg.heading)
+        q = tft.quaternion_from_euler(0, 0, obj.heading)
         new_obj.bbox.pose.pose.orientation.x = q[0]
         new_obj.bbox.pose.pose.orientation.y = q[1]
         new_obj.bbox.pose.pose.orientation.z = q[2]
@@ -42,7 +68,35 @@ def convert_BSMVec(msg, pub):
         
     pub.publish(new_msg)
 
-def convert_ControlCommand(msg, args):
+def convert_to_BSMVec(msg, pub):
+    assert type(msg) == TrackingBoxArray
+
+    new_msg = BSMVec()
+    new_msg.timestamp = msg.header.stamp.to_sec()
+    for obj in msg.targets:
+        new_obj = BSM()
+        new_obj.id = obj.uid
+        new_obj.size_x = obj.bbox.dimension.length_x
+        new_obj.size_y = obj.bbox.dimension.length_y
+        new_obj.size_z = obj.bbox.dimension.length_z
+
+        new_obj.x = obj.bbox.pose.pose.position.x
+        new_obj.y = obj.bbox.pose.pose.position.y
+        new_obj.z = obj.bbox.pose.pose.position.z
+
+        _, _, y = tft.euler_from_quaternion([
+            obj.bbox.pose.pose.orientation.x,
+            obj.bbox.pose.pose.orientation.y,
+            obj.bbox.pose.pose.orientation.z,
+            obj.bbox.pose.pose.orientation.w,
+        ])
+        new_obj.heading = y
+
+        new_msg.bsmVec.append(new_obj)
+        
+    pub.publish(new_msg)
+
+def convert_from_ControlCommand(msg, args):
     assert type(msg) == ControlCommand
     pub, map_cmd, map_act = args
     global control_counter
@@ -96,10 +150,16 @@ if __name__ == "__main__":
 
     if params.msg_type == "BSM":
         pub = rospy.Publisher(params.output_topic, TrackingBoxArray, queue_size=1, latch=True)
-        rospy.Subscriber(params.input_topic, BSMVec, convert_BSMVec, pub)
+        rospy.Subscriber(params.input_topic, BSMVec, convert_from_BSMVec, pub)
     elif params.msg_type == "ControlCommand":
         pub = rospy.Publisher(params.output_topic, Control, queue_size=1, latch=True)
-        rospy.Subscriber(params.input_topic, ControlCommand, convert_ControlCommand, (pub, map_cmd, map_act))
+        rospy.Subscriber(params.input_topic, ControlCommand, convert_from_ControlCommand, (pub, map_cmd, map_act))
+    elif params.msg_type == "VehicleState":
+        pub = rospy.Publisher(params.output_topic, RigidBodyStateStamped, queue_size=1, latch=True)
+        rospy.Subscriber(params.input_topic, VehicleState, convert_from_VehicleState, pub)
+    elif params.msg_type == "TrackingBoxArray":
+        pub = rospy.Publisher(params.output_topic, BSMVec, queue_size=1, latch=True)
+        rospy.Subscriber(params.input_topic, TrackingBoxArray, convert_to_BSMVec, pub)
     else:
         rospy.logerr("Invalid input message type")
         sys.exit(-1)

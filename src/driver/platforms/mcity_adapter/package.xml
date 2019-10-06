@@ -15,7 +15,6 @@
 
   <buildtool_depend>catkin</buildtool_depend>
   <exec_depend>roscpp</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
   <exec_depend>zzz_driver_actuators_dataspeed_adapter</exec_depend>
   <export></export>
 </package>

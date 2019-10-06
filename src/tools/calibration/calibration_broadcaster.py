@@ -92,6 +92,7 @@ from sensor_msgs.msg import CameraInfo
 from geometry_msgs.msg import TransformStamped
 
 ############## NOTE: Change you settings here ###############
+# TODO: Move this script into a node and these should be ros parameters
 calib_file = "demo.calib.json" # calibration file location
 caminfo_topic = "/intri_static" # this topic is used to contain aggregated intrinsics of camera, its behavior is like '/tf'
 pub_rate = 5 # frequency of publishing calibration data, unit is Hz
@@ -137,7 +138,7 @@ if __name__ == '__main__':
     camreporter = StaticCameraInfoBroadcaster()
 
     rate = rospy.Rate(pub_rate)
-    while True:
+    while not rospy.is_shutdown():
         try:
             for extri in calib_params['extrinsics']:
                 tfreporter.sendTransform(create_transform(extri))
