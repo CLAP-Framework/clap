@@ -3,6 +3,7 @@
 import sys
 import rospy
 import tf.transformations as tft
+import math
 
 from zzz_common.params import parse_private_args
 from zzz_control_msgs.msg import ControlCommand
@@ -19,7 +20,8 @@ def convert_from_VehicleState(msg, pub):
 
     new_msg = RigidBodyStateStamped()
     new_msg.header.stamp = rospy.Time.from_sec(msg.timestamp)
-    new_msg.state.child_frame_id = "odom"
+    new_msg.header.frame_id = "odom"
+    new_msg.state.child_frame_id = "base_link"
 
     new_msg.state.pose.pose.position.x = msg.x
     new_msg.state.pose.pose.position.y = msg.y
@@ -31,11 +33,13 @@ def convert_from_VehicleState(msg, pub):
     new_msg.state.accel.accel.linear.y = msg.acc_y
     new_msg.state.accel.accel.linear.z = msg.acc_z
 
+    # In MKZ, heading = 0 when x point towards north
+    # print(msg.heading / 3.14159 * 180 % 360)
     q = tft.quaternion_from_euler(0, 0, msg.heading)
     new_msg.state.pose.pose.orientation.x = q[0]
-    new_msg.state.pose.pose.orientation.x = q[1]
-    new_msg.state.pose.pose.orientation.x = q[2]
-    new_msg.state.pose.pose.orientation.x = q[3]
+    new_msg.state.pose.pose.orientation.y = q[1]
+    new_msg.state.pose.pose.orientation.z = q[2]
+    new_msg.state.pose.pose.orientation.w = q[3]
     new_msg.state.twist.twist.angular.z = msg.yaw_rate
 
     pub.publish(new_msg)
@@ -76,6 +80,7 @@ def convert_to_BSMVec(msg, pub):
     for obj in msg.targets:
         new_obj = BSM()
         new_obj.id = obj.uid
+        # TODO: Object type
         new_obj.size_x = obj.bbox.dimension.length_x
         new_obj.size_y = obj.bbox.dimension.length_y
         new_obj.size_z = obj.bbox.dimension.length_z
@@ -84,13 +89,15 @@ def convert_to_BSMVec(msg, pub):
         new_obj.y = obj.bbox.pose.pose.position.y
         new_obj.z = obj.bbox.pose.pose.position.z
 
-        _, _, y = tft.euler_from_quaternion([
+        _, _, yaw = tft.euler_from_quaternion([
             obj.bbox.pose.pose.orientation.x,
             obj.bbox.pose.pose.orientation.y,
             obj.bbox.pose.pose.orientation.z,
             obj.bbox.pose.pose.orientation.w,
         ])
-        new_obj.heading = y
+        new_obj.heading = yaw
+        new_obj.speed_x = obj.twist.twist.linear.x
+        new_obj.speed_y = obj.twist.twist.linear.y
 
         new_msg.bsmVec.append(new_obj)
         
