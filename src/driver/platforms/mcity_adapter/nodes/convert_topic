@@ -4,6 +4,7 @@ import sys
 import rospy
 import tf.transformations as tft
 import math
+import utm
 
 from zzz_common.params import parse_private_args
 from zzz_control_msgs.msg import ControlCommand
@@ -14,6 +15,8 @@ from zzz_driver_actuators_dataspeed_adapter.mkz import \
 from mcity_msg.msg import BSM, BSMVec, Control, VehicleState
 
 control_counter = 0
+MCITY_X0 = 277269.19443569996
+MCITY_Y0 = 4686394.2924168585
 
 def convert_from_VehicleState(msg, pub):
     assert type(msg) == VehicleState
@@ -77,10 +80,11 @@ def convert_to_BSMVec(msg, pub):
 
     new_msg = BSMVec()
     new_msg.timestamp = msg.header.stamp.to_sec()
+    new_msg.len = len(msg.targets)
     for obj in msg.targets:
         new_obj = BSM()
         new_obj.id = obj.uid
-        # TODO: Object type
+        new_obj.type = 7
         new_obj.size_x = obj.bbox.dimension.length_x
         new_obj.size_y = obj.bbox.dimension.length_y
         new_obj.size_z = obj.bbox.dimension.length_z
@@ -98,6 +102,10 @@ def convert_to_BSMVec(msg, pub):
         new_obj.heading = yaw
         new_obj.speed_x = obj.twist.twist.linear.x
         new_obj.speed_y = obj.twist.twist.linear.y
+        new_obj.latitude, new_obj.longitude = utm.to_latlon(
+            MCITY_X0 + new_obj.x, MCITY_Y0 + new_obj.y, 17, 'T')
+        new_obj.latitude *= math.pi / 180
+        new_obj.longitude *= math.pi / 180
 
         new_msg.bsmVec.append(new_obj)
         

@@ -145,6 +145,9 @@ class CameraProcessNode:
                 msg_class = ObjectClass()
                 msg_class.comments = self.yolo.classes[int(cls_id)]
                 msg_class.classid = conversion_class_id(self.yolo.classes, cls_id)
+                if (msg_class.classid & 0xf) != ObjectClass.HUMAN:
+                    continue
+
                 msg_class.score = cls_conf
                 msg_single.classes.append(msg_class)
 
