@@ -10,7 +10,7 @@ import tf2_ros as tf2
 #   this could be written by us, but is there any existing one?
 # TODO: Let this function support various input: pose + pose, pose + state, state + state, pose + odom, etc.
 
-def get_absolute_state(relative_state, base_state, check_frame=True):
+def get_absolute_state(relative_state, base_state, check_frame=False):
     '''
     Calculate absolute rigid body state.
     

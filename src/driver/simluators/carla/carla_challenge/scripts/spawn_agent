@@ -13,6 +13,7 @@ except ImportError:
           "carla egg file, or append the egg file to PYTHONPATH.")
 
 # Following is a default sensor_configuration
+'''
 default_sensor_configuration = {
     'ego_vehicle': {
         'Center': {
@@ -45,6 +46,11 @@ default_sensor_configuration = {
         # Map is automatically published
     }
 }
+'''
+default_sensor_configuration = {
+    'zzz_veh0': {},
+    'zzz_veh1': {}
+}
 
 client_state = {}
 
@@ -65,11 +71,15 @@ def setup(args):
     vehicle_actors = {}
     for vehicle, config in args.configuration.items():
         # Spawn vehicle
-        # TODO: add ability to switch vehicle model, vehicle color and spawn location
+        if 'spawn_at' in config.items():
+            # TODO: Test the ability to select spawn point
+            spawn_point = sensor_config.pop('spawn_at')
+        else:
+            spawn_points = wmap.get_spawn_points()
+            spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
+
         vehicle_model = random.choice(bplib.filter("vehicle.*"))
         vehicle_model.set_attribute('role_name', vehicle)
-        spawn_points = wmap.get_spawn_points()
-        spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
         actor = world.try_spawn_actor(vehicle_model, spawn_point)
 
         # Spawn sensors on this vehicle

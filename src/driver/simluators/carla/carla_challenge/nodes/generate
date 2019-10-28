@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import rospy
 
 import numpy as np
@@ -208,16 +209,15 @@ if __name__ == "__main__":
     global published_exit_path
     published_exit_path = False
 
+    starting_time = rospy.Time.now().to_sec()
     _local_map_publisher = rospy.Publisher("/zzz/navigation/local_static_map", Map, queue_size=1)
     _reference_path_publisher = rospy.Publisher("/zzz/navigation/reference_path", Path, queue_size=1)
-    starting_time = rospy.Time.now().to_sec()
-    _pose_subscriber = rospy.Subscriber("/zzz/navigation/ego_pose", RigidBodyStateStamped, 
-                                                                pose_callback, (_local_map_publisher,
-                                                                _reference_path_publisher, ReferencePathGenerator,starting_time))
+    _pose_subscriber = rospy.Subscriber("/zzz/navigation/ego_pose", RigidBodyStateStamped, pose_callback,
+        (_local_map_publisher, _reference_path_publisher, ReferencePathGenerator, starting_time))
 
+    rospy.spin()
 
-
-    # rospy.spin()
+    '''
     # generate surrounding vehicles
 
     rate = rospy.Rate(20)
@@ -227,9 +227,8 @@ if __name__ == "__main__":
         spawn_traffic_circle_agents(1000,carla_world,blueprints,spawn_points)
         remove_non_traffic_circle_agents(carla_world)
         rate.sleep()
+    '''
 
     del ReferencePathGenerator
     del carla_world
     del carla_client
-   
-    # rospy.spin()
