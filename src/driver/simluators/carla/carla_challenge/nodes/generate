@@ -13,6 +13,7 @@ import carla
 import random
 import time
 
+RUNNING_TIME = 300
 
 ###########
 # Event 4 Environment Setting
@@ -187,7 +188,7 @@ def pose_callback(msg, args):
     else:
         ready_to_exit = False
 
-    if current_time-starting_time < 110:
+    if current_time-starting_time < RUNNING_TIME:
         static_map = build_multilane_map(ego_x,ego_y,1)
         publisher_map.publish(static_map)
         build_reference_path(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane)

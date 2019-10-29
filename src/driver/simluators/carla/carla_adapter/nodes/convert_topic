@@ -9,7 +9,7 @@ from zzz_driver_msgs.msg import ChassisReport, ControlReport
 from zzz_navigation_msgs.msg import MapString
 from zzz_control_msgs.msg import ControlCommand
 from zzz_perception_msgs.msg import TrackingBoxArray, TrackingBox, ObjectClass
-from carla_msgs.msg import CarlaWorldInfo, CarlaEgoVehicleControl, CarlaEgoVehicleStatus
+from carla_ros_bridge_msgs.msg import CarlaEgoVehicleControl, CarlaEgoVehicleStatus
 from nav_msgs.msg import Path
 from derived_object_msgs.msg import ObjectArray, Object
 

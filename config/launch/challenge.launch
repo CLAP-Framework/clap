@@ -1,6 +1,10 @@
 <launch>
-    <!-- HOW TO CHANGE: 1. change this argument, 2. change the challenge.yaml-->
-    <arg name="vehicle" value="zzz_veh1"/>
+    <!-- HOW TO CHANGE:
+        1. change this `vehicle` argument
+        2. change the challenge.yaml
+        3. change the path of challenge.yaml
+    -->
+    <arg name="vehicle" value="zzz_veh0"/>
 
     <!-- Run Carla Bridge -->
     <rosparam file="/home/jacobz/Carla/zzz/config/launch/challenge.yaml" command="load" />
