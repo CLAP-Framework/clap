@@ -25,14 +25,18 @@ class PathBuffer:
         self._rerouting_required = False
         self._rerouting_requirement_sent = False
 
+        self._static_map_buffer = default_msg(MapState)
+
     def receive_static_map(self, map_input):
         assert type(map_input) == MapState
-
-        self._dynamic_map = map_input
+	# zhcao: to avoid the static map updating during generate the dynamic map
+        self._static_map_buffer = map_input
+        rospy.logdebug("updating local dynamic map")
 
     def receive_ego_state(self, state):
         assert type(state) == RigidBodyStateStamped
 
+        self._dynamic_map = self._static_map_buffer
         self._ego_vehicle_state = state.state
 
         # TODO: Move return to another function
@@ -44,6 +48,7 @@ class PathBuffer:
         assert type(reference_path) == Path
 
         self._reference_path.clear()
+        self._reference_path_buffer.clear()
         for wp in reference_path.poses:
             self._reference_path.append((wp.pose.position.x, wp.pose.position.y))
         rospy.loginfo("Received reference path, length:%d", len(reference_path.poses))
@@ -70,15 +75,10 @@ class PathBuffer:
             self._rerouting_required = True
             self._rerouting_requirement_sent = True
 
-        # current reference path is too short, require a new reference path
-        if len(self._reference_path) < required_reference_path_length and not self._rerouting_requirement_sent:
-            self._rerouting_required = True
-            self._rerouting_requirement_sent = True
-
         # Choose points from reference path to buffer
         while self._reference_path and len(self._reference_path_buffer) < self._buffer_size:
             wp = self._reference_path.popleft()
-            self.lane_change_smoothen(wp) # Change this to a planning module
+            # self.lane_change_smoothen(wp) # zhcao: find some bugs in this function, Change this to a planning module
             self._reference_path_buffer.append(wp)
 
         # Put buffer into dynamic map

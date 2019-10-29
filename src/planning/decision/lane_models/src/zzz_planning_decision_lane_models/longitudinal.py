@@ -26,12 +26,14 @@ class IDM(object):
 
         if target_lane_index == -1:
             target_lane = self.dynamic_map.jmap.reference_path
-
-        for lane in self.dynamic_map.mmap.lanes:
-            if lane.map_lane.index == target_lane_index:
-                target_lane = lane
+            return self.IDM_speed_in_lane(target_lane)
+        else:
+            for lane in self.dynamic_map.mmap.lanes:
+                if int(lane.map_lane.index) == int(target_lane_index):
+                    target_lane = lane
 
         if target_lane is None:
+            rospy.logwarn("cannot find target lane, target_lane_index:%d, lane_num:%d",target_lane_index,len(self.dynamic_map.mmap.lanes))
             return 0
         else:
             idm_speed = self.IDM_speed_in_lane(target_lane)
