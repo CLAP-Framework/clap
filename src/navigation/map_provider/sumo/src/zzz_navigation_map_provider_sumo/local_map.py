@@ -262,6 +262,7 @@ class LocalMap(object):
         '''
         Makes the drivable lanes starts from 0
         '''
+        # TODO(zhcao):should consider ego vehicle lane
 
         first_index = self.static_local_map.lanes[0].index
 

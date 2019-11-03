@@ -10,6 +10,7 @@ from zzz_common.params import parse_private_args
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_cognition_msgs.msg import MapState
 from zzz_cognition_reference_path import PathBuffer
+from zzz_navigation_msgs.msg import ReroutingRequest
 from nav_msgs.msg import Path
 
 from std_msgs.msg import Bool
@@ -23,7 +24,7 @@ class Node(object):
             map_file_type = "opendrive",
             pose_topic = "/zzz/navigation/ego_pose",
             reference_path_topic = "/zzz/navigation/reference_path",
-            rerouting_requried_topic = "/zzz/navigation/rerouting_required"
+            rerouting_requried_topic = "/zzz/navigation/rerouting"
         )
 
         self._map_trigger = threading.Event()
@@ -35,8 +36,9 @@ class Node(object):
         self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.pose_callback)
         self._reference_path_subscriber = rospy.Subscriber(params.reference_path_topic, Path, self.reference_callback)
         self._output_map_publisher = rospy.Publisher(params.map_output_topic, MapState, queue_size=1)
+        self._rerouting_required_publisher = rospy.Publisher(params.rerouting_requried_topic, Bool, queue_size=1)
 
-        # TODO: we need a separate mission module to deal with rerouting requirement
+        # TODO: we need a separate navigation/mission module to deal with rerouting request
         self._rerouting_required_publisher = rospy.Publisher(params.rerouting_requried_topic, Bool, queue_size=1)
 
     def map_callback(self, msg):
@@ -55,12 +57,12 @@ class Node(object):
         self._reference_path_trigger.wait()
 
         new_static_map = self._map_instance.receive_ego_state(msg)
-        rospy.logdebug("Path length: %d", len(new_static_map.jmap.reference_path.map_lane.central_path_points))
+        rospy.logdebug("Sent reference path, length: %d", len(new_static_map.jmap.reference_path.map_lane.central_path_points))
         self._output_map_publisher.publish(new_static_map)
 
         if self._map_instance._rerouting_required:
-            msg = Bool()
-            msg.data = True
+            msg = ReroutingRequest()
+            # zhcao: the rerouting logic should be revised later
             self._rerouting_required_publisher.publish(msg)
             self._map_instance._rerouting_required = False
 
