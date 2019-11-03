@@ -57,3 +57,10 @@ install(TARGETS euclidean_cluster_detector
 
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+
+catkin_python_setup()
+
+catkin_install_python(
+  PROGRAMS nodes/second
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
