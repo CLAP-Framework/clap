@@ -7,7 +7,7 @@
     <arg name="vehicle" value="zzz_veh0"/>
 
     <!-- Run Carla Bridge -->
-    <rosparam file="/home/jacobz/Carla/zzz/config/launch/challenge.yaml" command="load" />
+    <rosparam file="$(find zzz_driver_simulators_carla_challenge)/launch/challenge.yaml" command="load" />
     <node pkg="carla_ros_bridge" name="carla_client" type="client.py" output="screen"/>
     <node pkg="zzz_driver_simulators_carla_challenge" name="path_generate" type="generate" output="screen"/>
 
@@ -21,7 +21,7 @@
         name="nearest_locator" output="screen" ns="/zzz/cognition">
         <param name="objects_topic" value="/zzz/perception/objects_truth"/>
     </node>
-    <node pkg="zzz_cognition_reference_path" type="put_buffer"
+    <node pkg="zzz_cognition_object_locator" type="put_buffer"
         name="put_buffer" output="screen" ns="/zzz/cognition">
         <param name="reference_path_topic" value="/zzz/navigation/reference_path"/> 
     </node>
