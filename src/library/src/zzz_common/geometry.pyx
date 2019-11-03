@@ -38,6 +38,12 @@ cpdef dist_from_point_to_line2d(float x0, float y0, float x1, float y1, float x2
 
     cdef float l, dl, d1, d2
     l = sqrt((y2-y1)*(y2-y1) + (x2-x1)*(x2-x1))
+    
+    # if two points are the same one
+    if l == 0:
+       dl = sqrt((y0-y1)*(y0-y1) + (x0-x1)*(x0-x1))
+       return dl, 0, 0
+
     dl = ((y2-y1)*x0 - (x2-x1)*y0 + x2*y1 - x1*y2) / l
     d1 = (x1*x1+x0*(x2-x1)-x1*x2 + y1*y1+y0*(y2-y1)-y1*y2) / l
     d2 = (x2*x2-x0*(x2-x1)-x1*x2 + y2*y2-y0*(y2-y1)-y1*y2) / l

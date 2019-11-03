@@ -119,7 +119,7 @@ class NearestLocator:
             return -1 # TODO: return reasonable value
 
         # Judge whether the point is outside of lanes
-        if closest_lane_dist * second_closest_lane_dist > 0:
+        if closest_lane == second_closest_lane or closest_lane_dist * second_closest_lane_dist > 0:
             # The object is at left or right most
             return closest_lane
         else:
@@ -149,10 +149,9 @@ class NearestLocator:
             for lane in self._static_map_lane_path_array])  
         ego_lane_index = self.locate_object_in_lane(self._ego_vehicle_state.state)
 
-        self._ego_vehicle_distance_to_lane_head = dist_list[:, 2]
-        self._ego_vehicle_distance_to_lane_tail = dist_list[:, 3]
-        
-        if self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)] <= lane_end_dist_thres:
+        self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
+        self._ego_vehicle_distance_to_lane_tail = dist_list[:, 4]
+        if ego_lane_index < 0 or self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)] <= lane_end_dist_thres:
             # Drive into junction, wait until next map
             rospy.logdebug("In junction due to close to intersection")
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP
@@ -275,8 +274,11 @@ class NearestLocator:
         '''
         Put stop sign detections into lanes
         '''
-        # TODO: Implement this
-        pass
+        # TODO(zhcao): Change the speed limit according to the map or the traffic sign(perception)
+        # Now we set the multilane speed limit as 40 km/h.
+        total_lane_num = len(self._static_map.lanes)
+        for i in range(total_lane_num):
+            self._dynamic_map.mmap.lanes[i].map_lane.speed_limit = 40
 
     # TODO(zyxin): Move this function into separate prediction module
     def predict_vehicle_behavior(self, vehicle, lane_change_thres = 0.2):

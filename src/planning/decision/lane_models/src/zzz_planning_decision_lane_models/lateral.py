@@ -17,7 +17,7 @@ class LaneUtility(object):
         self.dynamic_map = dynamic_map
 
         # Following reference path in junction
-        if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or dynamic_map.mmap.target_lane_index == -1:
+        if dynamic_map.model == MapState.MODEL_JUNCTION_MAP:
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         if dynamic_map.mmap.distance_to_junction < close_to_junction:
