@@ -71,6 +71,16 @@ def setup(args):
     world = client.get_world()
     wmap = world.get_map()
     bplib = world.get_blueprint_library()
+    # set a clear weather for debug
+    weather = world.get_weather()
+    weather.cloudyness = 0
+    weather.precipitation = 0
+    weather.precipitation_deposits = 0
+    weather.wind_intensity = 0
+    weather.sun_azimuth_angle = 0
+    weather.sun_altitude_angle = 90
+    world.set_weather(weather)
+    #
     
     vehicle_actors = {}
     for vehicle, config in args.configuration.items():
