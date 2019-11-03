@@ -9,7 +9,7 @@ from zzz_common.params import parse_private_args
 
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_cognition_msgs.msg import MapState
-from zzz_cognition_reference_path import PathBuffer
+from zzz_cognition_object_locator import PathBuffer
 from nav_msgs.msg import Path
 
 from std_msgs.msg import Bool
