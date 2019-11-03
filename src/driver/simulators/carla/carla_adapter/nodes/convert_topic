@@ -1,0 +1,138 @@
+#!/usr/bin/env python
+
+import sys
+import rospy
+
+from zzz_common.params import parse_private_args
+
+from zzz_driver_msgs.msg import ChassisReport, ControlReport
+from zzz_navigation_msgs.msg import MapString
+from zzz_control_msgs.msg import ControlCommand
+from zzz_perception_msgs.msg import TrackingBoxArray, TrackingBox, ObjectClass
+from carla_msgs.msg import CarlaWorldInfo, CarlaEgoVehicleControl, CarlaEgoVehicleStatus
+from nav_msgs.msg import Path
+from derived_object_msgs.msg import ObjectArray, Object
+
+def convert_CarlaWorldInfo(msg, pub):
+    assert type(msg) == CarlaWorldInfo
+    new_msg = MapString()
+    new_msg.header.stamp = rospy.Time.now()
+    new_msg.header.frame_id = 'map'
+    new_msg.map_type = MapString.MAP_OPENDRIVE
+    new_msg.content = msg.opendrive
+    pub.publish(new_msg)
+
+def convert_ControlCommand(msg, pub):
+    assert type(msg) == ControlCommand
+    new_msg = CarlaEgoVehicleControl()
+    new_msg.header = msg.header
+
+    new_msg.steer = -msg.steer # In Carla, right turning is positive
+    if msg.accel > 0:
+        new_msg.throttle = msg.accel
+    else:
+        new_msg.brake = -msg.accel
+
+    if msg.gear == ControlCommand.GEAR_PARKING or msg.parking_brake:
+        new_msg.hand_brake = 1
+    elif msg.gear == ControlCommand.GEAR_REVERSE:
+        new_msg.reverse = 1
+    elif msg.gear == ControlCommand.GEAR_DRIVE:
+        new_msg.manual_gear_shift = False
+    elif msg.gear > 0:
+        new_msg.gear = msg.gear
+        new_msg.manual_gear_shift = True
+
+    pub.publish(new_msg)
+
+def convert_VehicleStatus(msg, chassis_pub, control_pub):
+    assert type(msg) == CarlaEgoVehicleStatus
+
+    chassis_msg = ChassisReport()
+    chassis_msg.speed = msg.velocity
+    chassis_pub.publish(chassis_msg)
+    
+    control_msg = ControlReport()
+    control_msg.throttle_available = True
+    control_msg.throttle_report = msg.control.throttle
+    control_msg.brake_available = True
+    control_msg.brake_report = msg.control.brake
+    control_msg.steer_available = True
+    control_msg.steer_report = msg.control.steer
+    control_pub.publish(control_msg)
+
+def convert_ObjectArray(msg, pub):
+    assert type(msg) == ObjectArray
+
+    new_msg = TrackingBoxArray()
+    new_msg.header = msg.header
+    for target in msg.objects:
+        new_obj = TrackingBox()
+        new_obj.bbox.pose.pose = target.pose
+        new_obj.twist.twist = target.twist
+        new_obj.accel.accel = target.accel
+
+        assert target.shape.type == 1 # SolidPrimitive.BOX
+        new_obj.bbox.dimension.length_x, new_obj.bbox.dimension.length_y,\
+            new_obj.bbox.dimension.length_z = target.shape.dimensions
+
+        # Convert classification, XXX: Actually carla didn't provide object property now
+        tclass = ObjectClass()
+        tclass.score = target.classification_certainty
+        if target.classification == Object.CLASSIFICATION_UNKNOWN or target.classification == Object.CLASSIFICATION_UNKNOWN_SMALL\
+            or target.classification == Object.CLASSIFICATION_UNKNOWN_MEDIUM or target.classification == Object.CLASSIFICATION_UNKNOWN_BIG:
+            tclass.classid = ObjectClass.UNKNOWN
+        elif target.classification == Object.CLASSIFICATION_BIKE:
+            tclass.classid = ObjectClass.CYCLIST_BICYCLE
+        elif target.classification == Object.CLASSIFICATION_CAR:
+            tclass.classid = ObjectClass.VEHICLE_PASSENGER
+        elif target.classification == Object.CLASSIFICATION_MOTORCYCLE:
+            tclass.classid = ObjectClass.CYCLIST_MOTORCYCLE
+        elif target.classification == Object.CLASSIFICATION_OTHER_VEHICLE:
+            tclass.classid = ObjectClass.VEHICLE
+        elif target.classification == Object.CLASSIFICATION_PEDESTRIAN:
+            tclass.classid = ObjectClass.HUMAN_PEDESTRIAN
+        elif target.classification == Object.CLASSIFICATION_SIGN:
+            tclass.classid = ObjectClass.ROADSIDE_TRAFFIC_SIGN
+        elif target.classification == Object.CLASSIFICATION_TRUCK:
+            tclass.classid = ObjectClass.VEHICLE_TRUCK
+        else:
+            raise ValueError("Unrecognized object class")
+        new_obj.classes.append(tclass)
+        new_obj.uid = target.id
+
+        new_msg.targets.append(new_obj)
+    pub.publish(new_msg)
+
+if __name__ == "__main__":
+    rospy.init_node("convert_topic")
+
+    params = parse_private_args(
+        input_topic="",
+        output_topic="",
+        msg_type=""
+    )
+
+    if not (params.input_topic and params.output_topic and params.msg_type):
+        rospy.logerr("Not enought parameters!")
+        sys.exit(-1)
+
+    if params.msg_type == "CarlaWorldInfo":
+        pub = rospy.Publisher(params.output_topic, MapString, queue_size=1, latch=True)
+        rospy.Subscriber(params.input_topic, CarlaWorldInfo, convert_CarlaWorldInfo, pub)
+    elif params.msg_type == "ControlCommand":
+        pub = rospy.Publisher(params.output_topic, CarlaEgoVehicleControl, queue_size=1, latch=True)
+        rospy.Subscriber(params.input_topic, ControlCommand, convert_ControlCommand, pub)
+    elif params.msg_type == "VehicleStatus":
+        # By default, output_topic should be /zzz/drivers/vehicle_report
+        chassis_pub = rospy.Publisher(params.output_topic + "/chassis", ChassisReport, queue_size=1, latch=True)
+        control_pub = rospy.Publisher(params.output_topic + "/control", ControlReport, queue_size=1, latch=True)
+        rospy.Subscriber(params.input_topic, CarlaEgoVehicleStatus, convert_VehicleStatus, chassis_pub, control_pub)
+    elif params.msg_type == "ObjectArray":
+        pub = rospy.Publisher(params.output_topic, TrackingBoxArray, queue_size=1, latch=True)
+        rospy.Subscriber(params.input_topic, ObjectArray, convert_ObjectArray, pub)
+    else:
+        rospy.logerr("Invalid input message type")
+        sys.exit(-1)
+    
+    rospy.spin()

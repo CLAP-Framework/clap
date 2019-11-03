@@ -1,0 +1,12 @@
+easydict
+pathlib
+cython >= 0.29
+utm
+intervaltree
+plotly
+dash
+filterpy
+pcl-py
+scipy >= 1.2.0
+shapely
+google-cloud-storage

@@ -23,7 +23,7 @@ namespace zzz { namespace perception {
         #ifndef NDEBUG
         string cluster_topic, plane_topic;
         pnh.param("cluster_topic", cluster_topic, string("points_cluster"));
-        pnh.param("plane_topic", cluster_topic, string("points_plane"));
+        pnh.param("plane_topic", plane_topic, string("points_plane"));
         _cluster_publisher = nh.advertise<sensor_msgs::PointCloud2>(cluster_topic, 1);
         _plane_publisher = nh.advertise<sensor_msgs::PointCloud2>(plane_topic, 1);
         #endif

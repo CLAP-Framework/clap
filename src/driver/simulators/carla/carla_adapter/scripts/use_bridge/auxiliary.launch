@@ -1,0 +1,27 @@
+<launch>
+    <!-- Adapters -->
+    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_map" output="screen">
+        <param name="input_topic" value="/carla/world_info" />
+        <param name="output_topic" value="/zzz/navigation/static_map" />
+        <param name="msg_type" value="CarlaWorldInfo" />
+    </node>
+    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_command" output="screen">
+        <param name="input_topic" value="/zzz/control/command" />
+        <param name="output_topic" value="/carla/ego_vehicle/vehicle_control_cmd" />
+        <param name="msg_type" value="ControlCommand" />
+    </node>
+    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_objects" output="screen">
+        <param name="input_topic" value="/carla/ego_vehicle/objects" />
+        <param name="output_topic" value="/zzz/perception/objects_truth" />
+        <param name="msg_type" value="ObjectArray" />
+    </node>
+
+    <!-- Benchmarking -->
+    <node pkg="zzz_driver_datasets_benchmark" type="tracking" name="perception_benchmark" output="screen">
+        <param name="ground_truth_topic" value="/zzz/perception/objects_truth"/>
+    </node>
+
+    <!-- Visualization -->
+    <node pkg="zzz_visualization_web_dash" type="dashboard" name="dashboard">
+    </node>
+</launch>

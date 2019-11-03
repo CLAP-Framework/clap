@@ -87,10 +87,10 @@ def generate_3d_detection_msg(hs, ws, ls, txs, tys, tzs, rys, type_list):
 class Detection3dOnLidar(object):
     def __init__(self):
         params = parse_private_args(
-            input_topic_left="/zzz/driver/image_raw",
-            input_topic_lidar="/zzz/driver/image_raw",
-            camera_info_left="/zzz/driver/camera_info",
-            input_topic_detc_2d="", 
+            input_camera_topic="/zzz/drivers/image_raw",
+            input_topic_lidar="/zzz/drivers/image_raw",
+            camera_info_topic="/zzz/drivers/camera_info",
+            input_2ddection_topic="", 
             output_topic="objects_detected",
             target_frame="base_link", # TODO: which frame
             gpu=1,
@@ -111,10 +111,10 @@ class Detection3dOnLidar(object):
         
         self._publisher = rospy.Publisher(params.pop("output_topic"), DetectionBoxArray, queue_size=1)
 
-        image_sub = message_filters.Subscriber(params.input_topic_left, Image)
-        info_left_sub = message_filters.Subscriber(params.camera_info_left, CameraInfo)
+        image_sub = message_filters.Subscriber(params.input_camera_topic, Image)
+        info_left_sub = message_filters.Subscriber(params.camera_info_topic, CameraInfo)
         lidar_sub = message_filters.Subscriber(params.input_topic_lidar, PointCloud2)
-        detection_2d_sub = message_filters.Subscriber(params.input_topic_detc_2d, DetectionBox2DArray)
+        detection_2d_sub = message_filters.Subscriber(params.input_2ddection_topic, DetectionBox2DArray)
 
         # img_cache = message_filters.Cache(image_sub, 30)
         # lidar_cache = message_filters.Cache(lidar_sub, 30)

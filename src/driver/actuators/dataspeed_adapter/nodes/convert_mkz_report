@@ -20,10 +20,10 @@ if __name__ == "__main__":
         input_fuel_topic="fuel_level_report",
         input_surround_topic="surround_report",
         input_driver_assist_topic="driver_assist_report",
-        output_chassis_topic="/zzz/driver/chassis_report",
-        output_control_topic="/zzz/driver/control_report",
-        output_auxiliary_topic="/zzz/driver/aux_report",
-        output_resource_topic="/zzz/driver/res_report",
+        output_chassis_topic="/zzz/drivers/chassis_report",
+        output_control_topic="/zzz/drivers/control_report",
+        output_auxiliary_topic="/zzz/drivers/aux_report",
+        output_resource_topic="/zzz/drivers/res_report",
     )
 
     # TODO: register subscriber, create buffer and publish in loop

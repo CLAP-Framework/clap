@@ -60,3 +60,6 @@ ref/
 
 # Recorded rosbags
 *.bag
+
+# Catkin generated
+src/CMakeLists.txt

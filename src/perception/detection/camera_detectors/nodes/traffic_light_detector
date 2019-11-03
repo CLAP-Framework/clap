@@ -143,12 +143,6 @@ class TrafLightDetc:
 
         self.inferenceImg(cv_image)
 
-    # # message type is MapState
-    # def callbackLane(self, data): 
-    #     self.map_state_in = data
-    #     self.total_lane = len(data.lanes)
-    #     self.cur_lane = data.ego_lane_index
-
     def inferenceImg(self, image_np):
         
         # Expand dimensions since the model expects images to have shape: [1, None, None, 3]

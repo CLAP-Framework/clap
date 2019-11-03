@@ -1,0 +1,1 @@
+This package provides interface to [lgsvl simulator](https://github.com/lgsvl/simulator)

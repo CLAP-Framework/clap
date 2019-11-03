@@ -79,8 +79,8 @@ class RLSDecision(object):
         # State space = 2+6*lane_num
 
         state = []
-        ego_y = self._dynamic_map.mmap.ego_mmap_y
-        ego_v = self._dynamic_map.mmap.ego_mmap_vx
+        ego_y = self._dynamic_map.mmap.ego_ffstate.d
+        ego_v = self._dynamic_map.mmap.ego_ffstate.vx
         state.append(ego_y)
         state.append(ego_v)
         for i,lane in enumerate(self._dynamic_map.mmap.lanes):
@@ -152,9 +152,9 @@ class RLSDecision(object):
         if len(lane.front_vehicles) > 0:
             fv = lane.front_vehicles[0]
             fv_id = fv.uid
-            fv_x = fv.mmap_x
-            fv_y = fv.mmap_y
-            fv_vx = fv.mmap_vx
+            fv_x = fv.ffstate.x
+            fv_y = fv.ffstate.y
+            fv_vx = fv.ffstate.vx
             # fv_vy = fv.mmap_vy # FIXME(zhong): should consider lane change speed
         else:
             # default fv # TODO(zhong): More reasonable default value
@@ -172,9 +172,9 @@ class RLSDecision(object):
         if len(lane.rear_vehicles) > 0:
             rv = lane.rear_vehicles[0]
             rv_id = rv.uid
-            rv_x = rv.mmap_x # negative value
-            rv_y = rv.mmap_y
-            rv_vx = rv.mmap_vx
+            rv_x = fv.ffstate.x # negative value
+            rv_y = fv.ffstate.y
+            rv_vx = fv.ffstate.vx
             # rv_vy = rv.mmap_vy # FIXME(zhong): should consider lane change speed
         else:
             rv_id = 0

@@ -11,6 +11,7 @@ bool in_junction # = True
 int8 target_lane_index # TODO(zyxin): Change to a list to support multiple lane turning
 
 # Lanes if it's in a structured road, should be sorted by ascending index
+# The index is starting from right most lane, i.e. the right most lane is indexed as 0
 Lane[] lanes
 
 # Road area if in junction

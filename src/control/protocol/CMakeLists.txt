@@ -5,6 +5,7 @@ find_package(catkin REQUIRED genmsg std_msgs # essential dependency
 )
 
 add_message_files(DIRECTORY msg FILES
+    AuxiliaryCommand.msg
     ControlCommand.msg
 )
 

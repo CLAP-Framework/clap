@@ -25,7 +25,7 @@ class NearestNeighborFilter:
     XXX: Other metrics: take covariance, speed or heading angle into account
     '''
     def __init__(self, dist_thres=3, dist_metric="euclidean"):
-        self._dist_thres = 3
+        self._dist_thres = dist_thres
         self._metric = dist_metric
 
     def associate(self, detections, pose_trackers, feature_trackers):
@@ -39,17 +39,18 @@ class NearestNeighborFilter:
             return []
 
         results = [float('nan')] * len(detections)
-        tracker_locations = np.zeros((len(pose_trackers), 3))
+        tracker_locations = np.zeros((len(pose_trackers), 2))
         tracker_keymap = {}
         for keyidx_tr, idx_tr in enumerate(pose_trackers.keys()):
-            tracker_locations[keyidx_tr, :] = pose_trackers[idx_tr].pose_state[:3]
+            # TODO: state tracker now ignore z axis
+            tracker_locations[keyidx_tr, :] = pose_trackers[idx_tr].pose_state[:2]
             tracker_keymap[keyidx_tr] = idx_tr
 
         if len(pose_trackers) == 0:
             return results
         for idx_dt, dt in enumerate(detections):
             position = dt.bbox.pose.pose.position
-            d = np.array([position.x, position.y, position.z]) - tracker_locations
+            d = np.array([position.x, position.y]) - tracker_locations
             d = np.linalg.norm(d, axis=1)
             if np.min(d) < self._dist_thres:
                 results[idx_dt] = tracker_keymap[np.argmin(d)]

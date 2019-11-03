@@ -15,13 +15,12 @@ add_message_files(DIRECTORY msg FILES
     Dimension2DWithCovariance.msg
     DimensionWithCovariance.msg
     LaneDetection.msg
+    LaneDetectionArray.msg
     ObjectClass.msg
     ObjectSignals.msg
     Pose2DWithCovariance.msg
     TrackingBox.msg
     TrackingBoxArray.msg
-    TrafficLightDetection.msg
-    TrafficLightDetectionArray.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs geometry_msgs sensor_msgs)

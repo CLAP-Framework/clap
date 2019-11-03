@@ -2,7 +2,7 @@
 
 import rospy
 import numpy as np
-from zzz_common.geometry import dense_polyline, nearest_point_to_polyline
+from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from zzz_planning_msgs.msg import DecisionTrajectory
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
@@ -53,13 +53,13 @@ class MainDecision(object):
 
         # if ego vehicle is on the target path
         # works for lane change, lane follow and reference path follow
-        dense_centrol_path = dense_polyline(central_path, resolution)
-        nearest_dis, nearest_idx = nearest_point_to_polyline(ego_x, ego_y, dense_centrol_path)
+        dense_centrol_path = dense_polyline2d(central_path, resolution)
+        nearest_dis, nearest_idx, _ = dist_from_point_to_polyline2d(ego_x, ego_y, dense_centrol_path)
+        nearest_dis = abs(nearest_dis)
 
         if nearest_dis > rectify_thres:
             if self.dynamic_map.model == MapState.MODEL_MULTILANE_MAP and target_lane_index != -1:
-                ego_mmap_y = self.dynamic_map.mmap.ego_mmap_y
-                rectify_dt = abs(ego_mmap_y - target_lane_index)*lc_dt
+                rectify_dt = abs(self.dynamic_map.mmap.ego_lane_index - target_lane_index)*lc_dt
             else:
                 rectify_dt = nearest_dis/lc_v
             return self.generate_smoothen_lane_change_trajectory(target_lane,rectify_dt,desired_speed)
@@ -74,10 +74,8 @@ class MainDecision(object):
 
         if lane_index == -1:
             return self.dynamic_map.jmap.reference_path
-
-        for lane in self.dynamic_map.mmap.lanes:
-            if lane.map_lane.index == lane_index:
-                return lane
+        else:
+            return self.dynamic_map.mmap.lanes[int(lane_index)]
 
         return None
 
@@ -97,7 +95,7 @@ class MainDecision(object):
         return msg
 
     def generate_smoothen_lane_change_trajectory(self, target_lane, rectify_dt, desired_speed,
-                                                        lc_dt = 1.5, rectify_min_d = 4, resolution=0.5, time_ahead=5, distance_ahead=10):
+                                                        lc_dt = 1.5, rectify_min_d = 6, resolution=0.5, time_ahead=5, distance_ahead=10):
 
         target_lane_center_path = self.convert_path_to_ndarray(target_lane.map_lane.central_path_points)
 
@@ -109,8 +107,8 @@ class MainDecision(object):
         # Considering if the ego_vehicle is in a lane Change
         lc_dis = max(rectify_dt*desired_speed,rectify_min_d)
 
-        dense_target_centrol_path = dense_polyline(target_lane_center_path, resolution)
-        nearest_dis, nearest_idx = nearest_point_to_polyline(ego_x, ego_y, dense_target_centrol_path)
+        dense_target_centrol_path = dense_polyline2d(target_lane_center_path, resolution)
+        _, nearest_idx, _ = dist_from_point_to_polyline2d(ego_x, ego_y, dense_target_centrol_path)
         front_path = dense_target_centrol_path[nearest_idx:]
         dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path, axis=0), axis = 1))
 
@@ -120,7 +118,7 @@ class MainDecision(object):
         # calculate start direction and end direction for control
 
         ego_direction = get_yaw(self.dynamic_map.ego_state)
-        nearest_end_idx = nearest_point_to_polyline(end_point[0], end_point[1], target_lane_center_path)[1]
+        _, nearest_end_idx, _ = dist_from_point_to_polyline2d(end_point[0], end_point[1], target_lane_center_path)
         end_point_direction = target_lane.map_lane.central_path_points[nearest_end_idx].tangent
 
         start_tangent = np.array([np.cos(ego_direction),np.sin(ego_direction)])

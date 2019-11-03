@@ -3,28 +3,35 @@ This module gives implementations of motion models and observation models.
 '''
 
 import numpy as np
+from zzz_common.geometry import wrap_angle
 from scipy.special import fresnel
 
 ########## Motion models for tracking where inputs are unknown ##########
 
-def wrap_angle(theta):
-    '''
-    Normalize the angle to [-pi, pi]
-    '''
-    return (theta + np.pi) % (2*np.pi) - np.pi
-
 def motion_BR(state, dt):
     '''
+    Brownian Motion model.
     Mean of brownian motion will not change while uncertainty goes larger
+
+    :param state: original state
+    :param float dt: time difference after last update (not actually used here)
+    :return: updated state
+    :rtype: The same type as input state
     '''
+
     return np.copy(state)
 
 def motion_CV(state, dt):
     '''
-    Constant Velocity
+    Constant Velocity model
 
-    States: [x, y, vx, vy]
+    :param state: original state in format [x, y, vx, vy]
+    :type state: np.ndarray or list
+    :param float dt: time difference after last update
+    :return: updated state
+    :rtype: np.ndarray
     '''
+
     state = np.copy(state)
     state[0] += state[2] * dt
     state[1] += state[3] * dt
@@ -38,12 +45,17 @@ def motion_CTRV(state, dt):
 
 def motion_CTRA(state, dt):
     '''
-    Constant Turn-Rate and (longitudinal) Acceleration. This model also assume that velocity is the same with heading angle.
+    Constant Turn-Rate and (longitudinal) Acceleration model.
+    This model also assume that velocity is the same with heading angle.
     CV, CTRV can be modeled by assume value equals zero
 
-    States: [x, y, theta, v, a, w]
-            [0  1    2    3  4  5]
+    :param state: original state in format [x, y, theta, v, a, w]
+    :type state: np.ndarray or list, contents are [x, y, vx, vy]
+    :param dt: time difference after last update
+    :return: updated state
+    :rtype: np.ndarray
     '''
+
     x, y, th, v, a, w = state
     nth = wrap_angle(th + w * dt)
     nv = v + a * dt
@@ -60,11 +72,16 @@ def motion_CTRA(state, dt):
 
 def motion_CSAA(state, dt):
     '''
-    Constant Steering Angle and Acceleration.
+    Constant Steering Angle and Acceleration model.
 
-    States: [x, y, theta, v, a, c]
-            [0  1    2    3  4  5]
+    :param state: original state in format [x, y, theta, v, a, c]
+                                           [0  1    2    3  4  5]
+    :type state: np.ndarray or list, contents are [x, y, vx, vy]
+    :param dt: time difference after last update
+    :return: updated state
+    :rtype: np.ndarray
     '''
+
     x, y, th, v, a, c = state
     
     gamma1 = (c*v*v)/(4*a) + th

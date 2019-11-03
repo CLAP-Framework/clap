@@ -7,7 +7,7 @@ from zzz_perception_msgs.msg import ObjectClass
 from zzz_driver_msgs.utils import get_speed, get_yaw
 from zzz_cognition_msgs.msg import MapState
 from intervaltree import Interval, IntervalTree
-from zzz_common.geometry import dist_from_point_to_polyline, nearest_point_to_polyline
+from zzz_common.geometry import dist_from_point_to_polyline2d
 
 class ReachableSet(object):
 
@@ -35,11 +35,10 @@ class ReachableSet(object):
         nearest_obstacle = None
         
         # FIXME(zyxin): should be in prediction part
-        if True: #self.dynamic_map.model == MapState.MODEL_JUNCTION_MAP or self.dynamic_map is None: # FIXME(zhcao): For carla challenge
+        if self.dynamic_map.model == MapState.MODEL_JUNCTION_MAP or self.dynamic_map is None: 
             for vehicle in self.vehicle_list:
-                # FIXME(CAO): ignore for challenge
-                # if vehicle.mmap_y > -1:
-                #     continue
+                if vehicle.lane_index > -1:
+                    continue
                 pred_trajectory = self.pred_trajectory(vehicle)
                 collision_idx, collision_time = self.intersection_between_trajectories(decision_trajectory_array,
                                                                                             pred_trajectory,vehicle)
@@ -104,7 +103,7 @@ class ReachableSet(object):
 
             if min_d < collision_thres:
                 nearest_idx = np.argmin(dist)
-                surrounding_vehicle_distance_before_collision = dist_from_point_to_polyline(wp[0],wp[1],pred_trajectory)[1]
+                surrounding_vehicle_distance_before_collision = dist_from_point_to_polyline(wp[0],wp[1],pred_trajectory,True)[2]
                 collision_time = surrounding_vehicle_distance_before_collision/surrounding_vehicle_speed
                 # rospy.logdebug("considering vehicle:%d, dis_to_collision:%d, col_time:%.2f, speed:%.2f col_index:%d(%d)",vehicle.uid,
                 #                                                     surrounding_vehicle_distance_before_collision,

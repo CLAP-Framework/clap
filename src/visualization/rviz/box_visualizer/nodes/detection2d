@@ -11,7 +11,7 @@ class Node():
     def __init__(self):
         params = parse_private_args(
             input_topic="objects2d_detected",
-            image_topic="/zzz/driver/image_raw",
+            image_topic="/zzz/drivers/image_raw",
             output_topic="objects2d_visual",
 
             label_color=[255,255,255,1],

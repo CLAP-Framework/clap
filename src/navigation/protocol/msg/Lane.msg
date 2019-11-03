@@ -2,6 +2,7 @@
 
 # ----- Basic properties -----
 # the rightest lane is 0, reference lane is -1
+# TODO: remove this field
 int16 index
 
 # Speed limit (km/h)
@@ -18,8 +19,8 @@ bool bidirectional # = False
 uint8 stop_state # = 0
 uint8 STOP_STATE_UNKNOWN = 0
 uint8 STOP_STATE_THRU = 1 # e.g. drive through at lane connection, green light
-uint8 STOP_STATE_YIELD = 2 # e.g. yellow light, flashing yellow light
-uint8 STOP_STATE_STOP = 3 # e.g. red light
+uint8 STOP_STATE_YIELD = 2 # e.g. unprotected left/right turn, flashing yellow light
+uint8 STOP_STATE_STOP = 3 # e.g. red light, yellow light
 uint8 STOP_STATE_STOP_YIELD = 4 # e.g. stop sign, right turn at red light
 uint8 STOP_STATE_STOP_YIELD_ALL_WAY = 5 # e.g. flashing red light, all way stop sign
 

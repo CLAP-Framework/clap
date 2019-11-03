@@ -22,7 +22,7 @@ class Node(object):
         params = parse_private_args(
             odom_input_topic = "/zzz/perception/odometry",
             pose_output_topic = "ego_pose",
-            gnss_input_topic = "/zzz/driver/gnss",
+            gnss_input_topic = "/zzz/drivers/gnss",
             map_origin = [0, 0, 0], # [lon, lat, alt]
             odom_translatin = [0, 0, 0], # [x, y, z] in UTC
             odom_rotation = [0, 0, 0, 1], # [x, y, z, w]
@@ -91,6 +91,8 @@ class Node(object):
 
         rel_state = convert_odometry_to_state(msg)
         state = get_absolute_state(rel_state, odom_state, check_frame=False)
+
+        rospy.logdebug("Position: %.3f, %.3f", state.state.pose.pose.position.x, state.state.pose.pose.position.y)
         
         self._pose_publisher.publish(state)
 
@@ -109,7 +111,7 @@ class Node(object):
         return transform
 
 if __name__ == "__main__":
-    rospy.init_node("pose_reporter", log_level=rospy.INFO)
+    rospy.init_node("pose_reporter", log_level=rospy.DEBUG)
     node = Node()
     rate = rospy.Rate(2)
     while not rospy.is_shutdown():

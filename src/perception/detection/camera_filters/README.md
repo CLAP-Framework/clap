@@ -1,0 +1,1 @@
+This package provides nodes to pre- or post-process the images. `ipm_projector` will project the boxes onto 3D space with planar surface assumption, `lidar_projector` will project point cloud onto the image, and generate a single 3D box from lidar measurements.
