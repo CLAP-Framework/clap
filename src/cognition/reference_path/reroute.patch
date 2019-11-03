@@ -29,7 +29,7 @@ index 44d34d7..0894e4b 100755
              "/carla/{}/goal".format(self.role_name), PoseStamped, self.on_goal)
  
 +        self.goal_subscriber = rospy.Subscriber(
-+            "/zzz/navigation/rerouting_required", Bool, self.rerouting_requirement_response)
++            "/zzz/navigation/rerouting", Bool, self.rerouting_requirement_response)
 +
          self._update_lock = threading.Lock()
  

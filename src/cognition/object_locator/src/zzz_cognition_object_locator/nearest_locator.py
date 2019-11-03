@@ -119,7 +119,7 @@ class NearestLocator:
             return -1 # TODO: return reasonable value
 
         # Judge whether the point is outside of lanes
-        if int(closest_lane)==int(second_closest_lane) or closest_lane_dist * second_closest_lane_dist > 0:
+        if closest_lane == second_closest_lane or closest_lane_dist * second_closest_lane_dist > 0:
             # The object is at left or right most
             return closest_lane
         else:
@@ -151,9 +151,7 @@ class NearestLocator:
 
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
         self._ego_vehicle_distance_to_lane_tail = dist_list[:, 4]
-        # zhcao: previous wrong index
-        # zhcao: add the condition when ego_index == -1
-        if int(ego_lane_index)<0 or self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)] <= lane_end_dist_thres:
+        if ego_lane_index < 0 or self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)] <= lane_end_dist_thres:
             # Drive into junction, wait until next map
             rospy.logdebug("In junction due to close to intersection")
             self._dynamic_map.model = MapState.MODEL_JUNCTION_MAP

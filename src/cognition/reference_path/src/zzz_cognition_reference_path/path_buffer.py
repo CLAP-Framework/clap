@@ -29,7 +29,8 @@ class PathBuffer:
 
     def receive_static_map(self, map_input):
         assert type(map_input) == MapState
-	# zhcao: to avoid the static map updating during generate the dynamic map
+        # zhcao: to avoid the static map updating during generate the dynamic map
+        # TODO: need better way to do this, e.g. custom ROS loop
         self._static_map_buffer = map_input
         rospy.logdebug("updating local dynamic map")
 
@@ -78,7 +79,7 @@ class PathBuffer:
         # Choose points from reference path to buffer
         while self._reference_path and len(self._reference_path_buffer) < self._buffer_size:
             wp = self._reference_path.popleft()
-            # self.lane_change_smoothen(wp) # zhcao: find some bugs in this function, Change this to a planning module
+            # self.lane_change_smoothen(wp) # TODO(zhcao): find some bugs in this function, also change this to a planning module
             self._reference_path_buffer.append(wp)
 
         # Put buffer into dynamic map

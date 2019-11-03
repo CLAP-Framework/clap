@@ -14,6 +14,7 @@ add_message_files(DIRECTORY msg FILES
     LaneSituation.msg
     Map.msg
     MapString.msg
+    ReroutingRequest.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs actionlib_msgs geometry_msgs)
