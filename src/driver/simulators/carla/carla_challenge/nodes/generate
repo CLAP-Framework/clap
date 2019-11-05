@@ -12,6 +12,7 @@ from carla_reference_path_generator import CarlaReferecePathGenerator
 import carla
 import random
 import time
+import thread
 
 RUNNING_TIME = 300
 
@@ -36,16 +37,9 @@ def spawn_traffic_circle_agents(max_agents, world, blueprints, spawn_points, ver
     '''
 
     sp_indices = [
-        # 8, 9, 47, 48, 55, 56, 57, 58, 145, 146, 153, 154, 164, 182, 183
-        0, 7, 8, 112, 113, 114, 118, 120, 121, 122, 123, 146, 149, 210, 211,218,219, 229, 247, 248, 257
+        8, 9, 47, 48, 55, 56, 57, 58, 145, 146, 153, 154, 164, 182, 183
+        # 0, 7, 8, 112, 113, 114, 118, 120, 121, 122, 123, 146, 149, 210, 211,218,219, 229, 247, 248, 257
     ]
-
-    # for i, point in enumerate(spawn_points):
-    #     p_x = point.location.x
-    #     p_y = point.location.y
-    #     d = np.sqrt(p_x*p_x+p_y*p_y)
-    #     if d > 26 and d < 100:
-    #         print(point.location.x,point.location.y,i)
 
     actor_list = world.get_actors()
     vehicle_list = actor_list.filter("*vehicle*")
@@ -197,6 +191,16 @@ def pose_callback(msg, args):
         publisher_map.publish(static_map)
     
 
+def generate_traffic(carla_world,delay = 0.05):
+    
+    # generate surrounding vehicles
+    blueprints = carla_world.get_blueprint_library().filter('vehicle.*')
+    spawn_points = carla_world.get_map().get_spawn_points()
+    while not rospy.is_shutdown():
+        spawn_traffic_circle_agents(1000,carla_world,blueprints,spawn_points)
+        remove_non_traffic_circle_agents(carla_world)
+        time.sleep(delay)
+
 if __name__ == "__main__":
     rospy.init_node("carla_challenge_setting_node")
 
@@ -216,19 +220,10 @@ if __name__ == "__main__":
     _pose_subscriber = rospy.Subscriber("/zzz/navigation/ego_pose", RigidBodyStateStamped, pose_callback,
         (_local_map_publisher, _reference_path_publisher, ReferencePathGenerator, starting_time))
 
-    rospy.spin()
-
-    '''
     # generate surrounding vehicles
+    thread.start_new_thread(generate_traffic,(carla_world,0.05))
 
-    rate = rospy.Rate(20)
-    blueprints = carla_world.get_blueprint_library().filter('vehicle.*')
-    spawn_points = carla_world.get_map().get_spawn_points()
-    while not rospy.is_shutdown():
-        spawn_traffic_circle_agents(1000,carla_world,blueprints,spawn_points)
-        remove_non_traffic_circle_agents(carla_world)
-        rate.sleep()
-    '''
+    rospy.spin()
 
     del ReferencePathGenerator
     del carla_world
