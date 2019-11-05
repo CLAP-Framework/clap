@@ -21,6 +21,7 @@ class NearestLocator:
         self._static_map_lane_tangets = None
         self._dynamic_map = None
         self._surrounding_object_list = None
+        self._surrounding_object_list_buffer = None
         self._ego_vehicle_state = None
         self._traffic_light_detection = None
         
@@ -47,7 +48,7 @@ class NearestLocator:
     def receive_object_list(self, object_list):
         assert type(object_list) == TrackingBoxArray
         if self._ego_vehicle_state != None:
-            self._surrounding_object_list = convert_tracking_box(object_list, self._ego_vehicle_state)
+            self._surrounding_object_list_buffer = convert_tracking_box(object_list, self._ego_vehicle_state)
 
     def receive_ego_state(self, state):
         assert type(state) == RigidBodyStateStamped
@@ -63,6 +64,9 @@ class NearestLocator:
         self._dynamic_map = cognition_default(MapState)
         self._dynamic_map.header.frame_id = "map"
         self._dynamic_map.header.stamp = rospy.Time.now()
+
+        # Update buffer information
+        self._surrounding_object_list = self._surrounding_object_list_buffer
 
         # Create dynamic maps and add static map elements
         self._dynamic_map.ego_state = self._ego_vehicle_state.state
