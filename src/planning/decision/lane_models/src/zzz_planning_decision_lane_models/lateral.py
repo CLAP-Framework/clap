@@ -10,6 +10,7 @@ class LaneUtility(object):
     def __init__(self, longitudinal_model):
         self.longitudinal_model_instance = longitudinal_model
         self.dynamic_map = None
+        self.previous_target_lane = -1
 
     def lateral_decision(self, dynamic_map, close_to_junction = 20):
 
@@ -37,30 +38,30 @@ class LaneUtility(object):
 
     def generate_lane_change_index(self):
 
-        ego_lane_index = self.dynamic_map.mmap.ego_lane_index
+        ego_lane_index = int(round(self.dynamic_map.mmap.ego_lane_index))
         current_lane_utility = self.lane_utility(ego_lane_index)
 
         if not self.lane_change_safe(ego_lane_index, ego_lane_index + 1):
             left_lane_utility = -1
         else:
-            left_lane_utility = self.lane_utility(self.dynamic_map.mmap.ego_lane_index + 1)
+            left_lane_utility = self.lane_utility(ego_lane_index + 1)
 
         if not self.lane_change_safe(ego_lane_index, ego_lane_index - 1):
             right_lane_utility = -1
         else:
-            right_lane_utility = self.lane_utility(self.dynamic_map.mmap.ego_lane_index - 1)
+            right_lane_utility = self.lane_utility(ego_lane_index - 1)
 
         # TODO: target lane = -1?
         rospy.logdebug("left_utility = %f, ego_utility = %f, right_utility = %f",
             left_lane_utility, current_lane_utility, right_lane_utility)
 
         if right_lane_utility > current_lane_utility and right_lane_utility >= left_lane_utility:
-            return self.dynamic_map.mmap.ego_lane_index -1
+            return ego_lane_index -1
 
         if left_lane_utility > current_lane_utility and left_lane_utility > right_lane_utility:
-            return self.dynamic_map.mmap.ego_lane_index + 1
+            return ego_lane_index + 1
 
-        return self.dynamic_map.mmap.ego_lane_index
+        return ego_lane_index
 
     def lane_utility(self, lane_index):
 
