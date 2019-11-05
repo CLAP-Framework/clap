@@ -63,7 +63,7 @@ class Node(object):
         if self._map_instance._rerouting_required:
             msg = ReroutingRequest()
             # zhcao: the rerouting logic should be revised later
-            self._rerouting_required_publisher.publish(msg)
+            # self._rerouting_required_publisher.publish(msg)
             self._map_instance._rerouting_required = False
 
 if __name__ == "__main__":

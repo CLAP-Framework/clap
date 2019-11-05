@@ -56,12 +56,12 @@ class PathBuffer:
         
         self._rerouting_requirement_sent = False
 
-    def update_reference_path_buffer(self, required_reference_path_length = 10):
+    def update_reference_path_buffer(self, required_reference_path_length = 10, front_vehicle_avoidance_require_thres = 2):
         """
         Delete the passed point and add more point to the reference path
         """
 
-        if len(self._reference_path_buffer) > 0:
+        if len(self._reference_path_buffer) > 1:
             _, nearest_idx, _ = dist_from_point_to_polyline2d(
                 self._ego_vehicle_state.pose.pose.position.x,
                 self._ego_vehicle_state.pose.pose.position.y,
@@ -71,10 +71,10 @@ class PathBuffer:
             for _ in range(nearest_idx):
                 rospy.logdebug("Removed waypoint: %s, remaining count: %d", str(self._reference_path_buffer.popleft()), len(self._reference_path))
 
-        # current reference path is too short, require a new reference path
-        if len(self._reference_path) < required_reference_path_length and not self._rerouting_requirement_sent:
-            self._rerouting_required = True
-            self._rerouting_requirement_sent = True
+        # current reference path is too short, require a new reference path TODO(zhcao):Rerouting 
+        # if len(self._reference_path) < required_reference_path_length and not self._rerouting_requirement_sent:
+        #     self._rerouting_required = True
+        #     self._rerouting_requirement_sent = True
 
         # Choose points from reference path to buffer
         while self._reference_path and len(self._reference_path_buffer) < self._buffer_size:
@@ -91,11 +91,12 @@ class PathBuffer:
         
         self._dynamic_map.jmap.reference_path.map_lane.index = -1
 
-        # Calculate vehicles on the reference path
+        # Calculate vehicles on the reference path 
         # TODO: find all vehicles near enough on reference_path
-        front_vehicle = self.get_front_vehicle_on_reference_path()
-        if front_vehicle is not None:
-            self._dynamic_map.jmap.reference_path.front_vehicles = [front_vehicle]
+        if len(self._dynamic_map.jmap.reference_path.map_lane.central_path_points) > front_vehicle_avoidance_require_thres:
+            front_vehicle = self.get_front_vehicle_on_reference_path()
+            if front_vehicle is not None:
+                self._dynamic_map.jmap.reference_path.front_vehicles = [front_vehicle]
 
         self._dynamic_map.jmap.reference_path.map_lane.speed_limit = 30
 
