@@ -26,8 +26,8 @@ class DecisionNode(object):
 
     def dynamic_map_callback(self, msg, decision_dt = 0.75):
         current_time = rospy.Time.now().to_sec()
-        if current_time - self._last_decision_time < decision_dt:
-            return
+        # if current_time - self._last_decision_time < decision_dt:
+        #     return
         self._last_decision_time = current_time
 
         rospy.logdebug("Current_time: %f",self._last_decision_time)

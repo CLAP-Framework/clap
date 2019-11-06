@@ -16,6 +16,7 @@ from zzz_driver_msgs.utils import get_speed, get_yaw
 class NearestLocator:
     def __init__(self, lane_dist_thres=5):
         self._static_map = Map()
+        self._static_map_buffer = Map()
         self._static_map.in_junction = True
         self._static_map_lane_path_array = None
         self._static_map_lane_tangets = None
@@ -39,11 +40,10 @@ class NearestLocator:
     def receive_static_map(self, static_map):
         assert type(static_map) == Map
 
-        self._static_map = static_map
-        self._static_map_lane_path_array = get_lane_array(static_map.lanes)
-        self._static_map_lane_tangets = [[point.tangent for point in lane.central_path_points] for lane in static_map.lanes]
+        self._static_map_buffer = static_map
+
         rospy.loginfo("Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
-            len(self._static_map.lanes), int(self._static_map.in_junction), self._static_map.target_lane_index)
+            len(self._static_map_buffer.lanes), int(self._static_map_buffer.in_junction), self._static_map_buffer.target_lane_index)
 
     def receive_object_list(self, object_list):
         assert type(object_list) == TrackingBoxArray
@@ -67,6 +67,9 @@ class NearestLocator:
 
         # Update buffer information
         self._surrounding_object_list = self._surrounding_object_list_buffer
+        self._static_map = self._static_map_buffer
+        self._static_map_lane_path_array = get_lane_array(self._static_map_buffer.lanes)
+        self._static_map_lane_tangets = [[point.tangent for point in lane.central_path_points] for lane in self._static_map_buffer.lanes]
 
         # Create dynamic maps and add static map elements
         self._dynamic_map.ego_state = self._ego_vehicle_state.state
@@ -183,7 +186,7 @@ class NearestLocator:
                     lane, return_end_distance=True)
                     for lane in self._static_map_lane_path_array])
                 closest_lane = np.argmin(np.abs(dist_list[:, 0]))
-                
+                # print("++++++++",vehicle.state.pose.pose.position.x,vehicle.state.pose.pose.position.y)
                 # Determine if the vehicle is close to lane enough
                 if abs(dist_list[closest_lane, 0]) > lane_dist_thres:
                     continue 
@@ -212,9 +215,12 @@ class NearestLocator:
                     front_vehicle.ffstate.s = self._ego_vehicle_distance_to_lane_tail[lane_id] - front_vehicles[vehicle_row, 1]
                     front_vehicle.behavior = self.predict_vehicle_behavior(front_vehicle)
                     self._dynamic_map.mmap.lanes[lane_id].front_vehicles.append(front_vehicle)
-                    rospy.logdebug("Lane index: %d, Front vehicle id: %d, behavior: %d, x:%.1f, y:%.1f", 
-                                    lane_id, front_vehicle.uid, front_vehicle.behavior,
-                                    front_vehicle.state.pose.pose.position.x,front_vehicle.state.pose.pose.position.y)
+                
+                front_vehicle = self._dynamic_map.mmap.lanes[lane_id].front_vehicles[0]
+                rospy.logdebug("Lane index: %d, Front vehicle id: %d, behavior: %d, x:%.1f, y:%.1f, d:%.1f", 
+                                lane_id, front_vehicle.uid, front_vehicle.behavior,
+                                front_vehicle.state.pose.pose.position.x,front_vehicle.state.pose.pose.position.y,
+                                front_vehicle.ffstate.s)
 
             if len(rear_vehicles) > 0:
                 # Descending sort rear objects by distance to lane end
@@ -229,9 +235,12 @@ class NearestLocator:
                     rear_vehicle.ffstate.s = rear_vehicles[vehicle_row, 1] - self._ego_vehicle_distance_to_lane_head[lane_id] # negative value
                     rear_vehicle.behavior = self.predict_vehicle_behavior(rear_vehicle)
                     self._dynamic_map.mmap.lanes[lane_id].rear_vehicles.append(rear_vehicle)
-                    rospy.logdebug("Lane index: %d, Rear vehicle id: %d, behavior: %d, x:%.1f, y:%.1f", 
-                                    lane_id, rear_vehicle.uid, rear_vehicle.behavior, 
-                                    rear_vehicle.state.pose.pose.position.x,rear_vehicle.state.pose.pose.position.y)
+                
+                rear_vehicle = self._dynamic_map.mmap.lanes[lane_id].rear_vehicles[0]
+                rospy.logdebug("Lane index: %d, Rear vehicle id: %d, behavior: %d, x:%.1f, y:%.1f, d:%.1f", 
+                                lane_id, rear_vehicle.uid, rear_vehicle.behavior, 
+                                rear_vehicle.state.pose.pose.position.x,rear_vehicle.state.pose.pose.position.y,
+                                rear_vehicle.ffstate.s)
 
     def locate_traffic_light_in_lanes(self):
         # TODO: Currently it's a very simple rule to locate the traffic lights
@@ -302,7 +311,7 @@ class NearestLocator:
         d_theta = vehicle_driving_direction - lane_direction
         d_theta = wrap_angle(d_theta)
 
-        rospy.logdebug("id:%d, vehicle_direction:%.2f, lane_direction:%.2f",vehicle.uid,vehicle_driving_direction,lane_direction)
+        # rospy.logdebug("id:%d, vehicle_direction:%.2f, lane_direction:%.2f",vehicle.uid,vehicle_driving_direction,lane_direction)
         if abs(d_theta) > lane_change_thres:
             if d_theta > 0:
                 behavior = RoadObstacle.BEHAVIOR_MOVING_LEFT

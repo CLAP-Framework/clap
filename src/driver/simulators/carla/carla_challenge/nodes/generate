@@ -221,7 +221,7 @@ if __name__ == "__main__":
         (_local_map_publisher, _reference_path_publisher, ReferencePathGenerator, starting_time))
 
     # generate surrounding vehicles
-    thread.start_new_thread(generate_traffic,(carla_world,0.05))
+    thread.start_new_thread(generate_traffic,(carla_world,1))
 
     rospy.spin()
 

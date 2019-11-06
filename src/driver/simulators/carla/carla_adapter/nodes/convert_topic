@@ -72,7 +72,7 @@ def convert_ObjectArray(msg, pub):
     for target in msg.objects:
         new_obj = TrackingBox()
         new_obj.bbox.pose.pose = target.pose
-        new_obj.bbox.pose.pose.position.y = -new_obj.bbox.pose.pose.position.y # FIXME: This is for Carla 0.9.5
+        new_obj.bbox.pose.pose.position.y = new_obj.bbox.pose.pose.position.y # FIXME: This is for Carla 0.9.5
         new_obj.twist.twist = target.twist
         new_obj.accel.accel = target.accel
 
