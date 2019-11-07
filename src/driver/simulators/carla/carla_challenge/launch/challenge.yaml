@@ -2,7 +2,7 @@ use_sim_time: true
 carla_town: ""
 carla:
   # the network connection for the python connection to CARLA
-  host: 127.0.0.1 #141.211.37.209
+  host: 127.0.0.1 # 141.211.37.209 # 128.30.27.114
   port: 2000
   # enable/disable synchronous mode. If enabled ros-bridge waits until
   # expected data is received for all sensors

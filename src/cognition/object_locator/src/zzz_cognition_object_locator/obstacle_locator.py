@@ -96,7 +96,7 @@ class NearestLocator:
             self.locate_stop_sign_in_lanes()
             self.locate_speed_limit_in_lanes()
 
-        rospy.logdebug("Updated Dynamic Map: lanes_num = %d, in_junction = %d, lane_index = %d, distance_to_end = %f",
+        rospy.logdebug("Updated Dynamic Map: lanes_num = %d, in_junction = %d, lane_index = %.2f, distance_to_end = %f",
             len(self._static_map.lanes), int(self._static_map.in_junction), self._dynamic_map.mmap.ego_lane_index, self._dynamic_map.mmap.distance_to_junction)
 
     # ========= For in lane =========
