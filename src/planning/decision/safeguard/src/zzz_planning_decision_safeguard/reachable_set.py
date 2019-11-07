@@ -35,10 +35,13 @@ class ReachableSet(object):
         nearest_obstacle = None
         
         # FIXME(zyxin): should be in prediction part
-        if self.dynamic_map.model == MapState.MODEL_JUNCTION_MAP or self.dynamic_map is None: 
+        if True: # self.dynamic_map.model == MapState.MODEL_JUNCTION_MAP or self.dynamic_map is None: 
             for vehicle in self.vehicle_list:
                 if vehicle.lane_index > -1:
-                    continue
+                    if self.dynamic_map.model == MapState.MODEL_JUNCTION_MAP or self.dynamic_map is None:
+                        pass
+                    else:
+                        continue
                 pred_trajectory = self.pred_trajectory(vehicle)
                 collision_idx, collision_time = self.intersection_between_trajectories(decision_trajectory_array,
                                                                                             pred_trajectory,vehicle)
