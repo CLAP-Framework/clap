@@ -4,7 +4,7 @@
         2. change the challenge.yaml
         3. change the path of challenge.yaml
     -->
-    <arg name="vehicle" value="zzz_veh0"/>
+    <arg name="vehicle" value="zzz_veh3"/>
 
     <!-- Run Carla Bridge -->
     <rosparam file="$(find zzz_driver_simulators_carla_challenge)/launch/challenge.yaml" command="load" />

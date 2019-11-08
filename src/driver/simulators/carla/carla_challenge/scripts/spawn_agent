@@ -48,7 +48,7 @@ default_sensor_configuration = {
 }
 '''
 default_sensor_configuration = {
-    'zzz_veh0': {
+    'zzz_veh3': {
         'spawn_at': [4.926103, 40.578606, 1.843102, -88.891235],
         'Center': {
             'type': 'sensor.camera.rgb',
@@ -109,7 +109,7 @@ def setup(args):
         vehicle_model = bplib.filter("vehicle.lincoln.mkz2017")[0] # random.choice(bplib.filter("vehicle.*"))
         vehicle_model.set_attribute('role_name', vehicle)
         vehicle_model.set_attribute('color', "255,255,0")
-        print("Spawn vehicle at %f, %f" % (spawn_point.location.x, spawn_point.location.y))
+        print("Spawn vehicle %s at %f, %f" % (vehicle, spawn_point.location.x, spawn_point.location.y))
         actor = world.try_spawn_actor(vehicle_model, spawn_point)
 
         # Spawn sensors on this vehicle
