@@ -24,7 +24,8 @@ class LaneUtility(object):
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         # Case if cannot locate ego vehicle correctly
-        if dynamic_map.mmap.ego_lane_index < 0 or dynamic_map.mmap.ego_lane_index > len(dynamic_map.mmap.lanes)-1:
+        # TODO: int?
+        if int(round(dynamic_map.mmap.ego_lane_index)) < 0 or int(round(dynamic_map.mmap.ego_lane_index)) > len(dynamic_map.mmap.lanes)-1:
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         target_index = self.generate_lane_change_index()
@@ -37,30 +38,30 @@ class LaneUtility(object):
 
     def generate_lane_change_index(self):
 
-        ego_lane_index = self.dynamic_map.mmap.ego_lane_index
+        ego_lane_index = int(round(self.dynamic_map.mmap.ego_lane_index))
         current_lane_utility = self.lane_utility(ego_lane_index)
 
         if not self.lane_change_safe(ego_lane_index, ego_lane_index + 1):
             left_lane_utility = -1
         else:
-            left_lane_utility = self.lane_utility(self.dynamic_map.mmap.ego_lane_index + 1)
+            left_lane_utility = self.lane_utility(ego_lane_index + 1)
 
         if not self.lane_change_safe(ego_lane_index, ego_lane_index - 1):
             right_lane_utility = -1
         else:
-            right_lane_utility = self.lane_utility(self.dynamic_map.mmap.ego_lane_index - 1)
+            right_lane_utility = self.lane_utility(ego_lane_index - 1)
 
         # TODO: target lane = -1?
         rospy.logdebug("left_utility = %f, ego_utility = %f, right_utility = %f",
             left_lane_utility, current_lane_utility, right_lane_utility)
 
         if right_lane_utility > current_lane_utility and right_lane_utility >= left_lane_utility:
-            return self.dynamic_map.mmap.ego_lane_index -1
+            return ego_lane_index -1
 
         if left_lane_utility > current_lane_utility and left_lane_utility > right_lane_utility:
-            return self.dynamic_map.mmap.ego_lane_index + 1
+            return ego_lane_index + 1
 
-        return self.dynamic_map.mmap.ego_lane_index
+        return ego_lane_index
 
     def lane_utility(self, lane_index):
 
