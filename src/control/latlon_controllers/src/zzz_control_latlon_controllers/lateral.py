@@ -26,11 +26,11 @@ class PurePersuitLateralController():
 
     def _control_point(self, ego_pose, trajectory, current_speed, resolution = 0.1):
 
-        if current_speed > 10:        
+        if current_speed > 10:
             control_target_dt = 0.5 - (current_speed - 10)*0.01
         else:
             control_target_dt = 0.5
-     
+
         control_target_distance = control_target_dt * current_speed  ## m
         if control_target_distance < 3:
             control_target_distance = 3
@@ -38,6 +38,10 @@ class PurePersuitLateralController():
         ego_loc = np.array([ego_pose.position.x, ego_pose.position.y])
 
         trajectory_array = self.convert_trajectory_to_ndarray(trajectory)
+
+        print("--------")
+        print("ego position:",ego_loc)
+        print(trajectory_array)
 
         trajectory_dense = dense_polyline2d(trajectory_array, resolution)
 
@@ -62,7 +66,7 @@ class PurePersuitLateralController():
 
         ego_x = ego_pose.position.x
         ego_y = ego_pose.position.y
-        
+
         v_vec = np.array([math.cos(ego_yaw),
                           math.sin(ego_yaw),
                           0.0])
@@ -84,18 +88,18 @@ class PurePersuitLateralController():
         lf = 1.2
         lr = 1.65
         lwb = lf + lr
-        
+
         v_rear_x = ego_x - v_vec[0]*lr/np.linalg.norm(v_vec)
         v_rear_y = ego_y - v_vec[1]*lr/np.linalg.norm(v_vec)
         l = (target_x-v_rear_x)*(target_x-v_rear_x)+(target_y-v_rear_y)*(target_y-v_rear_y)
         l = math.sqrt(l)
 
         theta = np.arctan(2*np.sin(_dot)*lwb/l)
-        
+
 
         k = 1 # XXX: np.pi/180*50
         theta = theta * k
-        
+
         return theta
 
 
@@ -118,7 +122,7 @@ class PurePersuitLateralController():
                 return end_idx
 
         rospy.logdebug("start_idx: %s, ego_loc: %s", str(start_idx), str(start_loc))
-                                                    
+
 class PreviewLateralController():
     """
     TODO(zhcao): Implement this
@@ -176,16 +180,15 @@ class PreviewLateralController():
         lf = 1.2
         lr = 1.65
         lwb = lf+lr
-        
+
         v_rear_x = v_begin.x - v_vec[0]*lr/np.linalg.norm(v_vec)
         v_rear_y = v_begin.y - v_vec[1]*lr/np.linalg.norm(v_vec)
         l = (target_x-v_rear_x)*(target_x-v_rear_x)+(target_y-v_rear_y)*(target_y-v_rear_y)
         l = math.sqrt(l)
 
         theta = np.arctan(2*np.sin(_dot)*lwb/l)
-        
+
 
         k = 1# np.pi/180*50
         theta = theta*k
         return theta
-
