@@ -10,7 +10,7 @@ from zzz_common.kinematics import get_frenet_state
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_driver_msgs.utils import get_speed, get_yaw
 from zzz_navigation_msgs.msg import Lane, Map
-from zzz_navigation_msgs.utils import get_lane_array
+from zzz_navigation_msgs.utils import get_lane_array, default_msg as navigation_default
 from zzz_perception_msgs.msg import (DetectionBoxArray, ObjectSignals,
                                      TrackingBoxArray)
 
@@ -67,22 +67,17 @@ class NearestLocator:
 
         # Update buffer information
         tstates.surrounding_object_list = self._surrounding_object_list_buffer or []
-        if self._static_map_buffer is None:
-            tstates.static_map = Map()
-            tstates.static_map.in_junction = True
-        else:
-            tstates.static_map = self._static_map_buffer
+        tstates.static_map = self._static_map_buffer or navigation_default(Map)
         static_map = tstates.static_map # for easier access
         tstates.static_map_lane_path_array = get_lane_array(tstates.static_map.lanes)
         tstates.static_map_lane_tangets = [[point.tangent for point in lane.central_path_points] for lane in tstates.static_map.lanes]
         tstates.dynamic_map = cognition_default(MapState)
-        tstates.dynamic_map.header.frame_id = "map"
-        tstates.dynamic_map.header.stamp = rospy.Time.now()
         dynamic_map = tstates.dynamic_map # for easier access
 
-
         # Create dynamic maps and add static map elements
-        tstates.dynamic_map.ego_state = tstates.ego_state
+        dynamic_map.header.frame_id = "map"
+        dynamic_map.header.stamp = rospy.Time.now()
+        dynamic_map.ego_state = tstates.ego_state.state
         if static_map.in_junction or len(static_map.lanes) == 0:
             rospy.logdebug("In junction due to static map report junction location")
             dynamic_map.model = MapState.MODEL_JUNCTION_MAP
@@ -106,7 +101,7 @@ class NearestLocator:
             self.locate_stop_sign_in_lanes(tstates)
             self.locate_speed_limit_in_lanes(tstates)
 
-        rospy.logdebug("Updated Dynamic Map: lanes_num = %d, in_junction = %d, lane_index = %.2f, distance_to_end = %f",
+        rospy.logdebug("Updated Dynamic Map: lanes_num = %d, in_junction = %s, lane_index = %.2f, distance_to_end = %f",
             len(dynamic_map.mmap.lanes), str(dynamic_map.model == MapState.MODEL_JUNCTION_MAP),
             dynamic_map.mmap.ego_lane_index, dynamic_map.mmap.distance_to_junction)
 
@@ -162,7 +157,7 @@ class NearestLocator:
         dist_list = np.array([dist_from_point_to_polyline2d(
             tstates.ego_state.state.pose.pose.position.x, tstates.ego_state.state.pose.pose.position.y,
             lane, return_end_distance=True)
-            for lane in tstates._static_map_lane_path_array])  
+            for lane in tstates.static_map_lane_path_array])  
         ego_lane_index = self.locate_object_in_lane(tstates.ego_state.state, tstates)
 
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
