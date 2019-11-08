@@ -189,7 +189,7 @@ class NearestLocator:
                     lane, return_end_distance=True)
                     for lane in tstates.static_map_lane_path_array])
                 closest_lane = np.argmin(np.abs(dist_list[:, 0]))
-                # print("++++++++",vehicle.state.pose.pose.position.x,vehicle.state.pose.pose.position.y)
+
                 # Determine if the vehicle is close to lane enough
                 if abs(dist_list[closest_lane, 0]) > lane_dist_thres:
                     continue 
