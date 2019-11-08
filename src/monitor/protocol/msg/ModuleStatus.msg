@@ -1,4 +1,4 @@
-# This message is used to report module status
+# This message is used to report module status. This message is only reported when changes happen.
 
 Header header
 

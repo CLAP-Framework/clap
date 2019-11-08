@@ -16,6 +16,8 @@ def default_msg(msg_type):
         msg = RoadObstacle()
     elif msg_type == JunctionMapState:
         msg = JunctionMapState()
+    else:
+        raise ValueError("Unrecognized message type")
     
     return msg
 
