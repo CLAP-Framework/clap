@@ -28,7 +28,7 @@ class ControllerNode(object):
 
 
     def loop(self):
-        while True:
+        while not rospy.is_shutdown():
             self._rate.sleep()
             control_msg = self._control_instance.run_step()
             self._command_publisher.publish(control_msg)

@@ -27,7 +27,6 @@ class LocatorNode(object):
         self._map_instance = NearestLocator()
         self._rate = rospy.Rate(params.hz)
 
-        # TODO: thread lock
         self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self._map_instance.receive_ego_state)
         self._surrounding_vehicle_subscriber = rospy.Subscriber(params.objects_topic, TrackingBoxArray, self._map_instance.receive_object_list)
         self._static_map_subscriber = rospy.Subscriber(params.map_input_topic, Map, self._map_instance.receive_static_map)
@@ -36,10 +35,10 @@ class LocatorNode(object):
             self._map_instance.receive_traffic_light_detection)
 
     def loop(self):
-        while True:
-            self._rate.sleep()
-            if self._map_instance.update():
-                self._dynamic_map_publisher.publish(self._map_instance.dynamic_map)
+        while not rospy.is_shutdown():
+            self._rate.sleep() # TODO(zyxin): remove sleep after ensure the following modules are good
+            dmap = self._map_instance.update()
+            if dmap: self._dynamic_map_publisher.publish(self._map_instance.dynamic_map)
 
 if __name__ == "__main__":
 
