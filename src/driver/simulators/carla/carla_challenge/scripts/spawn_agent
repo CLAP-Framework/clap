@@ -56,6 +56,12 @@ default_sensor_configuration = {
             'roll':0.0, 'pitch':0.0, 'yaw': 0.0,
             'image_size_x': 800, 'image_size_y': 600, 'fov':100
         },
+        'Sky': {
+            "type": "sensor.camera.rgb",
+            "x": 0, "y": 0, "z": 50,
+            "roll": 0.0, "pitch": -90.0, "yaw": 0,
+            "image_size_x": 1280, "image_size_y": 720, "fov": 100
+        },
     },
     # 'zzz_veh1': {
     #    'spawn_at': [-6.446170, -42.193752, 1.843102, 92.004189]

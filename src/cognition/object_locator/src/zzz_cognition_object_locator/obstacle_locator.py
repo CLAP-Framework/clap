@@ -71,6 +71,10 @@ class NearestLocator:
         self._static_map_lane_path_array = get_lane_array(self._static_map_buffer.lanes)
         self._static_map_lane_tangets = [[point.tangent for point in lane.central_path_points] for lane in self._static_map_buffer.lanes]
 
+        # Skip if not ready
+        if not self._ego_vehicle_state:
+            return False
+
         # Create dynamic maps and add static map elements
         self._dynamic_map.ego_state = self._ego_vehicle_state.state
         if self._static_map.in_junction or len(self._static_map.lanes) == 0:
@@ -98,6 +102,8 @@ class NearestLocator:
 
         rospy.logdebug("Updated Dynamic Map: lanes_num = %d, in_junction = %d, lane_index = %.2f, distance_to_end = %f",
             len(self._static_map.lanes), int(self._static_map.in_junction), self._dynamic_map.mmap.ego_lane_index, self._dynamic_map.mmap.distance_to_junction)
+
+        return True
 
     # ========= For in lane =========
 
