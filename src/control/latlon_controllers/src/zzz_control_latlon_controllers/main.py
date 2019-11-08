@@ -25,6 +25,9 @@ class MainController():
         self.desired_trajectory = decision.trajectory
         self.desired_speed = decision.desired_speed
 
+    def update_pose(self, pose):
+        self.ego_state = pose.state
+
     def ready_for_control(self, short_distance_thres = 5):
         if self.desired_trajectory is None or len(self.desired_trajectory.poses) == 0:
             rospy.logdebug("Haven't recevied trajectory")
@@ -40,22 +43,21 @@ class MainController():
         
         return True
 
-    def run_step(self, msg):
+    def run_step(self):
         """
         Execute one step of control invoking both lateral and longitudinal PID controllers to track a trajectory
         at a given target_speed.
         return: control
         """
-
-        self.ego_state = msg.state
-        rospy.logdebug("received target speed:%f, current_speed: %f", self.desired_speed, get_speed(self.ego_state))
-
-        if not self.ready_for_control():
+        
+        if not self.ego_state or not self.ready_for_control():
             control_msg = ControlCommand()
             control_msg.accel = -1
             control_msg.steer = 0
             
             return control_msg
+
+        rospy.logdebug("received target speed:%f, current_speed: %f", self.desired_speed, get_speed(self.ego_state))
         
         target_speed = self.desired_speed
         trajectory = self.desired_trajectory

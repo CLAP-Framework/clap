@@ -39,10 +39,6 @@ class PurePersuitLateralController():
 
         trajectory_array = self.convert_trajectory_to_ndarray(trajectory)
 
-        print("--------")
-        print("ego position:",ego_loc)
-        print(trajectory_array)
-
         trajectory_dense = dense_polyline2d(trajectory_array, resolution)
 
         end_idx = self.get_next_idx(ego_loc, trajectory_dense, control_target_distance)

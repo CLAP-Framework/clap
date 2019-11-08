@@ -27,6 +27,7 @@ class LocatorNode(object):
         self._map_instance = NearestLocator()
         self._rate = rospy.Rate(params.hz)
 
+        # TODO: thread lock
         self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self._map_instance.receive_ego_state)
         self._surrounding_vehicle_subscriber = rospy.Subscriber(params.objects_topic, TrackingBoxArray, self._map_instance.receive_object_list)
         self._static_map_subscriber = rospy.Subscriber(params.map_input_topic, Map, self._map_instance.receive_static_map)

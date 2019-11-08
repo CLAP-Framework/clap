@@ -24,7 +24,8 @@ class LaneUtility(object):
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         # Case if cannot locate ego vehicle correctly
-        if dynamic_map.mmap.ego_lane_index < 0 or dynamic_map.mmap.ego_lane_index > len(dynamic_map.mmap.lanes)-1:
+        # TODO: int?
+        if int(round(dynamic_map.mmap.ego_lane_index)) < 0 or int(round(dynamic_map.mmap.ego_lane_index)) > len(dynamic_map.mmap.lanes)-1:
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         target_index = self.generate_lane_change_index()
