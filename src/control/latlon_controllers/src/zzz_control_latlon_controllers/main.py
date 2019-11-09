@@ -18,15 +18,18 @@ class MainController():
         self._lon_controller = lon_controller if lon_controller is not None else PIDLongitudinalController()
         self._lat_controller = lat_controller if lat_controller is not None else PurePersuitLateralController()
         self.ego_state = None
+        self.ego_state_buffer = None
         self.desired_trajectory = None
+        self.desired_trajectory_buffer = None
         self.desired_speed = 30.0
+        self.desired_speed_buffer = 30.0
 
     def update_decision(self, decision):
-        self.desired_trajectory = decision.trajectory
-        self.desired_speed = decision.desired_speed
+        self.desired_trajectory_buffer = decision.trajectory
+        self.desired_speed_buffer = decision.desired_speed
 
     def update_pose(self, pose):
-        self.ego_state = pose.state
+        self.ego_state_buffer = pose.state
 
     def ready_for_control(self, short_distance_thres = 5):
         if self.desired_trajectory is None or len(self.desired_trajectory.poses) == 0:
@@ -50,6 +53,10 @@ class MainController():
         return: control
         """
         
+        self.ego_state = self.ego_state_buffer
+        self.desired_trajectory = self.desired_trajectory_buffer
+        self.desired_speed = self.desired_speed_buffer
+
         if not self.ego_state or not self.ready_for_control():
             control_msg = ControlCommand()
             control_msg.accel = -1

@@ -96,7 +96,7 @@ class PurePersuitLateralController():
         theta = np.arctan(2*np.sin(_dot)*lwb/l)
 
 
-        k = 1 # XXX: np.pi/180*50
+        k = 0.8 # XXX: np.pi/180*50
         theta = theta * k
 
         return theta
