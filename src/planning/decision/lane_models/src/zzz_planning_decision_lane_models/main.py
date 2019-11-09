@@ -27,13 +27,13 @@ class MainDecision(object):
         '''
         # update_dynamic_local_map
         if self._dynamic_map_buffer is None:
-            return None
+            return None, -1, 0
         dynamic_map = self._dynamic_map_buffer
 
         changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
         if desired_speed < 0: # TODO: clean this
             desired_speed = 0
-        rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
+        # rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
 
         # TODO: Is this reasonable?
         # if len(self.dynamic_map.jmap.reference_path.map_lane.central_path_points) == 0:
@@ -46,7 +46,7 @@ class MainDecision(object):
         msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory) # TODO: move to library
         msg.desired_speed = desired_speed
 
-        return msg
+        return msg, changing_lane_index, desired_speed
 
     def get_trajectory(self, dynamic_map, target_lane_index, desired_speed,
                 resolution=0.5, time_ahead=5, distance_ahead=10, rectify_thres=2,
@@ -96,8 +96,7 @@ class MainDecision(object):
         return msg
 
     def generate_smoothen_lane_change_trajectory(self, dynamic_map, target_lane,
-        rectify_dt, desired_speed, lc_dt = 1.5, rectify_min_d = 6, resolution=0.5, time_ahead=5, distance_ahead=10):
-
+        rectify_dt, desired_speed, rectify_min_d = 6, resolution=0.5, time_ahead=5, distance_ahead=10):
         target_lane_center_path = self.convert_path_to_ndarray(target_lane.map_lane.central_path_points)
 
         ego_x = dynamic_map.ego_state.pose.pose.position.x
@@ -106,6 +105,8 @@ class MainDecision(object):
         # Calculate the longitudinal distance for lane Change
         # Considering if the ego_vehicle is in a lane Change
         lc_dis = max(rectify_dt*desired_speed,rectify_min_d)
+
+        rospy.logdebug("lane change distance: %f", lc_dis)
 
         dense_target_centrol_path = dense_polyline2d(target_lane_center_path, resolution)
         _, nearest_idx, _ = dist_from_point_to_polyline2d(ego_x, ego_y, dense_target_centrol_path)

@@ -27,11 +27,11 @@ class DecisionNode(object):
 
     def loop(self):
         while not rospy.is_shutdown():
-            publish_msg = self._decision_instance.update()
-            if publish_msg:
+            publish_msg, target_lane_index, desired_speed = self._decision_instance.update()
+            if publish_msg is not None:
                 self._decision_trajectory_publisher.publish(publish_msg)
-                rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
-                    len(publish_msg.trajectory.poses), publish_msg.desired_speed)
+                rospy.logdebug("PUBLISH: target_lane_index = %d, trajectory length = %d, desired_speed = %f km/h", 
+                    target_lane_index, len(publish_msg.trajectory.poses), desired_speed*3.6)
             self._rate.sleep()
 
 if __name__ == "__main__":

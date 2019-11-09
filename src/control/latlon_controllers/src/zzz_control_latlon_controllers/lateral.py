@@ -22,14 +22,17 @@ class PurePersuitLateralController():
 
         control_point = self._control_point(ego_pose, trajectory, current_speed)
 
+        if len(control_point) <= 1:
+            return 0
+
         return self._purepersuit_control(control_point, ego_pose)
 
     def _control_point(self, ego_pose, trajectory, current_speed, resolution = 0.1):
 
         if current_speed > 10:
-            control_target_dt = 0.5 - (current_speed - 10)*0.01
+            control_target_dt = 0.58 - (current_speed - 10)*0.01
         else:
-            control_target_dt = 0.5
+            control_target_dt = 0.58
 
         control_target_distance = control_target_dt * current_speed  ## m
         if control_target_distance < 3:

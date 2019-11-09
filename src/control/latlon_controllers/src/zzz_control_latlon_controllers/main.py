@@ -30,7 +30,7 @@ class MainController():
 
     def ready_for_control(self, short_distance_thres = 5):
         if self.desired_trajectory is None or len(self.desired_trajectory.poses) == 0:
-            rospy.logdebug("Haven't recevied trajectory")
+            rospy.logdebug("Control Module: Haven't recevied trajectory")
             return False
 
         last_loc = np.array([self.desired_trajectory.poses[-1].pose.position.x, self.desired_trajectory.poses[-1].pose.position.y]) 
@@ -38,7 +38,7 @@ class MainController():
         d = np.linalg.norm(ego_loc - last_loc)
 
         if d < short_distance_thres:
-            rospy.loginfo("Vehicle stopped since it reached target point (dist:%.3f)", d)
+            rospy.loginfo("Control Module: Vehicle stopped since it reached target point (dist:%.3f)", d)
             return False
         
         return True
