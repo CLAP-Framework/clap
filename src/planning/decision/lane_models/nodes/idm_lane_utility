@@ -7,6 +7,7 @@ from zzz_planning_decision_lane_models.longitudinal import IDM
 from zzz_planning_decision_lane_models.lateral import LaneUtility
 from zzz_planning_decision_lane_models import MainDecision
 from zzz_planning_msgs.msg import DecisionTrajectory
+from nav_msgs.msg import Path
 
 class DecisionNode(object):
     def __init__(self):
@@ -14,6 +15,7 @@ class DecisionNode(object):
         params = parse_private_args(
             decision_trajectory_topic="decision_trajectory",
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
+            rviz_decition_trajectory_topic="rviz_decition_trajectory",
             hz = 10,
         )
 
@@ -24,6 +26,7 @@ class DecisionNode(object):
 
         self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
+        self._rviz_decision_trajectory_publisher = rospy.Publisher(params.rviz_decition_trajectory_topic, Path, queue_size=1)
 
     def loop(self):
         while not rospy.is_shutdown():
@@ -32,6 +35,11 @@ class DecisionNode(object):
                 self._decision_trajectory_publisher.publish(publish_msg)
                 rospy.logdebug("PUBLISH: target_lane_index = %d, trajectory length = %d, desired_speed = %f km/h", 
                     target_lane_index, len(publish_msg.trajectory.poses), desired_speed*3.6)
+
+                # for rviz
+                decision_trajectory_msg = publish_msg.trajectory
+                self._rviz_decision_trajectory_publisher.publish(decision_trajectory_msg)
+
             self._rate.sleep()
 
 if __name__ == "__main__":

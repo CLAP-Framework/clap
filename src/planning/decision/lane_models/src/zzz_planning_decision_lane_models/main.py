@@ -49,7 +49,7 @@ class MainDecision(object):
         return msg, changing_lane_index, desired_speed
 
     def get_trajectory(self, dynamic_map, target_lane_index, desired_speed,
-                resolution=0.5, time_ahead=5, distance_ahead=10, rectify_thres=2,
+                resolution=0.5, time_ahead=0, distance_ahead=50, rectify_thres=2,
                 lc_dt = 1.5, lc_v = 2.67):
         # TODO: get smooth spline (write another module to generate spline)
         ego_x = dynamic_map.ego_state.pose.pose.position.x
@@ -68,6 +68,7 @@ class MainDecision(object):
         nearest_dis = abs(nearest_dis)
 
         if nearest_dis > rectify_thres:
+            rospy.logdebug("reason1: nearest_dis:%f", nearest_dis)
             if dynamic_map.model == MapState.MODEL_MULTILANE_MAP and target_lane_index != -1:
                 rectify_dt = abs(dynamic_map.mmap.ego_lane_index - target_lane_index)*lc_dt
             else:
@@ -78,6 +79,7 @@ class MainDecision(object):
             front_path = dense_centrol_path[nearest_idx:]
             dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path, axis=0), axis = 1))
             trajectory = front_path[:np.searchsorted(dis_to_ego, desired_speed*time_ahead+distance_ahead)-1]
+            rospy.logdebug("reason2: front_path_length: %d , trajectory_length: %d", len(front_path), len(trajectory))
             return trajectory
 
     # TODO(zyxin): Add these to zzz_navigation_msgs.utils
@@ -85,14 +87,14 @@ class MainDecision(object):
         point_list = [(point.position.x, point.position.y) for point in path]
         return np.array(point_list)
 
-    def convert_ndarray_to_pathmsg(self, path):
+    def convert_ndarray_to_pathmsg(self, path, path_id = 'map'):
         msg = Path()
         for wp in path:
             pose = PoseStamped()
             pose.pose.position.x = wp[0]
             pose.pose.position.y = wp[1]
             msg.poses.append(pose)
-
+        msg.header.frame_id = path_id
         return msg
 
     def generate_smoothen_lane_change_trajectory(self, dynamic_map, target_lane,
