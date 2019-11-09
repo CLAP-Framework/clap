@@ -63,9 +63,16 @@ class MainDecision(object):
 
         # if ego vehicle is on the target path
         # works for lane change, lane follow and reference path follow
-        dense_centrol_path = dense_polyline2d(central_path, resolution)
+        dense_centrol_path = central_path # FIXME(challenge only), dense_polyline2d(central_path, resolution)
         nearest_dis, nearest_idx, _ = dist_from_point_to_polyline2d(ego_x, ego_y, dense_centrol_path)
         nearest_dis = abs(nearest_dis)
+
+        rospy.logdebug("Target lane distance: %d, %f", nearest_idx, nearest_dis)
+        if nearest_idx == 0: # FIXME(challenge), weird case, fallback to naive nearest
+            dist_list = np.linalg.norm(dense_centrol_path - [ego_x, ego_y], axis=1)
+            nearest_idx = np.argmin(dist_list)
+            nearest_dis = dist_list[nearest_idx]
+            rospy.logwarn("Target lane distance wrong, fixed!")
 
         if nearest_dis > rectify_thres:
             rospy.logdebug("reason1: nearest_dis:%f", nearest_dis)

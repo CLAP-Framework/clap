@@ -109,8 +109,8 @@ def setup(args):
         vehicle_model = bplib.filter("vehicle.lincoln.mkz2017")[0] # random.choice(bplib.filter("vehicle.*"))
         vehicle_model.set_attribute('role_name', vehicle)
         vehicle_model.set_attribute('color', "255,255,0")
-        print("Spawn vehicle %s at %f, %f" % (vehicle, spawn_point.location.x, spawn_point.location.y))
         actor = world.try_spawn_actor(vehicle_model, spawn_point)
+        print("Spawn vehicle %s (%d) at %f, %f" % (vehicle, actor.id, spawn_point.location.x, spawn_point.location.y))
 
         # Spawn sensors on this vehicle
         vehicle_actors[vehicle] = [actor]
