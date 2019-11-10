@@ -152,6 +152,22 @@ class NearestLocator:
                 obj.lane_index = -1
             tstates.dynamic_map.jmap.obstacles.append(obj)
 
+    ''' FIXME(challenge only)
+    def publish_traj(self, array):
+
+        from nav_msgs.msg import Path
+        from geometry_msgs.msg import PoseStamped
+
+        msg = Path()
+        for wp in array:
+            pose = PoseStamped()
+            pose.pose.position.x = wp[0]
+            pose.pose.position.y = wp[1]
+            msg.poses.append(pose)
+        msg.header.frame_id = 'map'
+        self._rviz_decision_trajectory_publisher.publish(msg)
+    '''
+
     # TODO: adjust lane_end_dist_thres to class variable
     def locate_ego_vehicle_in_lanes(self, tstates, lane_end_dist_thres=2, lane_dist_thres=5):
         dist_list = np.array([dist_from_point_to_polyline2d(
@@ -159,22 +175,24 @@ class NearestLocator:
             lane, return_end_distance=True)
             for lane in tstates.static_map_lane_path_array])  
         ego_lane_index = self.locate_object_in_lane(tstates.ego_state.state, tstates)
+        ego_lane_index_rounded = int(round(ego_lane_index))
 
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
         self._ego_vehicle_distance_to_lane_tail = dist_list[:, 4]
-        if ego_lane_index < 0 or self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)] <= lane_end_dist_thres:
+        if ego_lane_index_rounded < 0 or self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded] <= lane_end_dist_thres:
             # Drive into junction, wait until next map
-            rospy.logdebug("In junction due to close to intersection")
+            rospy.logdebug("In junction due to close to intersection, ego_lane_index = %f, dist_to_lane_tail = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)])
             tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             # TODO: Calculate frenet coordinate here or in put_buffer?
             return
         else:
             tstates.dynamic_map.model = MapState.MODEL_MULTILANE_MAP
             tstates.dynamic_map.ego_ffstate = get_frenet_state(tstates.ego_state, 
-                tstates.static_map_lane_path_array[int(ego_lane_index)],
-                tstates.static_map_lane_tangets[int(ego_lane_index)])
+                tstates.static_map_lane_path_array[ego_lane_index_rounded],
+                tstates.static_map_lane_tangets[ego_lane_index_rounded])
             tstates.dynamic_map.mmap.ego_lane_index = ego_lane_index
-            tstates.dynamic_map.mmap.distance_to_junction = self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)]
+            tstates.dynamic_map.mmap.distance_to_junction = self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded]
+        rospy.logdebug("Distance to end: (lane %f) %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded])
 
     def locate_surrounding_objects_in_lanes(self, tstates, lane_dist_thres=3):
         lane_front_vehicle_list = [[] for _ in tstates.static_map.lanes]

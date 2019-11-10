@@ -18,14 +18,18 @@ class LaneUtility(object):
 
         # Following reference path in junction
         if dynamic_map.model == MapState.MODEL_JUNCTION_MAP:
+            rospy.logdebug("Decision for ref path, reason 1")
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         if dynamic_map.mmap.distance_to_junction < close_to_junction:
+            rospy.logdebug("Decision for ref path, reason 2")
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         # Case if cannot locate ego vehicle correctly
         # TODO: int?
-        if int(round(dynamic_map.mmap.ego_lane_index)) < 0 or int(round(dynamic_map.mmap.ego_lane_index)) > len(dynamic_map.mmap.lanes)-1:
+        ego_lane_index_rounded = int(round(dynamic_map.mmap.ego_lane_index))
+        if ego_lane_index_rounded < 0 or ego_lane_index_rounded > len(dynamic_map.mmap.lanes)-1:
+            rospy.logdebug("Decision for ref path, reason 3, ego_lane_index = %f", dynamic_map.mmap.ego_lane_index)
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         target_index = self.generate_lane_change_index()
