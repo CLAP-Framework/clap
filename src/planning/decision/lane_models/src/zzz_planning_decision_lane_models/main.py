@@ -84,14 +84,14 @@ class MainDecision(object):
         point_list = [(point.position.x, point.position.y) for point in path]
         return np.array(point_list)
 
-    def convert_ndarray_to_pathmsg(self, path):
+    def convert_ndarray_to_pathmsg(self, path):#FIXME(dns )
         msg = Path()
         for wp in path:
             pose = PoseStamped()
             pose.pose.position.x = wp[0]
             pose.pose.position.y = wp[1]
             msg.poses.append(pose)
-
+        msg.header.frame_id = "map"  # FIXME(NANSHAN):
         return msg
 
     def generate_smoothen_lane_change_trajectory(self, target_lane, rectify_dt, desired_speed,

@@ -8,10 +8,6 @@ from zzz_driver_msgs.utils import get_speed, get_yaw
 from zzz_cognition_msgs.msg import MapState
 from intervaltree import Interval, IntervalTree
 from zzz_common.geometry import dist_from_point_to_polyline2d
-from zzz_planning_msgs.msg import DecisionTrajectory
-import cubic_spline_planner
-import frenet_optimal_trajectory
-import copy
 
 class ReachableSet(object):
 
@@ -31,38 +27,6 @@ class ReachableSet(object):
     def check_trajectory(self, decision_trajectory, desired_speed):
 
         decision_trajectory_array = self.convert_trajectory_to_ndarray(decision_trajectory)
-        Frenetrefx,Frenetrefy=self.conver_ndarray_to_XY(decision_trajectory_array)
-        rospy.loginfo("DNSSSSSSSS: i am in node trajectory111=[%f] ",decision_trajectory_array[1,0] )#FIXME(nanshan)
-        rospy.loginfo("DNSSSSSSSS: i am in node FreFrenetrefx=[%f] ",Frenetrefx[1] )#FIXME(nanshan)
-
-        rospy.loginfo("DNSSSSSSSS: i am in node trajectory111=[%f] ",decision_trajectory_array[1,1] )#FIXME(nanshan)
-        rospy.loginfo("DNSSSSSSSS: i am in node FreFrenetrefy=[%f] ",Frenetrefy[1] )#FIXME(nanshan)
-
-        rospy.loginfo("DNSSSSSSSS: i am in node trajectory111=[%f] ", decision_trajectory_array[-1,0 ])  # FIXME(nanshan)
-        rospy.loginfo("DNSSSSSSSS: i am in node FreFrenetrefx=[%f] ", Frenetrefx[-1])  # FIXME(nanshan)
-
-        rospy.loginfo("DNSSSSSSSS: i am in node trajectory111=[%f] ", decision_trajectory_array[-1, 1])  # FIXME(nanshan)
-        rospy.loginfo("DNSSSSSSSS: i am in node FreFrenetrefy=[%f] ", Frenetrefy[-1])  # FIXME(nanshan)
-   
-        #tx, ty, tyaw, tc, csp=frenet_optimal_trajectory.generate_target_course(Frenetrefx,Frenetrefy)
-
-
-        # ob = np.array([
-        #         [100,-8]
-        #         ])
-        # c_speed = desired_speed # current speed [m/s]
-        # c_d = 0  # current lateral position [m]
-        # c_d_d = 0.0  # current lateral speed [m/s]
-        # c_d_dd = 0.0  # current latral acceleration [m/s]
-        # s0 = 0.0  # current course position
-        # #rospy.logdebug("Frenetrefx 1 = %f, Frenetrefy = %f ", Frenetrefx[0], Frenetrefy[0])
-        # bestpath=frenet_optimal_trajectory.frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
-        # rospy.loginfo("DNSSSSSSSS: i am in node besxxxxxxxxx1=[%f] ", bestpath.x[-1])  # FIXME(nanshan)
-        # rospy.loginfo("DNSSSSSSSS: i am in node besyyyyyyyyyy=[%f] ", bestpath.y[-1])  # FIXME(nanshan)
-        # msg = DecisionTrajectory()
-        # msg.trajectory=self.convert_XY_to_pathmsg(bestpath.x,bestpath.y)
-
-
         if len(decision_trajectory_array) == 0:
             return False, desired_speed
         self.collision_points = []
@@ -148,29 +112,13 @@ class ReachableSet(object):
                 break
             
         return nearest_idx,collision_time
-
-    def convert_XY_to_pathmsg(self,XX,YY,path_id = 'map'):
-        msg = Path()
-        for i in range(1,len(XX)):
-            pose = PoseStamped()
-            pose.pose.position.x = XX[i]
-            pose.pose.position.y = YY[i]
-            msg.poses.append(pose)
-        msg.header.frame_id = path_id 
-        return msg
+        
 
     def convert_trajectory_to_ndarray(self, trajectory):
 
         trajectory_array = [(pose.pose.position.x, pose.pose.position.y) for pose in trajectory.poses]
         return np.array(trajectory_array)
 
-    def conver_ndarray_to_XY(self,path):
-        global_x=[]
-        global_y=[]
-        for wp in path:
-            global_x.append(wp[0])
-            global_y.append(wp[1])
-        return np.array(global_x), np.array(global_y)
 
     def get_ego_idx(self, decision_trajectory):
         ego_pose = self.dynamic_map.ego_state.pose.pose

@@ -8,17 +8,20 @@ from zzz_planning_decision_lane_models.lateral import LaneUtility
 from zzz_planning_decision_lane_models import MainDecision
 from zzz_planning_msgs.msg import DecisionTrajectory
 
+
+from nav_msgs.msg import Path  #FIXME(Nanshan)
 class DecisionNode(object):
     def __init__(self):
 
         params = parse_private_args(
             decision_trajectory_topic="decision_trajectory",
+            RVIZ_decision_trajectory_topic="decision_trajectory_path",         #FIXME(Nanshan)
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref"
         )
 
         self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self.dynamic_map_callback)
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
-
+        self._rviz_decision_trajectory_publisher = rospy.Publisher(params.RVIZ_decision_trajectory_topic, Path, queue_size=1) #FIXME(Nanshan)
         model_lon = IDM()
         model_lat = LaneUtility(model_lon)
         self._decision_instance = MainDecision(lon_decision=model_lon, lat_decision=model_lat)
@@ -32,11 +35,12 @@ class DecisionNode(object):
 
         rospy.logdebug("Current_time: %f",self._last_decision_time)
         publish_msg = self._decision_instance.generate_trajectory_with_speed(msg)
+        publish_msg2 = publish_msg.trajectory  #FIXME(NANSHAN):
         rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
             len(publish_msg.trajectory.poses), publish_msg.desired_speed)
 
         self._decision_trajectory_publisher.publish(publish_msg)
-
+        self._rviz_decision_trajectory_publisher.publish(publish_msg2)#FIXME(NANSHAN):
 if __name__ == "__main__":
 
     rospy.init_node("decision_node", log_level=rospy.DEBUG)
