@@ -8,6 +8,7 @@ from zzz_cognition_msgs.msg import MapState
 from zzz_planning_msgs.msg import DecisionTrajectory
 from zzz_planning_decision_safeguard.reachable_set import ReachableSet
 from nav_msgs.msg import Path  #FIXME(Nanshan)
+
 #from zzz_planning_decision_safeguard.DFrenet import ReachableSet #FIXME(Nanshan)
 
 
@@ -35,13 +36,13 @@ class SafeguardNode(object):
         self._safeguard_trajectory_publisher.publish(decision_msg)
         self._rviz_safeguard_trajectory_publisher.publish(rviz_decision_msg)  #FIXME(Nanshan)
     def check_trajectory(self, decision):
-        safeguard_triggered, safespeed = self._safeguard_instance.check_trajectory(decision.trajectory, decision.desired_speed)
+        safeguard_triggered, safespeed,safetrajectory = self._safeguard_instance.check_trajectory(decision.trajectory, decision.desired_speed)
 
         if safeguard_triggered:
             rospy.loginfo("Safeguarded triggered")
 
         msg = decision
-        msg.trajectory = decision.trajectory
+        msg.trajectory = safetrajectory    #decision.trajectory
         msg.desired_speed = safespeed
 
         return msg

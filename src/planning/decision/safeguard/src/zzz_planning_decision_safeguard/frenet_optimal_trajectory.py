@@ -334,7 +334,6 @@ def main():
     for i in range(SIM_LOOP):
         path = frenet_optimal_planning(
             csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
-
         s0 = path.s[1]
         c_d = path.d[1]
         c_d_d = path.d_d[1]
