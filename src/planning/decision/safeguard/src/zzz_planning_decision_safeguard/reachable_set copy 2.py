@@ -1,7 +1,4 @@
 
-
-
-
 import rospy
 import numpy as np
 import math
@@ -11,7 +8,7 @@ from zzz_driver_msgs.utils import get_speed, get_yaw
 from zzz_cognition_msgs.msg import MapState
 from intervaltree import Interval, IntervalTree
 from geometry_msgs.msg import PoseStamped
-import frenet_optimal_trajectory
+import .frenet_optimal_trajectory
 from zzz_planning_msgs.msg import DecisionTrajectory
 from nav_msgs.msg import Path
 
@@ -43,7 +40,6 @@ class ReachableSet(object):
 
         decision_trajectory_array = self.convert_trajectory_to_ndarray(decision_trajectory)
         Frenetrefx,Frenetrefy=self.conver_ndarray_to_XY(decision_trajectory_array)
-
         rospy.loginfo("DNSSSSSSSS: i am in node trajectory111=[%f] ",decision_trajectory_array[1,0] )#FIXME(nanshan)
         rospy.loginfo("DNSSSSSSSS: i am in node FreFrenetrefx=[%f] ",Frenetrefx[1] )#FIXME(nanshan)
 
@@ -88,10 +84,7 @@ class ReachableSet(object):
 
         #rospy.loginfo("DNSSSSSSSS: i am in node besyyyyyyyyyy=[%f] ", bestpath.y[-1])  # FIXME(nanshan)
         msg = DecisionTrajectory()
-        msg.desired_speed = desired_speed
         msg.trajectory=self.convert_XY_to_pathmsg(bestpath.x,bestpath.y)
-
-
 
 
         # if len(decision_trajectory_array) == 0:
@@ -188,10 +181,11 @@ class ReachableSet(object):
             pose.pose.position.x = XX[i]
             pose.pose.position.y = YY[i]
             msg.poses.append(pose)
-        msg.header.frame_id = path_id
+        #msg.header.frame_id = path_id
         return msg
 
     def convert_trajectory_to_ndarray(self, trajectory):
+
         trajectory_array = [(pose.pose.position.x, pose.pose.position.y) for pose in trajectory.poses]
         return np.array(trajectory_array)
 

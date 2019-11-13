@@ -93,6 +93,7 @@ class MainDecision(object):
             pose.pose.position.y = wp[1]
             msg.poses.append(pose)
         msg.header.frame_id = "map"  # FIXME(NANSHAN):
+
         return msg
 
     def generate_smoothen_lane_change_trajectory(self, target_lane, rectify_dt, desired_speed,
