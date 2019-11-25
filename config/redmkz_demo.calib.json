@@ -1,10 +1,16 @@
 {
     "extrinsics": [
         {
-            "frame_id": "base_link",
-            "child_frame_id": "camera",
+            "frame_id": "camera",
+            "child_frame_id": "base_link",
             "txyz": [0,0,0],
             "qxyzw": [0,0,0,1]
+        },
+        {
+            "frame_id": "velodyne_fm",
+            "child_frame_id": "camera",
+            "txyz": [-0.03004938,-0.25959212,0.0],
+            "qxyzw": [ 0.49775305,-0.48845214,0.50215719,0.51136539]
         }
     ],
     "intrinsics": [

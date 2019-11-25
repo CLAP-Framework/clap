@@ -24,8 +24,10 @@
             <param name="weights_file" value="$(find zzz_perception_detection_camera_detectors)/src/yolov3/weights/yolov3-spp.weights"/>
             <param name="names_file"   value="$(find zzz_perception_detection_camera_detectors)/src/yolov3/data/coco.names"/>
         </node>
-        <node pkg="zzz_perception_detection_camera_filters" type="ipm_projector"
-            name="ipm" output="screen" ns="/zzz/perception">
+        <node pkg="zzz_perception_detection_camera_filters" type="object_lidar_projector"
+            name="lidar_proj" output="screen" ns="/zzz/perception">
+            <param name="camera_info_topic" value="/intri_static"/>
+            <param name="camera_topic" value="/camera/image_color"/>
             <param name="output_topic" value="objects_projected"/>
         </node>
         <node pkg="zzz_perception_tracking_object_filters" type="to_static"

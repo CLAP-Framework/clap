@@ -3,13 +3,14 @@
 import rospy
 import numpy as np
 import pcl
-import tf2
+import tf2_ros as tf2
 import tf.transformations as tft
 import cv2
 import cv_bridge
 import threading
 
-from sensor_msgs.msg import PointCloud2, CameraInfo
+from sensor_msgs.msg import PointCloud2, CameraInfo, Image
+from zzz_perception_detection_camera_filters.projection import LidarExtrinsicProjection
 from zzz_perception_msgs.msg import DetectionBox2DArray, DetectionBoxArray, DetectionBox, DetectionBox2D
 from zzz_common.params import parse_private_args
 
@@ -17,66 +18,21 @@ class Node():
     def __init__(self):
 
         params = parse_private_args(
-            cloud_topic="points_raw",
+            cloud_topic="/velodyne_points",
             detection_topic="objects2d_detected",
             camera_info_topic="camera_info",
             output_topic="objects_projected",
-            depth_gather="kmeans", # Method to get the depth from a group of points
+            criterion="closest", # Method to get the depth from a group of points
         )
 
-        self._cloud_sub = rospy.Subscriber(params.cloud_topic, PointCloud2, self.cloud_callback)
+        self._projector = LidarExtrinsicProjection()
+        self._cloud_sub = rospy.Subscriber(params.cloud_topic, PointCloud2, self._projector.receive_point_cloud)
         self._detect_sub = rospy.Subscriber(params.detection_topic, DetectionBox2DArray, self.detection_callback)
-        self._caminfo_sub = rospy.Subscriber(params.camera_info_topic, CameraInfo, self.caminfo_callback)
         self._obj_pub = rospy.Publisher(params.output_topic, DetectionBoxArray, queue_size=1)
 
-        self._cloud_header = None
-        self._cloud_data = None
-        self._cloud_event = threading.Event()
-        self._caminfo_latest = None
-        self._caminfo_event = None
-        self._tfbuffer = tf2.Buffer()
-        self._tflistener = tf2.TransformListener(self._tfbuffer)
-        self._bridge = cv_bridge.CvBridge()
-
-    def caminfo_callback(self, msg):
-        self._caminfo_latest = msg
-        self._caminfo_event.set()
-
-    def cloud_callback(self, msg):
-        self._cloud_data = pcl.PointCloud(msg)
-        self._cloud_header = msg.header
-        self._cloud_event.set()
-
-    def scatter(self, img, xyz, s=5, a=0.5):
-        dots = img.copy()
-        ym, xm, zm = xyz
-        zmax, zmin = np.max(zm), np.min(zm)
-        zm = 256*(zm - zmin)/(zmax-zmin)
-        zm = cv2.applyColorMap(zm.astype('u1'), cv2.COLORMAP_HSV)
-        for x,y,z in zip(xm,ym,zm):
-            color = tuple([int(c) for c in z[0]])
-            dots = cv2.circle(dots,(x,y), s, color, -1)
-        ret = img.copy()
-        cv2.addWeighted(dots, a, ret, 1-a, 0, ret)
-        return ret
-
     def detection_callback(self, msg):
-        rt = self._tfbuffer.lookup_transform(self._cloud_header.frame_id, msg.header.frame_id, msg.header.stamp)
-
-        euler = tft.quaternion_matrix([rt.transform.rotation.x, rt.transform.rotation.y, rt.transform.rotation.z, rt.transform.rotation.w])
-        xyz = (self._cloud_data.xyz - [rt.transform.translation.x, rt.transform.translation.y, rt.transform.translation.z]).dot(euler[:3,:3])
-        
-        zloc = xyz[:,2]
-        uvw = np.reshape(self._caminfo_latest.K, (3,4)).dot(np.insert(xyz, 3, values=1, axis=1))
-        xloc = uvw[0,:] / uvw[2,:]
-        yloc = uvw[1,:] / uvw[2,:]
-
-        # TODO: For debugging
-        img = self._bridge.imgmsg_to_cv2(msg)
-        img = self.scatter(img, [xloc, yloc, zloc])
-        cv2.namedWindow("Projection")
-        cv2.imshow('Projection', img)
-        cv2.waitKey(1)
+        new_detects = self._projector.receive_detections(msg)
+        self._obj_pub.publish(new_detects)
 
 if __name__ == "__main__":
     rospy.init_node("lidar_projector")

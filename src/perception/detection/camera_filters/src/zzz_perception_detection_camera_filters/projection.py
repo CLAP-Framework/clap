@@ -3,11 +3,17 @@ Inverse Perspective Mapping
 Credit to `write_ipm_yml.py` by minghan
 '''
 
-import cv2
-import numpy as np
 import os
-
+import cv2
+import pcl
+import numpy as np
 import scipy.spatial.transform as sst
+
+import rospy
+import tf
+import tf2_ros as tf2
+from zzz_perception_msgs.msg import DetectionBox2DArray, DetectionBox, DetectionBoxArray
+from zzz_common.params import IntrinsicListener
 
 class InversePerspectiveMapping():
     '''
@@ -273,3 +279,95 @@ class InversePerspectiveMapping():
         perspective_transform = self.M_img2bev
         bev = cv2.warpPerspective(img, perspective_transform, (self.u_bev_width, self.v_bev_height))
         return bev
+
+class LidarExtrinsicProjection:
+    '''
+    This class project the points from lidar into image and then extract the lidar cluster
+    from image based on criteria.
+    '''
+    def __init__(self, criterion="closest", params=None):
+        '''
+        :param criterion: the strategy to choose cluster. `closest`: select closest points and cluster based on mutual distance threshold.
+        :type criterion: str
+        :param params: parameters for the selected criterion
+        :type params: tuple
+        '''
+        self._criterion = criterion
+        self._params = params
+        if not self._params: # default params
+            if criterion == "closest":
+                self._params = (1, 1) # mutual distance threshold, discard point threshold at distance
+
+        self._tfbuffer = tf2.Buffer()
+        self._tflistener = tf2.TransformListener(self._tfbuffer)
+        self._intri_buffer = IntrinsicListener()
+        self._cloud_data = None # transformed cloud array
+        self._cloud_frame = None # point cloud frame
+        
+    def receive_point_cloud(self, cloud_msg):
+        self._cloud_frame = cloud_msg.header.frame_id
+        self._cloud_data = pcl.PointCloud(cloud_msg)
+
+        self._tfcloud = pcl.PointCloud(cloud_msg)
+
+    def receive_detections(self, detections):
+        if self._criterion == "closest":
+            return self._process_from_closest(detections)
+        return None
+
+    def _process_from_closest(self, detections):
+        # Fetch parameters
+        mutual_dist_thres, close_zthres = self._params
+
+        # Fetch extrinsics
+        if not self._cloud_frame:
+            return None # not yet initialized
+
+        assert type(detections) == DetectionBox2DArray
+        image_frame = detections.header.frame_id
+
+        try:
+            rt = self._tfbuffer.lookup_transform(self._cloud_frame, image_frame, detections.header.stamp)
+            intri = self._intri_buffer.lookupCameraInfo(image_frame)
+        except tf2.LookupException as e:
+            rospy.logwarn("TF lookup error: %s", str(e))
+            return None
+
+        # Project lidar to cam frame
+        R = tf.transformations.quaternion_matrix([rt.transform.rotation.x, rt.transform.rotation.y, rt.transform.rotation.z, rt.transform.rotation.w])[:3,:3]
+        T = np.array([rt.transform.translation.x, rt.transform.translation.y, rt.transform.translation.z]).reshape(3, 1)
+        cloud_transformed = R.dot(self._cloud_data.xyz.T) + T
+
+        K = np.reshape(intri.K, (3,3))
+        zloc = cloud_transformed[2,:]
+        proj = K.dot(cloud_transformed) # FIXME: distortion parameters are currently ignored
+        xloc = proj[0,:] / proj[2,:]
+        yloc = proj[1,:] / proj[2,:]
+
+        # Calculate points for each detection
+        # FIXME: rotation of the detection box are not considered
+        dist_list = np.linalg.norm(cloud_transformed, axis=0)
+        result = DetectionBoxArray()
+        result.header.frame_id = self._cloud_frame
+        result.header.stamp = detections.header.stamp
+        for det in detections.detections:
+            mask_x = np.abs(xloc - det.bbox.pose.x) <= det.bbox.dimension.length_x/2
+            mask_y = np.abs(yloc - det.bbox.pose.y) <= det.bbox.dimension.length_y/2
+            mask = mask_x & mask_y & (zloc > close_zthres)
+            
+            closest_index = np.argmin(dist_list[mask])
+            valid_indices = np.abs(dist_list[mask] - dist_list[mask][closest_index]) < mutual_dist_thres
+            valid_points = self._cloud_data.xyz[mask][valid_indices]
+
+            trans_det = DetectionBox()
+            trans_det.source_cloud = pcl.create_xyz(valid_points).to_msg()
+            trans_det.source_img = det.source_img
+            trans_det.source_frame = image_frame
+            center_x, center_y, center_z = np.mean(valid_points, axis=0)
+            trans_det.bbox.pose.pose.position.x = center_x
+            trans_det.bbox.pose.pose.position.y = center_y
+            trans_det.bbox.pose.pose.position.z = center_z
+
+            result.detections.append(trans_det)
+
+        return result

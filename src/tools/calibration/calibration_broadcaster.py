@@ -93,7 +93,7 @@ from geometry_msgs.msg import TransformStamped
 
 ############## NOTE: Change you settings here ###############
 # TODO: Move this script into a node and these should be ros parameters
-calib_file = "redmkz_demo.calib.json" # calibration file location
+calib_file = "config/redmkz_demo.calib.json" # calibration file location
 caminfo_topic = "/intri_static" # this topic is used to contain aggregated intrinsics of camera, its behavior is like '/tf'
 pub_rate = 5 # frequency of publishing calibration data, unit is Hz
 #############################################################
