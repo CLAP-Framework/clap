@@ -32,7 +32,7 @@ class MapProvider(object):
             reference_path_topic = "reference_path" # /zzz/navigation/reference_path
         )
         self._map_trigger = threading.Event()
-        self._reference_path_trigger = threading.Event()
+        self._reference_path_trigger = 0
 
         self._map_instance = LocalMap()
         if os.path.exists(params.map_file):
@@ -45,24 +45,38 @@ class MapProvider(object):
         self._local_map_publisher = rospy.Publisher(params.map_output_topic, Map, queue_size=1)
 
     def load_map_callback(self, map):
+        print("++++++ setup_hdmap enter")
         if self._map_instance.setup_hdmap(
             content=map.content, mtype=MAP_TYPES[map.map_type]):
+            print("++++++ load_map_callback _map_trigger.set")
             self._map_trigger.set()
         rospy.loginfo("[%s] Map loaded" % __module_name__)
         
     def reference_callback(self, msg):
+        print("+++++ reference_callback enter wait ")
         self._map_trigger.wait()
+        print("+++++ reference_callback  wait done ")
         if self._map_instance.setup_reference_lane_list(msg):
-            self._reference_path_trigger.set()
+            print("########## reference_callback set")
+            self._reference_path_trigger = 1
+        else:
+            print("*********self._map_instance.setup_reference_lane_list(msg) - False")
         rospy.loginfo("[%s] Received reference path" % __module_name__)
 
     def pose_callback(self, msg):
+        print("+++++++++++ pose_callback enter wait ##############", msg.state.pose.pose.position.x, msg.state.pose.pose.position.y)
         # Note: Here we actually assume that pose is updating at highest frequency
-        self._reference_path_trigger.wait()
+        #self._reference_path_trigger.wait()
+        #jxy: this is where the problem lies. Waiting flnally resulted in time delay!
+        print("_reference_path_trigger",self._reference_path_trigger)
+        if self._reference_path_trigger:
+            print("----------- pose_callback enter wait done ##############")
 
-        new_static_map = self._map_instance.receive_new_pose(msg.state.pose.pose.position.x, msg.state.pose.pose.position.y)
-        if new_static_map is not None:
-            self._local_map_publisher.publish(new_static_map)
+            new_static_map = self._map_instance.receive_new_pose(msg.state.pose.pose.position.x, msg.state.pose.pose.position.y)
+            print("----------- return static map ##############")
+            if new_static_map is not None:
+                print("---------------publish static map\n\n\n\n\n\n\n\n")
+                self._local_map_publisher.publish(new_static_map)
 
 if __name__ == "__main__":
     rospy.init_node("map_provider", log_level=rospy.INFO)

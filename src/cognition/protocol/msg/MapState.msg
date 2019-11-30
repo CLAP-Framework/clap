@@ -1,4 +1,4 @@
-# This message represents a homogeneous representation of dynamic map
+# This message represents a decision_oriented specific representation of dynamic map
 
 Header header
 

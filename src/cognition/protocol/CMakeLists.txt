@@ -13,6 +13,7 @@ add_message_files(DIRECTORY msg FILES
     MultiLaneMapState.msg
     MapState.msg
     RoadObstacle.msg
+    DrivingSpace.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs geometry_msgs zzz_perception_msgs zzz_navigation_msgs zzz_driver_msgs)

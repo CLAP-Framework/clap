@@ -31,6 +31,12 @@ uint8 SHAPE_POLYGON = 1
 
 # Representation of the object if it's represented by polygon
 geometry_msgs/Polygon shape
+
+# bbox, refer to BoundingBox in zzz_perception_msgs
+
+zzz_perception_msgs/DimensionWithCovariance dimension
+#uint8 dimension
+
 # Null uncertainty of Inf uncertainty means that the shape is not actually generated
 float32[] shape_uncertainty
 

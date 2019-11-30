@@ -10,6 +10,7 @@ float32 speed_limit
 
 # Length of the lane. Provided for easy computation
 float32 length
+float32 width
 
 # Whether this lane allow two way traffic
 # This can be true when the road is too narrow or in the center turning lane
