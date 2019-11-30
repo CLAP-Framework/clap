@@ -7,6 +7,8 @@ find_package(catkin REQUIRED genmsg std_msgs # essential dependency
 # catkin_python_setup()
 
 add_message_files(DIRECTORY msg FILES
+    DiagnosticInfo.msg
+    ModuleBeat.msg
     ModuleStatus.msg
 )
 

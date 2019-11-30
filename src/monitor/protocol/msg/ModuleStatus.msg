@@ -1,4 +1,4 @@
-# This message is used to report module status
+# This message is used to report module status. This message is only reported when changes happen.
 
 Header header
 
@@ -13,4 +13,4 @@ int8 module_status
 int8 STATUS_DISABLED = 0
 int8 STATUS_ENABLED = 1
 int8 STATUS_FINISHED = 2
-int8 STATUS_CRASHED = 2
+int8 STATUS_CRASHED = -1

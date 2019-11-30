@@ -83,7 +83,7 @@ cpdef dist_from_point_to_polyline2d(float x0, float y0, np.ndarray line, bint re
         dist_next, dist_next_head, dist_next_tail = dist_from_point_to_line2d(x0, y0,
             line[0,0], line[0,1], line[1,0], line[1,1])
         if dist_next_head < 0: # case 1
-            dist_closest = dist_line[closest_idx]
+            dist_closest = dist_line[closest_idx] # TODO: we don't have sign here
         else: # case 2
             dist_closest = dist_next
             closest_type = 1
@@ -91,7 +91,7 @@ cpdef dist_from_point_to_polyline2d(float x0, float y0, np.ndarray line, bint re
         dist_previous, dist_previous_head, dist_previous_tail = dist_from_point_to_line2d(x0, y0,
             line[length-2, 0], line[length-2, 1], line[length-1, 0], line[length-1, 1])
         if dist_previous_tail < 0: # case 3
-            dist_closest = dist_line[closest_idx]
+            dist_closest = dist_line[closest_idx] # TODO: we don't have sign here
         else: # case 4
             dist_closest = dist_previous
             closest_type = -1

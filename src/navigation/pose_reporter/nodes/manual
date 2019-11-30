@@ -48,9 +48,6 @@ class Node(object):
                 self._gnss_subscriber, 5, 0.1)
             self._gnss_synchronizer.registerCallback(self.gnss_callback)
 
-    def spin_step(self):
-        self._tfreporter.sendTransform(self.create_map_odom_transform())
-
     def gnss_callback(self, gnss, odom):
         map_proj = utm.from_latlon(self._map_origin[0], self._map_origin[1])
         gnss_proj = utm.from_latlon(gnss.longitude, gnss.latitude)
@@ -113,7 +110,4 @@ class Node(object):
 if __name__ == "__main__":
     rospy.init_node("pose_reporter", log_level=rospy.DEBUG)
     node = Node()
-    rate = rospy.Rate(2)
-    while not rospy.is_shutdown():
-        node.spin_step()
-        rate.sleep()
+    rospy.spin()

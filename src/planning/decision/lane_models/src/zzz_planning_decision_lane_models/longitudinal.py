@@ -127,10 +127,11 @@ class IDM(object):
         
         mmap_y = neighbor_lane.front_vehicles[0].ffstate.d
 
-        ego_idx = ego_lane.map_lane.index
-        neighbor_idx = neighbor_lane.map_lane.index
+        ego_idx = int(round(ego_lane.map_lane.index))
+        neighbor_idx = int(round(neighbor_lane.map_lane.index))
 
         if ((neighbor_idx-mmap_y)*(ego_idx-mmap_y)) < 0:
+            # rospy.logdebug("cut in judgement: ego_lane:%d, neighbor_lane:%d, mmap_y:%f",ego_idx,neighbor_idx,mmap_y)
             return True
 
         return False

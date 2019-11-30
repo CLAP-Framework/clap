@@ -8,5 +8,6 @@ catkin_python_setup()
 
 catkin_install_python(PROGRAMS
   nodes/nearest_locator
+  nodes/put_buffer
   nodes/driving_space
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
