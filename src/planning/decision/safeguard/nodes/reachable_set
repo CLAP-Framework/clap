@@ -32,18 +32,18 @@ class SafeguardNode(object):
 
     def decision_trajectory_callback(self, decision):
         decision_msg = self.check_trajectory(decision)
-        rviz_decision_msg=decision_msg.trajectory  #FIXME(Nanshan)
+        # rviz_decision_msg=decision_msg.trajectory  #FIXME(Nanshan)
         self._safeguard_trajectory_publisher.publish(decision_msg)
-        self._rviz_safeguard_trajectory_publisher.publish(rviz_decision_msg)  #FIXME(Nanshan)
+        # self._rviz_safeguard_trajectory_publisher.publish(rviz_decision_msg)  #FIXME(Nanshan)
     def check_trajectory(self, decision):
         #safeguard_triggered, safespeed = self._safeguard_instance.check_trajectory(decision.trajectory, decision.desired_speed)
-        safeguard_triggered, safespeed, safetrajectory = self._safeguard_instance.check_trajectory(decision.trajectory, decision.desired_speed)
+        # safeguard_triggered, safespeed, safetrajectory = self._safeguard_instance.check_trajectory(decision.trajectory, decision.desired_speed)
 
-        if safeguard_triggered:
-            rospy.loginfo("Safeguarded triggered")
+        # if safeguard_triggered:
+        #     rospy.loginfo("Safeguarded triggered")
         msg = decision
-        msg.trajectory = safetrajectory.trajectory#decision.trajectory
-        msg.desired_speed = safespeed
+        # msg.trajectory = safetrajectory.trajectory#decision.trajectory
+        # msg.desired_speed = safespeed
 
         return msg
 

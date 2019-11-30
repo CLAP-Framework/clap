@@ -83,12 +83,12 @@ class PathBuffer:
                 rospy.logdebug("removed waypoint: %s, remaining count: %d", str(removed_point), len(reference_path))
 
         # Current reference path is too short, require a new reference path
-        if len(reference_path) < required_reference_path_length and not self._rerouting_sent:
-            if not self._rerouting_trigger:
-                self._rerouting_trigger()
-                self._rerouting_sent = True
-        else:
-            self._rerouting_sent = False # reset flag
+        # if len(reference_path) < required_reference_path_length and not self._rerouting_sent:
+        #     if not self._rerouting_trigger:
+        #         self._rerouting_trigger()
+        #         self._rerouting_sent = True
+        # else:
+        #     self._rerouting_sent = False # reset flag
 
         # Choose points from reference path to buffer
         while reference_path and len(self._reference_path_segment) < self._buffer_size:

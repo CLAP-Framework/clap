@@ -219,7 +219,7 @@ class LocalMap(object):
 
         lane_wrapped = Lane()
         lane_wrapped.index = lane.getIndex()
-        lane_wrapped.width = lane.getWidth()
+        # lane_wrapped.width = lane.getWidth()
         last_x = last_y = last_s = None
         for wp in lane.getShape():
             point = LanePoint()
