@@ -1,0 +1,155 @@
+#!/usr/bin/env python
+'''
+This scripts convert raw ROSbag and Video into one bag with specified time span.
+'''
+
+import time, sys, os, argparse
+import os.path as osp
+from datetime import datetime, timedelta
+from tqdm import tqdm
+import json
+
+import cv2
+import rosbag, rospy
+from sensor_msgs.msg import Image
+from geometry_msgs.msg import TransformStamped
+from tf2_msgs.msg import TFMessage
+from cv_bridge import CvBridge
+
+def parse_video_timestamp(timestamp_file):
+    timelist = []
+
+    with open(timestamp_file, 'r') as timestamp:
+        # Judging the timestamp type
+        unconverted_time = False
+        test_line = timestamp.readline().decode().rstrip()
+        if ':' in test_line:
+            unconverted_time = True
+            with open(osp.join(osp.dirname(timestamp_file), 'start_time.txt'), 'r') as f:
+                startlist = f.readlines()
+            if 'front_60' in timestamp_file:
+                start_timestamp = int(startlist[0][14:])
+            elif 'front_30' in timestamp_file:
+                raise ValueError('Not supported')
+            else:
+                raise ValueError('Not supported')
+
+        # Load timestamps into a list
+        timestamp.seek(0, 0)
+        for line in timestamp.readlines():
+            seq, time = line.rstrip().split(',')
+            if int(seq) == 0: continue
+            if unconverted_time:
+                dtime = datetime.strptime(time, "%H:%M:%S.%f")
+                dtime = timedelta(hours=dtime.hour, minutes=dtime.minute, seconds=dtime.second, milliseconds=dtime.microsecond/1000)
+                mstime = int(dtime.total_seconds()*1000) + start_timestamp
+            else:
+                mstime = int(time)
+            timelist.append(mstime / 1000.0)
+    
+    return timelist
+
+def embed_video_into_bag(bag, video_file, video_topic, video_frame, start_time=None, end_time=None):
+
+    counter = 0
+    cb = CvBridge()
+    timestamps = parse_video_timestamp(video_file[:-3] + "txt")
+
+    video = cv2.VideoCapture(video_file)
+    if not video.isOpened():
+        raise RuntimeError("Cannot open video")
+
+    if start_time:
+        for idx, t in enumerate(timestamps):
+            if t > start_time:
+                video.set(cv2.CAP_PROP_POS_FRAMES, idx)
+                counter = idx
+                break
+
+    with tqdm(desc="Write Video", total=(start_time and end_time and end_time-start_time), unit=" seconds", dynamic_ncols=True) as t:
+        while True:
+            status, image = video.read()
+            if not status:
+                break
+            if end_time and timestamps[counter] > end_time:
+                break
+
+            stamp = rospy.Time.from_sec(timestamps[counter])
+            image = cb.cv2_to_imgmsg(image, encoding='bgr8')
+            image.header.stamp = stamp
+            image.header.frame_id = video_frame
+            bag.write(video_topic, image, stamp)
+
+            counter += 1
+            t.update(timestamps[counter] - start_time - t.n)
+
+def generate_tf_messages(calib_params, time):
+    msg = TFMessage()
+    for item in calib_params['extrinsics']:
+        transform = TransformStamped()
+        transform.header.stamp = time
+        transform.header.frame_id = item['frame_id']
+        transform.child_frame_id = item['child_frame_id']
+        transform.transform.translation.x = item['txyz'][0]
+        transform.transform.translation.y = item['txyz'][1]
+        transform.transform.translation.z = item['txyz'][2]
+        transform.transform.rotation.x = item['qxyzw'][0]
+        transform.transform.rotation.y = item['qxyzw'][1]
+        transform.transform.rotation.z = item['qxyzw'][2]
+        transform.transform.rotation.w = item['qxyzw'][3]
+
+        msg.transforms.append(transform)
+    return msg
+
+def main():
+    parser = argparse.ArgumentParser()
+    # TODO: add filter topic functionality
+    parser.add_argument('dir', default=os.getcwd())
+    parser.add_argument('-st', "--start-times", type=float, nargs='*', dest='tstart')
+    parser.add_argument('-et', "--end-times", type=float, nargs='*', dest='tend')
+    parser.add_argument('-c', "--calibration", type=str, help="The path of calibration file. If provided, the /tf topic in the file will be override")
+    args = parser.parse_args()
+
+    print("Loading rosbag ...")
+    start_times = args.tstart or [None]
+    end_times = args.tend or [None]
+
+    if args.calibration:
+        with open(args.calibration, 'r') as fin:
+            calib_json = json.load(fin)
+
+    with rosbag.Bag(osp.join(args.dir, "all_1.bag"), "r") as bag_in:
+        for tstart, tend in zip(start_times, end_times):
+            fileout = "segment-%.2f-%.2f.bag" % (tstart or float('nan'), tend or float('nan'))
+            bag_out = rosbag.Bag(osp.join(args.dir, fileout), "w")
+
+            with tqdm(desc="Write ROS Message", total=(tstart and tend and tend-tstart), unit=" seconds", dynamic_ncols=True) as t:
+                for topic, msg, time in bag_in.read_messages(
+                    start_time=(tstart and rospy.Time.from_sec(tstart)),
+                    end_time=(tend and rospy.Time.from_sec(tend))
+                ):
+                    if args.calibration and topic == "/tf":
+                        continue
+                    bag_out.write(topic, msg, time)
+                    t.update(time.to_sec() - (tstart or 0) - t.n)
+
+                # Write custom tf messages
+                if args.calibration:
+                    tf_interval = 0.1
+                    tf_time = int((tstart or bag_in.get_start_time()) / tf_interval) * tf_interval
+                    tf_endt = int((tend or bag_in.get_end_time()) / tf_interval + 1) * tf_interval
+                    while tf_time < tf_endt:
+                        msg_time = rospy.Time.from_sec(tf_time)
+                        msg = generate_tf_messages(calib_json, msg_time)
+                        bag_out.write("/tf", msg, msg_time)
+                        tf_time += tf_interval
+
+            embed_video_into_bag(bag_out, osp.join(args.dir, "front_60_1.mkv"), "/video_stream/front_60/image_raw", "front_60", tstart, tend)
+            embed_video_into_bag(bag_out, osp.join(args.dir, "front_30_1.mkv"), "/video_stream/front_30/image_raw", "front_30", tstart, tend)
+            embed_video_into_bag(bag_out, osp.join(args.dir, "pose_1.mkv"), "/video_stream/pose/image_raw", "pose", tstart, tend)
+            embed_video_into_bag(bag_out, osp.join(args.dir, "rear_1.mkv"), "/video_stream/rear/image_raw", "rear", tstart, tend)
+            bag_out.close()
+
+if __name__ == "__main__":
+    main()
+
