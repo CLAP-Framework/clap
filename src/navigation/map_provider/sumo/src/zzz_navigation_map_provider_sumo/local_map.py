@@ -58,7 +58,7 @@ class LocalMap(object):
         if mtype == 'unknown':
             rospy.logerr("Cannot load map with unknown type")
         elif mtype == 'opendrive':
-            print("########### odr file {} -> {}".format(file, converted_file))
+            rospy.logdebug("########### odr file {} -> {}".format(file, converted_file))
             command = ['netconvert', "--opendrive-files", file,
                 "--opendrive.import-all-lanes", "true",
                 "--offset.disable-normalization", "true",
@@ -66,7 +66,6 @@ class LocalMap(object):
                 "-o", converted_file]
             command = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
             exitcode = command.wait()
-            print("########### convert done")
             if exitcode != 0:
                 rospy.logerr("SUMO netconvert failed, (exit code: %d)" % exitcode)
             else:
@@ -93,7 +92,6 @@ class LocalMap(object):
 
         self._reference_lane_list.clear()
         for wp in reference_path.poses:
-            print("@@@@@@@@@@ working")
             # TODO: Takes too much time for processing
             wp_map_x, wp_map_y = self.convert_to_map_XY(wp.pose.position.x, wp.pose.position.y)
 
@@ -122,15 +120,15 @@ class LocalMap(object):
     def receive_new_pose(self, x, y):
         self._ego_vehicle_x = x
         self._ego_vehicle_y = y
-        print("                  wait: should update static map?")
-        #if not self.should_update_static_map():
+        #print("                  wait: should update static map?")
+        if self.should_update_static_map():
         #    print("                  should not update static map")
         #else:
-        print("                  we will always update static map?")
-        tick1 = time.time()
-        self.update_static_map()
-        tick2 = time.time()
-        print("running time of static_local_map: ", tick2-tick1)
+        #print("                  we will always update static map?")
+            tick1 = time.time()
+            self.update_static_map()
+            tick2 = time.time()
+        #print("running time of static_local_map: ", tick2-tick1)
         return self.static_local_map
 
         return None
@@ -184,8 +182,8 @@ class LocalMap(object):
         rospy.loginfo("Updated static map info: lane_number = %d, in_junction = %d, current_edge_id = %s, target_lane_index = %s",
             len(self.static_local_map.lanes), int(self.static_local_map.in_junction),
             self._current_edge_id, self.static_local_map.target_lane_index)
-        print("Check update: ego_map_location = (%f, %f), ego_location = (%f, %f)",
-            map_x, map_y, self._ego_vehicle_x, self._ego_vehicle_y)
+        #print("Check update: ego_map_location = (%f, %f), ego_location = (%f, %f)",
+        #    map_x, map_y, self._ego_vehicle_x, self._ego_vehicle_y)
 
     def update_lane_list(self):
         '''
@@ -194,7 +192,7 @@ class LocalMap(object):
         
         map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
         lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self.lane_search_radius, includeJunctions=False)
-        print("--------------",map_x,map_y)
+        #print("--------------",map_x,map_y)
         if len(lanes) > 0:
             self.static_local_map.in_junction = False
 
