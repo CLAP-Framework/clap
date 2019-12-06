@@ -26,6 +26,7 @@ class PathBuffer:
 
         self._rerouting_trigger = None
         self._rerouting_sent = False
+        self._debug = True
 
     def set_rerouting_trigger(self, trigger):
         self._rerouting_trigger = trigger
@@ -42,6 +43,8 @@ class PathBuffer:
     def receive_reference_path(self, reference_path):
         # TODO: Define a custom reference_path?
         assert type(reference_path) == Path
+        if self._debug:
+            print("#### PathBuffer msg frame - {}".format(reference_path.header.frame_id))
 
         # Here reference path is appended reversely in order to easy move points in a FIFO way
         self._reference_path_buffer = [(waypoint.pose.position.x, waypoint.pose.position.y) 
