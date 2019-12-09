@@ -7,17 +7,23 @@
     <arg name="ego_spawn" default="True"/> <!-- By default we use script to spawn vehicles -->
 <<<<<<< HEAD
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     <arg name="ego_spawn_point" default="-27,135.5 ,0,0,0,0"/> <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
 =======
 <<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
     <arg name="ego_spawn_point" default="-60.5,135.5 ,0,0,0,0"/> <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
 =======
     <arg name="ego_spawn_point" default="45,-133 ,2.5,0,0,0"/> <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
 >>>>>>> zwt
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes
 =======
     <arg name="ego_spawn_point" default="-60.5,135.5 ,0,0,0,0"/> <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
 >>>>>>> zwt
+=======
+>>>>>>> Stashed changes
 
     <rosparam file="$(arg carla_settings_file)" command="load" />
 
@@ -34,22 +40,31 @@
     </node>
     <node pkg="carla_ros_bridge" name="carla_ros_bridge" type="bridge.py" output="screen"/>
 <<<<<<< HEAD
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 =======
 >>>>>>> zwt
+=======
+>>>>>>> Stashed changes
     <!-- <node pkg="carla_waypoint_publisher" type="carla_waypoint_publisher.py" name="carla_waypoint_publisher" output="screen">  -->
          <param name="role_name" value="$(arg ego_actor)" /> 
     
     <node pkg="zzz_driver_simulators_carla_adapter" type="intersection_env" name="intersection_env" output="screen"> 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
 =======
     <!--<node pkg="carla_waypoint_publisher" type="carla_waypoint_publisher.py" name="carla_waypoint_publisher" output="screen">  -->
          <param name="role_name" value="$(arg ego_actor)" /> 
     
     <node pkg="zzz_driver_simulators_carla_adapter" type="intersection_env" name="intersection_env" output="screen">
 >>>>>>> zwt
+<<<<<<< Updated upstream
 =======
 >>>>>>> zwt
+=======
+>>>>>>> Stashed changes
     </node>
 
 </launch>
