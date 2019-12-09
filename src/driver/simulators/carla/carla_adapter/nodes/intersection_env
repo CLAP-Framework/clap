@@ -351,6 +351,10 @@ if __name__ == "__main__":
     change_the_world(carla_world)
     
     # Generate Reference Path
+=======
+<<<<<<< HEAD
+
+>>>>>>> Stashed changes
     # setgoal.x = 90
     # setgoal.y = -171
     # setgoal.z = 2.1
@@ -359,6 +363,7 @@ if __name__ == "__main__":
     # Generate surrounding vehicles
     generate_traffic(carla_world ,0)  #0 for fix point, 1 for random
 
+<<<<<<< Updated upstream
     # Publish and Subscribe messages
     starting_time = rospy.Time.now().to_sec()
     _local_map_publisher = rospy.Publisher("/zzz/navigation/local_static_map", Map, queue_size=1)
