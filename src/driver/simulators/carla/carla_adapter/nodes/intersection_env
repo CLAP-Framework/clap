@@ -261,7 +261,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
 
         #spawn one vehicle
         
-        for num in range(30,120):
+        for num in range(10,130):
             if num%10 == 0:
                 spawn_point = carla_world.get_map().get_spawn_points()[0]
                 spawn_point.location.x = -5.5
@@ -272,7 +272,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
                 spawn_point.rotation.roll = 0
                 spawn_points.append(spawn_point)
 
-        for num in range(10,50):
+        for num in range(-10,50):
             if num%10 == 0:
                 spawn_point = carla_world.get_map().get_spawn_points()[0]
                 spawn_point.location.x = num
@@ -284,7 +284,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
                 spawn_points.append(spawn_point)
 
 
-        for num in range(150,190):
+        for num in range(140,200):
             if num%10 == 0:
                 spawn_point = carla_world.get_map().get_spawn_points()[0]
                 spawn_point.location.x = 2
@@ -305,7 +305,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
             if vehicle is not None:
                 actor_list.append(vehicle)
                 vehicle.set_autopilot()                                                 #autopilot
-                # vehicle.apply_control(carla.VehicleControl(throttle=0.3, steer=0.0))  #given control command
+                # vehicle.apply_control(carla.VehicleControl(throttle=3.0, steer=0.0))  #given control command
                 print('fixed spawned %r at %s' % (vehicle.type_id, spawn_point.location))
 
 
@@ -351,19 +351,19 @@ if __name__ == "__main__":
     change_the_world(carla_world)
     
     # Generate Reference Path
-=======
-<<<<<<< HEAD
+    setgoal = carla_world.get_map().get_spawn_points()[0]
+    setgoal.location.x = 83.7
+    setgoal.location.y = 4.2
+    setgoal.location.z = 0
+    setgoal.rotation.pitch = 0
+    setgoal.rotation.yaw = 0 
+    setgoal.rotation.roll = 0
 
->>>>>>> Stashed changes
-    # setgoal.x = 90
-    # setgoal.y = -171
-    # setgoal.z = 2.1
-    ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world)
+    ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
 
     # Generate surrounding vehicles
     generate_traffic(carla_world ,0)  #0 for fix point, 1 for random
 
-<<<<<<< Updated upstream
     # Publish and Subscribe messages
     starting_time = rospy.Time.now().to_sec()
     _local_map_publisher = rospy.Publisher("/zzz/navigation/local_static_map", Map, queue_size=1)

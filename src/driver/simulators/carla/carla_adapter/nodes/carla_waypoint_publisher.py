@@ -42,7 +42,7 @@ class CarlaToRosWaypointConverter(object):
     """
     WAYPOINT_DISTANCE = 2.0
 
-    def __init__(self, carla_world):
+    def __init__(self, carla_world, setgoal):
         self.world = carla_world
         self.map = carla_world.get_map()
         self.ego_vehicle = None
@@ -52,16 +52,14 @@ class CarlaToRosWaypointConverter(object):
 
         # set initial goal
 
-        self.goal = self.world.get_map().get_spawn_points()[0]
+        # self.goal = self.world.get_map().get_spawn_points()[0]
+        self.goal = setgoal;
         
-        # self.goal.location.x = setgoal.x
-        # self.goal.location.y = setgoal.y
-        # self.goal.location.z = setgoal.z
-        self.goal.location.x = 2
-        self.goal.location.y = 73
-        self.goal.location.z = 0
-        ##
-        
+        # self.goal.location.x = 2
+        # self.goal.location.y = 73
+        # self.goal.location.z = 0
+
+
         self.current_route = None
         self.goal_subscriber = rospy.Subscriber(
             "/carla/{}/goal".format(self.role_name), PoseStamped, self.on_goal)
