@@ -7,16 +7,9 @@ import numpy as np
 from zzz_navigation_msgs.msg import MapString, Map, Lane, LanePoint
 from nav_msgs.msg import Path
 from zzz_driver_msgs.msg import RigidBodyStateStamped
-<<<<<<< HEAD
 #from carla_waypoint_publisher import CarlaReferecePathGenerator
 from carla_waypoint_publisher import CarlaToRosWaypointConverter
-<<<<<<< Updated upstream
 from carla import Transform, Location, Rotation
-=======
-=======
-from carla_reference_path_generator import CarlaReferecePathGenerator
->>>>>>> zwt
->>>>>>> Stashed changes
 
 import carla
 import random
@@ -149,14 +142,10 @@ def build_multilane_map(ego_x,ego_y,target_lane_index):
 def build_reference_path(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane):
 
     current_route = ReferencePathGenerator.current_route
-<<<<<<< HEAD
     # print("----------------------------------------ReferencePathGenerator.current_route: %d", len(ReferencePathGenerator.current_route))
 
     if current_route is None:
 
-=======
-    if current_route is None:
->>>>>>> zwt
         goal_x = 90
         goal_y = -171
         ReferencePathGenerator.calculate_route(ego_x,-ego_y,goal_x,goal_y)
@@ -356,17 +345,12 @@ if __name__ == "__main__":
     carla_client.set_timeout(2)
     carla_world = carla_client.get_world()
     rospy.loginfo("Connected to Carla.")
-<<<<<<< Updated upstream
     actor_list = []
     
     # Change enviornment
     change_the_world(carla_world)
     
     # Generate Reference Path
-=======
-<<<<<<< HEAD
-
->>>>>>> Stashed changes
     # setgoal.x = 90
     # setgoal.y = -171
     # setgoal.z = 2.1
@@ -375,33 +359,14 @@ if __name__ == "__main__":
     # Generate surrounding vehicles
     generate_traffic(carla_world ,0)  #0 for fix point, 1 for random
 
-<<<<<<< Updated upstream
     # Publish and Subscribe messages
-=======
-
-=======
-    ReferencePathGenerator = CarlaReferecePathGenerator(carla_world)
->>>>>>> zwt
-    global published_exit_path
-    published_exit_path = False
-
->>>>>>> Stashed changes
     starting_time = rospy.Time.now().to_sec()
     _local_map_publisher = rospy.Publisher("/zzz/navigation/local_static_map", Map, queue_size=1)
     _reference_path_publisher = rospy.Publisher("/carla/ego_vehicle/waypoints", Path, queue_size=1, latch=True)
     _pose_subscriber = rospy.Subscriber("/zzz/navigation/ego_pose", RigidBodyStateStamped, pose_callback)
 
-<<<<<<< Updated upstream
     global published_exit_path
     published_exit_path = False
-=======
-    # generate surrounding vehicles
-<<<<<<< HEAD
-    # thread.start_new_thread(generate_traffic,(carla_world,5))
-=======
-    thread.start_new_thread(generate_traffic,(carla_world,5))
->>>>>>> zwt
->>>>>>> Stashed changes
 
     rate = rospy.Rate(20)
     while not rospy.is_shutdown():
