@@ -22,7 +22,7 @@ class Speed_Decision(object):
 
 
     def speed_update(self, trajectory, dynamic_map):
-        return 5
+        return 20
 
     def longitudinal_speed(self, target_lane_index, traffic_light = False):
 

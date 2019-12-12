@@ -305,8 +305,122 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
             if vehicle is not None:
                 actor_list.append(vehicle)
                 vehicle.set_autopilot()                                                 #autopilot
-                # vehicle.apply_control(carla.VehicleControl(throttle=3.0, steer=0.0))  #given control command
+                # vehicle.apply_control(carla.VehicleControl(throttle=3.0, steer=0.0))      #given control command
                 print('fixed spawned %r at %s' % (vehicle.type_id, spawn_point.location))
+
+def generate_pedestrians(carla_world,carla_client,if_random,delay = 0.05):
+    # generate pedestrians
+    blueprintsWalkers = carla_world.get_blueprint_library().filter("walker.*")
+    spawn_points = []
+
+    for num in range(10,140):
+        if num%15 == 0:
+            spawn_point = carla_world.get_map().get_spawn_points()[0]
+            spawn_point.location.x = -13
+            spawn_point.location.y = num
+            spawn_point.location.z = 0
+            spawn_point.rotation.pitch = 0
+            spawn_point.rotation.yaw = 90 
+            spawn_point.rotation.roll = 0
+            spawn_points.append(spawn_point)
+
+    for spawn_point in spawn_points:
+        player = carla_world.try_spawn_actor(random.choice(blueprintsWalkers),spawn_point)
+        player_control = carla.WalkerControl()
+        player_control.speed = 2
+        pedestrian_heading = 90
+        player_rotation = carla.Rotation(0,pedestrian_heading,0)
+        player_control.direction = player_rotation.get_forward_vector()
+        # player_control.direction.x = 1
+        # player_control.direction.y = 0
+        # player_control.direction.z = 0
+        if player is not None:
+            player.apply_control(player_control)   
+
+
+    spawn_points = []
+
+    for num in range(-10,50):
+        if num%10 == 0:
+            spawn_point = carla_world.get_map().get_spawn_points()[0]
+            spawn_point.location.x = num
+            spawn_point.location.y = 128
+            spawn_point.location.z = 0
+            spawn_point.rotation.pitch = 0
+            spawn_point.rotation.yaw = 180 
+            spawn_point.rotation.roll = 0
+            spawn_points.append(spawn_point)
+    for spawn_point in spawn_points:
+        player = carla_world.try_spawn_actor(random.choice(blueprintsWalkers),spawn_point)
+        player_control = carla.WalkerControl()
+        player_control.speed = 3
+        pedestrian_heading = 180
+        player_rotation = carla.Rotation(0,pedestrian_heading,0)
+        player_control.direction = player_rotation.get_forward_vector()
+        # player_control.direction.x = 1
+        # player_control.direction.y = 0
+        # player_control.direction.z = 0
+        if player is not None:
+            player.apply_control(player_control)  
+
+    # batch = []
+    # walkers_list = []
+
+    # for spawn_point in spawn_points:
+    #     walker_bp = random.choice(blueprintsWalkers)
+    #     batch.append(carla.command.SpawnActor(walker_bp, spawn_point))
+
+    # results = carla_client.apply_batch_sync(batch, True)
+    # for i in range(len(results)):
+    #     if results[i].error:
+    #         # logging.error(results[i].error)
+    #         a = 1    
+
+    #     else:
+    #         walkers_list.append({"id": results[i].actor_id})
+
+    # batch = []
+    # walkers_list = []
+    # walker_controller_bp = carla_world.get_blueprint_library().find('controller.ai.walker')
+    # for i in range(len(walkers_list)):
+    #     batch.append(carla.command.SpawnActor(walker_controller_bp, carla.Transform(), walkers_list[i]["id"]))
+    
+    # results = carla_client.apply_batch_sync(batch, True)
+    # print('results: %s' % len(results))
+
+    # for i in range(len(results)):
+    #     if results[i].error:
+    #         # logging.error(results[i].error)
+    #         a = 1    
+    #     else:
+    #         walkers_list[i]["con"] = results[i].actor_id
+    #         print('....................................set controller')
+
+    
+    # all_id = []
+    # for i in range(len(walkers_list)):
+    #     all_id.append(walkers_list[i]["con"])
+    #     all_id.append(walkers_list[i]["id"])
+    # all_actors = carla_world.get_actors(all_id)
+
+    # print('....................................all_actors')
+
+    
+    # # carla_world.wait_for_tick()  
+
+    # for i in range(0, len(all_actors), 2):
+    #     # start walker
+    #     all_actors[i].start()
+    #     # set walk to random point
+    #     all_actors[i].go_to_location(carla_world.get_random_location_from_navigation())
+    #     # random max speed
+    #     all_actors[i].set_max_speed(1 + random.random())    # max speed between 1 and 2 (default is 1.4 m/s)
+    #     print('....................................set walker speed')
+
+
+    
+
+
 
 
 def try_spawn_random_vehicle_at(transform,blueprints,carla_world):
@@ -363,6 +477,10 @@ if __name__ == "__main__":
 
     # Generate surrounding vehicles
     generate_traffic(carla_world ,0)  #0 for fix point, 1 for random
+
+    # Generate pedestrians
+    generate_pedestrians(carla_world,carla_client,0)
+
 
     # Publish and Subscribe messages
     starting_time = rospy.Time.now().to_sec()
