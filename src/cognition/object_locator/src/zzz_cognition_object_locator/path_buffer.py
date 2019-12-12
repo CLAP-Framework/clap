@@ -10,6 +10,8 @@ from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import LanePoint
 from zzz_common.geometry import dist_from_point_to_polyline2d
 from nav_msgs.msg import Path
+import copy
+from threading import Lock
 
 class PathBuffer:
     def __init__(self, buffer_size=200):
@@ -17,12 +19,19 @@ class PathBuffer:
 
         # Buffer for updating states
         self._static_map_buffer = None
+        self._static_map_lock = Lock()
+
         self._ego_vehicle_state_buffer = None
+        self._ego_vehicle_state_lock = Lock()
+
         self._reference_path_buffer = None
+        self._reference_path_lock = Lock()
+
         self._reference_path_segment = deque(maxlen=buffer_size)
         self._reference_path_changed = False # Use this flag to avoid race condition on self._reference_path_segment
 
         self._judge_lane_change_threshold = 3
+        self._reference_path = None
 
         self._rerouting_trigger = None
         self._rerouting_sent = False
@@ -32,34 +41,44 @@ class PathBuffer:
 
     def receive_static_map(self, map_input):
         assert type(map_input) == MapState
-        self._static_map_buffer = map_input
+        with self._static_map_lock:
+            self._static_map_buffer = map_input
         rospy.logdebug("Updating local dynamic map")
 
     def receive_ego_state(self, state):
         assert type(state) == RigidBodyStateStamped
-        self._ego_vehicle_state_buffer = state
+        with self._ego_vehicle_state_lock:
+            self._ego_vehicle_state_buffer = state
 
     def receive_reference_path(self, reference_path):
         # TODO: Define a custom reference_path?
         assert type(reference_path) == Path
 
         # Here reference path is appended reversely in order to easy move points in a FIFO way
-        self._reference_path_buffer = [(waypoint.pose.position.x, waypoint.pose.position.y) 
+        with self._reference_path_lock:
+            self._reference_path_buffer = [(waypoint.pose.position.x, waypoint.pose.position.y) 
                                         for waypoint in reversed(reference_path.poses)]
-        self._reference_path_changed = True
+            self._reference_path_changed = True
         rospy.loginfo("Received reference path, length:%d", len(reference_path.poses))
 
     def update(self, required_reference_path_length = 10, front_vehicle_avoidance_require_thres = 2):
         """
         Delete the passed point and add more point to the reference path
         """
-
         # Load states
-        if not self._reference_path_buffer or not self._ego_vehicle_state_buffer:
+        # if not self._reference_path_buffer or not self._ego_vehicle_state_buffer:
+        if not self._ego_vehicle_state_buffer:
             return None
+
         tstates = edict()
-        tstates.dynamic_map = self._static_map_buffer or default_msg(MapState)
-        tstates.ego_state = self._ego_vehicle_state_buffer.state
+        # clone dynamic_map
+        with self._static_map_lock:
+            tstates.dynamic_map = copy.deepcopy(self._static_map_buffer or default_msg(MapState)) 
+
+        # clone ego state
+        with self._ego_vehicle_state_lock:
+            tstates.ego_state = copy.deepcopy(self._ego_vehicle_state_buffer.state)
+        
         dynamic_map = tstates.dynamic_map # for easy access
         ego_state = tstates.ego_state # for easy access
 
@@ -67,20 +86,19 @@ class PathBuffer:
         if self._reference_path_changed:
             self._reference_path_segment.clear()
             self._reference_path_changed = False
-        tstates.reference_path = self._reference_path_buffer
-        reference_path = tstates.reference_path # for easy access
+        # tstates.reference_path = self._reference_path_buffer
+        # reference_path = tstates.reference_path # for easy access
 
-        # Remove passed waypoints
+        # Remove passed waypoints - dequeue
         if len(self._reference_path_segment) > 1:
             _, nearest_idx, _ = dist_from_point_to_polyline2d(
                 ego_state.pose.pose.position.x,
                 ego_state.pose.pose.position.y,
                 np.array(self._reference_path_segment)
             )
-
             for _ in range(nearest_idx):
                 removed_point = self._reference_path_segment.popleft()
-                rospy.logdebug("removed waypoint: %s, remaining count: %d", str(removed_point), len(reference_path))
+                rospy.logdebug("removed waypoint: %s, remaining count: %d", str(removed_point), len(self._reference_path_buffer))
 
         # Current reference path is too short, require a new reference path
         # if len(reference_path) < required_reference_path_length and not self._rerouting_sent:
@@ -90,11 +108,12 @@ class PathBuffer:
         # else:
         #     self._rerouting_sent = False # reset flag
 
-        # Choose points from reference path to buffer
-        while reference_path and len(self._reference_path_segment) < self._buffer_size:
-            wp = reference_path.pop() # notice that the points are inserted reversely
-            # self.lane_change_smoothen(wp) # TODO(zhcao): find some bugs in this function, also change this to a planning module
-            self._reference_path_segment.append(wp)
+        # Choose points from reference path to buffer - enqueue
+        with self._reference_path_lock:
+            while self._reference_path_buffer and len(self._reference_path_segment) < self._buffer_size:
+                wp = self._reference_path_buffer.pop() # notice that the points are inserted reversely
+                # self.lane_change_smoothen(wp) # TODO(zhcao): find some bugs in this function, also change this to a planning module
+                self._reference_path_segment.append(wp)
 
         # Put buffer into dynamic map
         for wp in self._reference_path_segment:
@@ -148,7 +167,6 @@ class PathBuffer:
         reference_path = np.array(self._reference_path_segment)
 
         for vehicle in tstates.dynamic_map.jmap.obstacles:
-
             dist_list = np.linalg.norm(reference_path - [
                     vehicle.state.pose.pose.position.x,
                     vehicle.state.pose.pose.position.y

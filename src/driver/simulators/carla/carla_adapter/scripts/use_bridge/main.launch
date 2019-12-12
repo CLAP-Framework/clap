@@ -1,10 +1,10 @@
 <launch>
-    <include file="/home/auto/ZZZ/zzz/config/launch/full_stack/perception.launch">
+    <include file="$(env ZZZ_ROOT)/zzz/config/launch/full_stack/perception.launch">
         <arg name="enable_camera" value="false"/>
         <arg name="enable_lidar" value="true"/>
     </include>
-    <include file="/home/auto/ZZZ/zzz/config/launch/full_stack/planning.launch">
+    <include file="$(env ZZZ_ROOT)/zzz/config/launch/full_stack/planning.launch">
         <arg name="objects_topic" value="/zzz/perception/objects_truth"/>
     </include>
-    <include file="/home/auto/ZZZ/zzz/src/driver/simulators/carla/carla_adapter/scripts/use_bridge/auxiliary.launch"/>
+    <include file="$(env ZZZ_ROOT)/zzz/src/driver/simulators/carla/carla_adapter/scripts/use_bridge/auxiliary.launch"/>
 </launch>

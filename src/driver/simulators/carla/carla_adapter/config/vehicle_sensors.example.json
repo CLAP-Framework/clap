@@ -33,7 +33,7 @@
             "id": "Lidar",
             "x": 0, "y": 0, "z": 2.40,
             "roll": 0.0, "pitch": 0.0, "yaw": -45.0,
-	        "range": 5000,
+            "range": 5000,
             "channels": 100,
             "points_per_second": 1000000,
             "upper_fov": 2.0,
