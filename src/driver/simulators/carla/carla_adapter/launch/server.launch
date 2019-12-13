@@ -11,21 +11,20 @@
 
     <group if="$(eval ego_spawn)">
         <node pkg="carla_ego_vehicle" type="carla_ego_vehicle.py" name="carla_ego_vehicle_$(arg ego_actor)" output="screen">
-        <param name="sensor_definition_file" value="$(arg vehicle_sensors_file)" />
-        <param name="vehicle_filter" value="vehicle.lincoln.mkz2017" />
-        <param name="spawn_point" value="$(arg ego_spawn_point)" />
-        <param name="role_name" value="$(arg ego_actor)" />
+            <param name="sensor_definition_file" value="$(arg vehicle_sensors_file)" />
+            <param name="vehicle_filter" value="vehicle.lincoln.mkz2017" />
+            <param name="spawn_point" value="$(arg ego_spawn_point)" />
+            <param name="role_name" value="$(arg ego_actor)" />
         </node>
     </group>
+    
     <node pkg="carla_infrastructure" type="carla_infrastructure.py" name="carla_infrastructure" output="screen">
-      <param name="infrastructure_sensor_definition_file" value="$(arg static_sensors_file)" />
+        <param name="infrastructure_sensor_definition_file" value="$(arg static_sensors_file)" />
     </node>
-
-    <node pkg="carla_ros_bridge" name="carla_ros_bridge" type="bridge.py" output="screen">
-    </node>
-
+    
+    <node pkg="carla_ros_bridge" name="carla_ros_bridge" type="bridge.py" output="screen"/>
 
     <node pkg="carla_waypoint_publisher" type="carla_waypoint_publisher.py" name="carla_waypoint_publisher" output="screen">
         <param name="role_name" value="$(arg ego_actor)" />
-    </node>
+    </node> 
 </launch>
