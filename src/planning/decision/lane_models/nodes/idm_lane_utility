@@ -3,10 +3,12 @@
 import rospy
 from zzz_common.params import parse_private_args
 from zzz_cognition_msgs.msg import MapState
+from zzz_navigation_msgs.msg import Map
 from zzz_planning_decision_lane_models.longitudinal import IDM
 from zzz_planning_decision_lane_models.lateral import LaneUtility
 from zzz_planning_decision_lane_models import MainDecision
 from zzz_planning_msgs.msg import DecisionTrajectory
+
 
 
 from nav_msgs.msg import Path  #FIXME(Nanshan)
@@ -16,6 +18,7 @@ class DecisionNode(object):
         params = parse_private_args(
             decision_trajectory_topic="decision_trajectory",
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
+            static_map_topic="/zzz/navigation/local_static_map",
             RVIZ_decision_trajectory_topic="decision_trajectory_path", 
             hz = 10,
         )
@@ -25,6 +28,7 @@ class DecisionNode(object):
         self._rate = rospy.Rate(params.hz)
 
         self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
+        self._static_map_subscriber = rospy.Subscriber(params.static_map_topic, Map, self._decision_instance.receive_static_map)
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
         self._rviz_decision_trajectory_publisher = rospy.Publisher(params.RVIZ_decision_trajectory_topic, Path, queue_size=1)
 
