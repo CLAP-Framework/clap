@@ -22,8 +22,9 @@ import weakref
 import matplotlib.pyplot as plt
 
 
-from gym import error, spaces, utils
+from gym import error, spaces, utils, core
 from gym.utils import seeding
+
 
 ##########################################
 

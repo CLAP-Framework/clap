@@ -493,7 +493,7 @@ if __name__ == "__main__":
 
     rate = rospy.Rate(20)
     while not rospy.is_shutdown():
-        generate_map(_local_map_publisher, _reference_path_publisher, ReferencePathGenerator, starting_time)
+        # generate_map(_local_map_publisher, _reference_path_publisher, ReferencePathGenerator, starting_time)
         rate.sleep()
 
     del ReferencePathGenerator
