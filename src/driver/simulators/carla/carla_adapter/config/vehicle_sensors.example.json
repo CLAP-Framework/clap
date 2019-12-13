@@ -8,7 +8,6 @@
             "width": 800, "height": 600, "fov":100
         },
 
-        
         {
             "type": "sensor.other.gnss",
             "id": "GPS",

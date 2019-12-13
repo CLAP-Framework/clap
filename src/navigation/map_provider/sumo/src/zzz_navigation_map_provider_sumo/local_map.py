@@ -32,7 +32,7 @@ class LocalMap(object):
 
         self._current_edge_id = None # road id string
         self._reference_lane_list = deque(maxlen=20000)
-        self.lane_search_radius = 4
+        self._lane_search_radius = 4
 
     def setup_hdmap(self, file=None, content=None, mtype=None):
         if not (file or content):
@@ -58,7 +58,6 @@ class LocalMap(object):
         if mtype == 'unknown':
             rospy.logerr("Cannot load map with unknown type")
         elif mtype == 'opendrive':
-            rospy.logdebug("odr file {} -> {}".format(file, converted_file))
             command = ['netconvert', "--opendrive-files", file,
                 "--opendrive.import-all-lanes", "true",
                 "--offset.disable-normalization", "true",
@@ -84,27 +83,29 @@ class LocalMap(object):
         '''
         if self._hdmap is None:
             return False
-        assert type(reference_path) == Path
 
+        assert type(reference_path)==Path
         self._reference_lane_list.clear()
+        # todo this loop needs to be optimised later
+
         for wp in reference_path.poses:
             # TODO: Takes too much time for processing
             wp_map_x, wp_map_y = self.convert_to_map_XY(wp.pose.position.x, wp.pose.position.y)
 
             # Find the closest lane of the reference path points
-            lanes = self._hdmap.getNeighboringLanes(wp_map_x, wp_map_y, self.lane_search_radius, includeJunctions=False)
-            if len(lanes)>0:
+            lanes = self._hdmap.getNeighboringLanes(wp_map_x, wp_map_y, self._lane_search_radius, includeJunctions=False)
+            if len(lanes) > 0:
                 _, closestLane = min((dist, lane) for lane, dist in lanes)
                 # Discard duplicate lane ids
                 if len(self._reference_lane_list) != 0 and closestLane.getID() == self._reference_lane_list[-1].getID():
                     continue
                 self._reference_lane_list.append(closestLane)
+
         return True
 
     def convert_to_map_XY(self, x, y):
         map_x = x # + self._offset_x
         map_y = y # + self._offset_y
-
         return map_x, map_y
 
     def convert_to_origin_XY(self, map_x, map_y):
@@ -128,7 +129,7 @@ class LocalMap(object):
         rospy.logdebug("Check update: ego_map_location = (%f, %f), ego_location = (%f, %f)",
             map_x, map_y, self._ego_vehicle_x, self._ego_vehicle_y)
 
-        lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self.lane_search_radius, includeJunctions=False)
+        lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self._lane_search_radius, includeJunctions=False)
         if len(lanes) > 0:
             _, closestLane = min((dist, lane) for lane, dist in lanes)
             new_edge = closestLane.getEdge()
@@ -146,7 +147,6 @@ class LocalMap(object):
         init_static_map = Map()
         init_static_map.in_junction = True
         init_static_map.target_lane_index = -1
-
         return init_static_map
 
     def update_static_map(self):
@@ -170,9 +170,8 @@ class LocalMap(object):
         '''
         Update lanes when a new road is encountered
         '''
-        
         map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
-        lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self.lane_search_radius, includeJunctions=False)
+        lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self._lane_search_radius, includeJunctions=False)
         if len(lanes) > 0:
             self.static_local_map.in_junction = False
 
@@ -194,7 +193,6 @@ class LocalMap(object):
         '''
         Wrap lane information into ROS message
         '''
-
         lane_wrapped = Lane()
         lane_wrapped.index = lane.getIndex()
         # lane_wrapped.width = lane.getWidth()
@@ -202,7 +200,6 @@ class LocalMap(object):
         for wp in lane.getShape():
             point = LanePoint()
             x, y = self.convert_to_origin_XY(wp[0], wp[1])
-
             # Calculate mileage
             if last_s is None:
                 point.s = 0
@@ -254,9 +251,7 @@ class LocalMap(object):
         Makes the drivable lanes starts from 0
         '''
         # TODO(zhcao):should consider ego vehicle lane
-
         first_index = self.static_local_map.lanes[0].index
-
         for lane in self.static_local_map.lanes:
             lane.index = lane.index - first_index
 

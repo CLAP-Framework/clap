@@ -4,6 +4,7 @@ import rospy
 import numpy as np
 from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from zzz_planning_msgs.msg import DecisionTrajectory
+from threading import Lock
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 from zzz_cognition_msgs.msg import MapState
@@ -17,10 +18,14 @@ class MainDecision(object):
 
         self._longitudinal_model_instance = lon_decision
         self._lateral_model_instance = lat_decision
-        
-    def receive_dynamic_map(self, dynamic_map):
-        self._dynamic_map_buffer = dynamic_map
+        self._dynamic_map_lock = Lock()
 
+    # receive_dynamic_map running in Subscriber CallBack Thread.
+    def receive_dynamic_map(self, dynamic_map):
+        with self._dynamic_map_lock:
+            self._dynamic_map_buffer = dynamic_map
+
+    # update running in main node thread loop
     def update(self):
         '''
         This function generate trajectory
@@ -28,19 +33,19 @@ class MainDecision(object):
         # update_dynamic_local_map
         if self._dynamic_map_buffer is None:
             return None
-        dynamic_map = self._dynamic_map_buffer
 
-        changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
-        if desired_speed < 0: # TODO: clean this
-            desired_speed = 0
-        rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
+        trajectory = None
+        with self._dynamic_map_lock:
+            changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(self._dynamic_map_buffer)
+            if desired_speed < 0: # TODO: clean this
+                desired_speed = 0
 
-        # TODO: Is this reasonable?
-        # if len(self.dynamic_map.jmap.reference_path.map_lane.central_path_points) == 0:
-        #     return DecisionTrajectory() # Return null trajectory
-
-        # get trajectory by target lane and desired speed
-        trajectory = self.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
+            rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
+            # TODO: Is this reasonable?
+            # if len(self.dynamic_map.jmap.reference_path.map_lane.central_path_points) == 0:
+            #     return DecisionTrajectory() # Return null trajectory
+            # get trajectory by target lane and desired speed
+            trajectory = self.get_trajectory(self._dynamic_map_buffer, changing_lane_index, desired_speed)
 
         msg = DecisionTrajectory()
         msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory) # TODO: move to library
@@ -73,7 +78,6 @@ class MainDecision(object):
             else:
                 rectify_dt = nearest_dis/lc_v
             return self.generate_smoothen_lane_change_trajectory(dynamic_map, target_lane, rectify_dt, desired_speed)
-
         else:
             front_path = dense_centrol_path[nearest_idx:]
             dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path, axis=0), axis = 1))
