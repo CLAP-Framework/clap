@@ -58,7 +58,7 @@ class LocalMap(object):
         if mtype == 'unknown':
             rospy.logerr("Cannot load map with unknown type")
         elif mtype == 'opendrive':
-            rospy.logdebug("########### odr file {} -> {}".format(file, converted_file))
+            rospy.logdebug("odr file {} -> {}".format(file, converted_file))
             command = ['netconvert', "--opendrive-files", file,
                 "--opendrive.import-all-lanes", "true",
                 "--offset.disable-normalization", "true",
@@ -68,8 +68,6 @@ class LocalMap(object):
             exitcode = command.wait()
             if exitcode != 0:
                 rospy.logerr("SUMO netconvert failed, (exit code: %d)" % exitcode)
-            else:
-                rospy.logdebug("SUMO netconvert succeed, stderr:\n %s", command.stderr.read())
 
         self._hdmap = sumolib.net.readNet(converted_file)
         self._offset_x, self._offset_y = self._hdmap.getLocationOffset()
@@ -84,9 +82,7 @@ class LocalMap(object):
         '''
         Generate a list of ids of all lane of the reference path
         '''
-        rospy.logdebug("@@@@@@@@@@@@  Starting converting reference path to lane list")
         if self._hdmap is None:
-            rospy.logerr("@@@@@@@@@@@@ Reference lane list should not be set up before map loaded")
             return False
         assert type(reference_path) == Path
 
@@ -103,7 +99,6 @@ class LocalMap(object):
                 if len(self._reference_lane_list) != 0 and closestLane.getID() == self._reference_lane_list[-1].getID():
                     continue
                 self._reference_lane_list.append(closestLane)
-        print("@@@@@@@@@@ setup_reference_lane_list true")
         return True
 
     def convert_to_map_XY(self, x, y):
@@ -120,24 +115,15 @@ class LocalMap(object):
     def receive_new_pose(self, x, y):
         self._ego_vehicle_x = x
         self._ego_vehicle_y = y
-        #print("                  wait: should update static map?")
         if self.should_update_static_map():
-        #    print("                  should not update static map")
-        #else:
-        #print("                  we will always update static map?")
-            tick1 = time.time()
             self.update_static_map()
-            tick2 = time.time()
-        #print("running time of static_local_map: ", tick2-tick1)
-        return self.static_local_map
-
+            return self.static_local_map
         return None
 
     def should_update_static_map(self):
         '''
         Determine whether map updating is needed.
         '''
-
         map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
         rospy.logdebug("Check update: ego_map_location = (%f, %f), ego_location = (%f, %f)",
             map_x, map_y, self._ego_vehicle_x, self._ego_vehicle_y)
@@ -151,15 +137,12 @@ class LocalMap(object):
             if self._current_edge_id is None or new_edge.id != self._current_edge_id:
                 rospy.loginfo("Should update static map, edge id %s -> %s", self._current_edge_id, new_edge.id)
                 return True
-
-        rospy.logdebug("Won't update static map, current edge id %s\n\n\n\n", self._current_edge_id)
         return False
 
     def init_static_map(self):
         '''
         Generate null static map
         '''
-
         init_static_map = Map()
         init_static_map.in_junction = True
         init_static_map.target_lane_index = -1
@@ -182,8 +165,6 @@ class LocalMap(object):
         rospy.loginfo("Updated static map info: lane_number = %d, in_junction = %d, current_edge_id = %s, target_lane_index = %s",
             len(self.static_local_map.lanes), int(self.static_local_map.in_junction),
             self._current_edge_id, self.static_local_map.target_lane_index)
-        #print("Check update: ego_map_location = (%f, %f), ego_location = (%f, %f)",
-        #    map_x, map_y, self._ego_vehicle_x, self._ego_vehicle_y)
 
     def update_lane_list(self):
         '''
@@ -192,7 +173,6 @@ class LocalMap(object):
         
         map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
         lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self.lane_search_radius, includeJunctions=False)
-        #print("--------------",map_x,map_y)
         if len(lanes) > 0:
             self.static_local_map.in_junction = False
 

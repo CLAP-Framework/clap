@@ -48,12 +48,10 @@ class DrivingSpaceConstructor:
     def receive_static_map(self, static_map):
         assert type(static_map) == Map
 
-        rospy.logdebug("static map!!!\n\n\n\n")
-
         self._static_map = static_map
         self._static_map_lane_path_array = get_lane_array(static_map.lanes)
         self._static_map_lane_tangets = [[point.tangent for point in lane.central_path_points] for lane in static_map.lanes]
-        rospy.loginfo("Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
+        rospy.logdebug("Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
             len(self._static_map.lanes), int(self._static_map.in_junction), self._static_map.target_lane_index)
 
     def receive_object_list(self, object_list):
@@ -83,14 +81,14 @@ class DrivingSpaceConstructor:
 
         self._driving_space.obstacles = self._surrounding_object_list
 
-        rospy.logdebug("++++++++++++++++++++++len(self._static_map.lanes): %d\n", len(self._static_map.lanes))
+        rospy.logdebug("len(self._static_map.lanes): %d", len(self._static_map.lanes))
+
         if self._static_map.in_junction or len(self._static_map.lanes) == 0:
             rospy.logdebug("In junction due to static map report junction location")
         else:
             for lane in self._static_map.lanes:
                 self._driving_space.lanes.append(lane)
             #jxy: why is target lane in static map?
-            #self._dynamic_map.mmap.target_lane_index = self._static_map.target_lane_index
             self.locate_ego_vehicle_in_lanes()
             self.locate_obstacle_in_lanes()
             self.locate_stop_sign_in_lanes()
@@ -101,7 +99,6 @@ class DrivingSpaceConstructor:
 
         count = 0
         for lane in self._static_map.lanes:
-            #rospy.logdebug("lane\n\n\n")
             tempmarker = Marker() #jxy: must be put inside since it is python
             tempmarker.header.frame_id = "map"
             tempmarker.header.stamp = rospy.Time.now()
@@ -122,69 +119,67 @@ class DrivingSpaceConstructor:
                 p.y = lanepoint.position.y
                 p.z = lanepoint.position.z
                 tempmarker.points.append(p)
-            #print("----------------------------------------lanepoint.num: %d", len(tempmarker.points))
             self._lanes_markerarray.markers.append(tempmarker)
-            #print("----------------------------------------lanes_markerarray.markers.num: %d", len(self._lanes_markerarray.markers))
             count = count + 1
 
 
         self._obstacles_markerarray = MarkerArray()
         
         count = 0
-        for obs in self._surrounding_object_list:
-            if math.sqrt(math.pow((obs.state.pose.pose.position.x - self._ego_vehicle_state.state.pose.pose.position.x),2) + math.pow((obs.state.pose.pose.position.y - self._ego_vehicle_state.state.pose.pose.position.y),2)) < 50:
-                tempmarker = Marker() #jxy: must be put inside since it is python
-                tempmarker.header.frame_id = "map"
-                tempmarker.header.stamp = rospy.Time.now()
-                tempmarker.ns = "zzz/cognition"
-                tempmarker.id = count
-                tempmarker.type = Marker.CUBE
-                tempmarker.action = Marker.ADD
-                tempmarker.pose = obs.state.pose.pose
-                tempmarker.scale.x = obs.dimension.length_x
-                tempmarker.scale.y = obs.dimension.length_y
-                tempmarker.scale.z = obs.dimension.length_z
-                tempmarker.color.r = 1.0
-                tempmarker.color.g = 0.0
-                tempmarker.color.b = 1.0
-                tempmarker.color.a = 0.5
-                tempmarker.lifetime = rospy.Duration(0.5)
+        if self._surrounding_object_list is not None:
+            for obs in self._surrounding_object_list:
+                if math.sqrt(math.pow((obs.state.pose.pose.position.x - self._ego_vehicle_state.state.pose.pose.position.x),2) + math.pow((obs.state.pose.pose.position.y - self._ego_vehicle_state.state.pose.pose.position.y),2)) < 50:
+                    tempmarker = Marker() #jxy: must be put inside since it is python
+                    tempmarker.header.frame_id = "map"
+                    tempmarker.header.stamp = rospy.Time.now()
+                    tempmarker.ns = "zzz/cognition"
+                    tempmarker.id = count
+                    tempmarker.type = Marker.CUBE
+                    tempmarker.action = Marker.ADD
+                    tempmarker.pose = obs.state.pose.pose
+                    tempmarker.scale.x = obs.dimension.length_x
+                    tempmarker.scale.y = obs.dimension.length_y
+                    tempmarker.scale.z = obs.dimension.length_z
+                    tempmarker.color.r = 1.0
+                    tempmarker.color.g = 0.0
+                    tempmarker.color.b = 1.0
+                    tempmarker.color.a = 0.5
+                    tempmarker.lifetime = rospy.Duration(0.5)
 
-                self._obstacles_markerarray.markers.append(tempmarker)
-                count = count + 1
-        
-        for obs in self._surrounding_object_list:
-            if math.sqrt(math.pow((obs.state.pose.pose.position.x - self._ego_vehicle_state.state.pose.pose.position.x),2) + math.pow((obs.state.pose.pose.position.y - self._ego_vehicle_state.state.pose.pose.position.y),2)) < 50:
-                tempmarker = Marker() #jxy: must be put inside since it is python
-                tempmarker.header.frame_id = "map"
-                tempmarker.header.stamp = rospy.Time.now()
-                tempmarker.ns = "zzz/cognition"
-                tempmarker.id = count
-                tempmarker.type = Marker.ARROW
-                tempmarker.action = Marker.ADD
-                tempmarker.scale.x = 0.4
-                tempmarker.scale.y = 0.7
-                tempmarker.scale.z = 0.75
-                tempmarker.color.r = 1.0
-                tempmarker.color.g = 1.0
-                tempmarker.color.b = 0.0
-                tempmarker.color.a = 0.5
-                tempmarker.lifetime = rospy.Duration(0.5)
+                    self._obstacles_markerarray.markers.append(tempmarker)
+                    count = count + 1
+            
+            for obs in self._surrounding_object_list:
+                if math.sqrt(math.pow((obs.state.pose.pose.position.x - self._ego_vehicle_state.state.pose.pose.position.x),2) + math.pow((obs.state.pose.pose.position.y - self._ego_vehicle_state.state.pose.pose.position.y),2)) < 50:
+                    tempmarker = Marker() #jxy: must be put inside since it is python
+                    tempmarker.header.frame_id = "map"
+                    tempmarker.header.stamp = rospy.Time.now()
+                    tempmarker.ns = "zzz/cognition"
+                    tempmarker.id = count
+                    tempmarker.type = Marker.ARROW
+                    tempmarker.action = Marker.ADD
+                    tempmarker.scale.x = 0.4
+                    tempmarker.scale.y = 0.7
+                    tempmarker.scale.z = 0.75
+                    tempmarker.color.r = 1.0
+                    tempmarker.color.g = 1.0
+                    tempmarker.color.b = 0.0
+                    tempmarker.color.a = 0.5
+                    tempmarker.lifetime = rospy.Duration(0.5)
 
-                startpoint = Point()
-                endpoint = Point()
-                startpoint.x = obs.state.pose.pose.position.x
-                startpoint.y = obs.state.pose.pose.position.y
-                startpoint.z = obs.state.pose.pose.position.z
-                endpoint.x = obs.state.pose.pose.position.x + obs.state.twist.twist.linear.x
-                endpoint.y = obs.state.pose.pose.position.y + obs.state.twist.twist.linear.y
-                endpoint.z = obs.state.pose.pose.position.z + obs.state.twist.twist.linear.z
-                tempmarker.points.append(startpoint)
-                tempmarker.points.append(endpoint)
-                #rospy.logdebug("obstacle velocity: %f %f %f", obs.state.twist.twist.linear.x, obs.state.twist.twist.linear.y, obs.state.twist.twist.linear.z)
+                    startpoint = Point()
+                    endpoint = Point()
+                    startpoint.x = obs.state.pose.pose.position.x
+                    startpoint.y = obs.state.pose.pose.position.y
+                    startpoint.z = obs.state.pose.pose.position.z
+                    endpoint.x = obs.state.pose.pose.position.x + obs.state.twist.twist.linear.x
+                    endpoint.y = obs.state.pose.pose.position.y + obs.state.twist.twist.linear.y
+                    endpoint.z = obs.state.pose.pose.position.z + obs.state.twist.twist.linear.z
+                    tempmarker.points.append(startpoint)
+                    tempmarker.points.append(endpoint)
 
-                self._obstacles_markerarray.markers.append(tempmarker)
-                count = count + 1
+                    self._obstacles_markerarray.markers.append(tempmarker)
+                    count = count + 1
 
         #ego vehicle visualization
         self._ego_markerarray = MarkerArray()
@@ -220,7 +215,6 @@ class DrivingSpaceConstructor:
 
         vel_self = np.array([[self._ego_vehicle_state.state.twist.twist.linear.x], [self._ego_vehicle_state.state.twist.twist.linear.y], [self._ego_vehicle_state.state.twist.twist.linear.z]])
         vel_world = np.matmul(rotation_mat_inverse, vel_self)
-        #print("shape: ", vel_self.shape, vel_world.shape)
         #check if it should be reversed
         ego_vx_world = vel_world[0]
         ego_vy_world = vel_world[1]
