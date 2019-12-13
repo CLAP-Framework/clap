@@ -35,13 +35,13 @@
         <param name="reference_path_topic" value="$(arg waypoint_topic)"/>
     </node>
 
-    <!-- <node pkg="zzz_planning_decision_continuous_models" type="continuous_utility"
+    <node pkg="zzz_planning_decision_continuous_models" type="continuous_utility"
           name="continuous_utility" output="screen" ns="/zzz/planning">
-    </node> -->
-
-    <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
-          name="idm_lane_utility" output="screen" ns="/zzz/planning">
     </node>
+
+    <!-- <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
+          name="idm_lane_utility" output="screen" ns="/zzz/planning">
+    </node> -->
 
     <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
           name="safeguard" output="screen" ns="/zzz/planning">
