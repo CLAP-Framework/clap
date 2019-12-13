@@ -21,6 +21,7 @@ class Trajectory_Planner(object):
         self.dynamic_map = dynamic_map
 
     def trajectory_update(self, dynamic_map):
+        pass
 
 
     def longitudinal_speed(self, target_lane_index, traffic_light = False):
