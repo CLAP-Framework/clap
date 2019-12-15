@@ -363,63 +363,6 @@ def generate_pedestrians(carla_world,carla_client,if_random,delay = 0.05):
         if player is not None:
             player.apply_control(player_control)  
 
-    # batch = []
-    # walkers_list = []
-
-    # for spawn_point in spawn_points:
-    #     walker_bp = random.choice(blueprintsWalkers)
-    #     batch.append(carla.command.SpawnActor(walker_bp, spawn_point))
-
-    # results = carla_client.apply_batch_sync(batch, True)
-    # for i in range(len(results)):
-    #     if results[i].error:
-    #         # logging.error(results[i].error)
-    #         a = 1    
-
-    #     else:
-    #         walkers_list.append({"id": results[i].actor_id})
-
-    # batch = []
-    # walkers_list = []
-    # walker_controller_bp = carla_world.get_blueprint_library().find('controller.ai.walker')
-    # for i in range(len(walkers_list)):
-    #     batch.append(carla.command.SpawnActor(walker_controller_bp, carla.Transform(), walkers_list[i]["id"]))
-    
-    # results = carla_client.apply_batch_sync(batch, True)
-    # print('results: %s' % len(results))
-
-    # for i in range(len(results)):
-    #     if results[i].error:
-    #         # logging.error(results[i].error)
-    #         a = 1    
-    #     else:
-    #         walkers_list[i]["con"] = results[i].actor_id
-    #         print('....................................set controller')
-
-    
-    # all_id = []
-    # for i in range(len(walkers_list)):
-    #     all_id.append(walkers_list[i]["con"])
-    #     all_id.append(walkers_list[i]["id"])
-    # all_actors = carla_world.get_actors(all_id)
-
-    # print('....................................all_actors')
-
-    
-    # # carla_world.wait_for_tick()  
-
-    # for i in range(0, len(all_actors), 2):
-    #     # start walker
-    #     all_actors[i].start()
-    #     # set walk to random point
-    #     all_actors[i].go_to_location(carla_world.get_random_location_from_navigation())
-    #     # random max speed
-    #     all_actors[i].set_max_speed(1 + random.random())    # max speed between 1 and 2 (default is 1.4 m/s)
-    #     print('....................................set walker speed')
-
-
-    
-
 
 
 

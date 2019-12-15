@@ -12,11 +12,12 @@ from zzz_driver_msgs.utils import get_speed, get_yaw
 
 
 class MainDecision(object):
-    def __init__(self, path_decision=None, speed_decision=None):
+    def __init__(self, path_decision=None, speed_decision=None, Planning_type=None):
         self._dynamic_map_buffer = None
 
         self._path_model_instance = path_decision
         self._speed_model_instance = speed_decision
+        self.Planning_type = Planning_type
         
     def receive_dynamic_map(self, dynamic_map):
         self._dynamic_map_buffer = dynamic_map
@@ -31,18 +32,20 @@ class MainDecision(object):
         dynamic_map = self._dynamic_map_buffer
 
         reference_path_from_map = dynamic_map.jmap.reference_path
-        Planning_type = 1;
 
-        if Planning_type == 1:
+        trajectory = reference_path_from_map
+        desired_speed = 0
+
+        if self.Planning_type == 1:
             # Only follow path
             trajectory = reference_path_from_map
             desired_speed = self._speed_model_instance.speed_update(trajectory, dynamic_map)
 
-        elif Planning_type == 2:
+        elif self.Planning_type == 2:
             # Keep replanning
             trajectory = self._path_model_instance.trajectory_update(dynamic_map)
 
-        elif Planning_type == 3:
+        elif self.Planning_type == 3:
             # Replanning only when dynamic obstacles predict to collide with me
 
             # Collision check
@@ -50,7 +53,7 @@ class MainDecision(object):
             if Collision_and_Replan == 1:
                 trajectory = self._path_model_instance.trajectory_update(dynamic_map)
 
-        elif Planning_type == 4:
+        elif self.Planning_type == 4:
             # Replanning only when fixed obstacles on my path
 
             # Collision check
@@ -80,8 +83,6 @@ class MainDecision(object):
         front_path = dense_centrol_path[nearest_idx:]
         dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path, axis=0), axis = 1))
         send_trajectory = front_path[:np.searchsorted(dis_to_ego, desired_speed*time_ahead+distance_ahead)-1]
-
-
 
         # Convert to Message type
         msg = DecisionTrajectory()
