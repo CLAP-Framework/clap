@@ -31,7 +31,10 @@ class RLSPlanner(object):
         # else:
         #     # TODO: Implement server mode to make multiple connection to this node.
         #     #     In this mode, only rule based action is returned to system
-        #     raise NotImplementedError("Server mode is still wating to be implemented.")     
+        #     raise NotImplementedError("Server mode is still wating to be implemented.") 
+        # 
+    def speed_update(self, trajectory, dynamic_map):
+            return 10   
 
     def trajectory_update(self, dynamic_map):
 

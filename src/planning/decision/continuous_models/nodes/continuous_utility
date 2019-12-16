@@ -9,8 +9,8 @@ from zzz_planning_decision_continuous_models.speed_decision import Speed_Decisio
 from zzz_planning_decision_continuous_models import MainDecision
 from zzz_planning_msgs.msg import DecisionTrajectory
 
-
 from nav_msgs.msg import Path  #FIXME(Nanshan)
+
 class DecisionNode(object):
     def __init__(self):
 

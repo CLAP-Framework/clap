@@ -30,7 +30,6 @@ class MainDecision(object):
         if self._dynamic_map_buffer is None:
             return None
         dynamic_map = self._dynamic_map_buffer
-
         reference_path_from_map = dynamic_map.jmap.reference_path
 
         trajectory = reference_path_from_map
@@ -39,6 +38,7 @@ class MainDecision(object):
         if self.Planning_type == 1:
             # Only follow path
             trajectory = reference_path_from_map
+
             desired_speed = self._speed_model_instance.speed_update(trajectory, dynamic_map)
 
         elif self.Planning_type == 2:
