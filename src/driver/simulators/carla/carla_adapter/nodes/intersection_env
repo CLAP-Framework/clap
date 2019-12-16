@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 
+import math
+import random
 import sys
-import rospy
+import thread
+import time
 
 import numpy as np
-from zzz_navigation_msgs.msg import MapString, Map, Lane, LanePoint
+import rospy
 from nav_msgs.msg import Path
-from zzz_driver_msgs.msg import RigidBodyStateStamped
-#from carla_waypoint_publisher import CarlaReferecePathGenerator
-from carla_waypoint_publisher import CarlaToRosWaypointConverter
-from carla import Transform, Location, Rotation
 
 import carla
-import random
-import time
-import thread
-import math
+from carla import Location, Rotation, Transform
+#from carla_waypoint_publisher import CarlaReferecePathGenerator
+from carla_waypoint_publisher import CarlaToRosWaypointConverter
+from zzz_driver_msgs.msg import RigidBodyStateStamped
+from zzz_navigation_msgs.msg import Lane, LanePoint, Map, MapString
 
 RUNNING_TIME = 300
 CX = -0.4771
@@ -231,7 +231,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
     if if_random == 1:
 
         #set_ramdom_vehicle_number
-        count = 10
+        count = 100
 
         for spawn_point in spawn_points:
             if try_spawn_random_vehicle_at(spawn_point,blueprints,carla_world):
@@ -252,46 +252,47 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
         spawn_points = []
 
         #spawn one vehicle
-        # spawn_point = carla_world.get_map().get_spawn_points()[0]
-        # spawn_point.location.x = 16
-        # spawn_point.location.y = 131
-        # spawn_point.location.z = 0
-        # spawn_point.rotation.pitch = 0
-        # spawn_point.rotation.yaw = 180 #0 for east,90 for south
-        # spawn_point.rotation.roll = 0
-        # spawn_points.append(spawn_point)
-
-        #spawn one vehicle
         
-        for num in range(10,130):
-            if num%10 == 0:
-                spawn_point = carla_world.get_map().get_spawn_points()[0]
-                spawn_point.location.x = -5.5
-                spawn_point.location.y = num
-                spawn_point.location.z = 0
-                spawn_point.rotation.pitch = 0
-                spawn_point.rotation.yaw = 90 
-                spawn_point.rotation.roll = 0
-                spawn_points.append(spawn_point)
-
-        for num in range(-10,50):
+        for num in range(10,60):
             if num%10 == 0:
                 spawn_point = carla_world.get_map().get_spawn_points()[0]
                 spawn_point.location.x = num
-                spawn_point.location.y = 130
-                spawn_point.location.z = 0
+                spawn_point.location.y = -207
+                spawn_point.location.z = 2
+                spawn_point.rotation.pitch = 0
+                spawn_point.rotation.yaw = 180 
+                spawn_point.rotation.roll = 0
+                spawn_points.append(spawn_point)
+
+        for num in range(20,70):
+            if num%10 == 0:
+                spawn_point = carla_world.get_map().get_spawn_points()[0]
+                spawn_point.location.x = num
+                spawn_point.location.y = -137
+                spawn_point.location.z = 6
                 spawn_point.rotation.pitch = 0
                 spawn_point.rotation.yaw = 180 
                 spawn_point.rotation.roll = 0
                 spawn_points.append(spawn_point)
 
 
-        for num in range(140,200):
+        for num in range(140,190):
             if num%10 == 0:
                 spawn_point = carla_world.get_map().get_spawn_points()[0]
-                spawn_point.location.x = 2
+                spawn_point.location.x = 0.5
                 spawn_point.location.y = num
-                spawn_point.location.z = 0
+                spawn_point.location.z = 2
+                spawn_point.rotation.pitch = 0
+                spawn_point.rotation.yaw = 270 
+                spawn_point.rotation.roll = 0
+                spawn_points.append(spawn_point)
+
+        for num in range(0,120):
+            if num%10 == 0:
+                spawn_point = carla_world.get_map().get_spawn_points()[0]
+                spawn_point.location.x = -75
+                spawn_point.location.y = -num
+                spawn_point.location.z = 2
                 spawn_point.rotation.pitch = 0
                 spawn_point.rotation.yaw = 270 
                 spawn_point.rotation.roll = 0
@@ -412,8 +413,8 @@ if __name__ == "__main__":
     
     # Generate Reference Path
     setgoal = carla_world.get_map().get_spawn_points()[0]
-    setgoal.location.x = -21.5
-    setgoal.location.y = -205
+    setgoal.location.x = -67
+    setgoal.location.y = -200
     setgoal.location.z = 8
     setgoal.rotation.pitch = 0
     setgoal.rotation.yaw = 0 
@@ -427,15 +428,12 @@ if __name__ == "__main__":
     generate_pedestrians(carla_world,carla_client,0)
 
 
-
-
     global published_exit_path
     published_exit_path = False
 
     rate = rospy.Rate(20)
     while not rospy.is_shutdown():
-        # generate_map(_local_map_publisher, _reference_path_publisher, ReferencePathGenerator, starting_time)
-        
+        # generate_map(_local_map_publisher, _reference_path_publisher, ReferencePathGenerator, starting_time)    
        
         # Keep Generating Reference Path
         if pose_buffer is not None:
@@ -444,7 +442,7 @@ if __name__ == "__main__":
 
             if math.pow((ego_x+21.5),2) + math.pow((ego_y-205),2) < 10:
                 setgoal = carla_world.get_map().get_spawn_points()[0]
-                setgoal.location.x = -39.5
+                setgoal.location.x = -11
                 setgoal.location.y = -134.5
                 setgoal.location.z = 0
                 setgoal.rotation.pitch = 0
@@ -455,8 +453,8 @@ if __name__ == "__main__":
 
             if math.pow((ego_x+39.5),2) + math.pow((ego_y-134.5),2) < 10:
                 setgoal = carla_world.get_map().get_spawn_points()[0]
-                setgoal.location.x = -21.5
-                setgoal.location.y = -205
+                setgoal.location.x = -67
+                setgoal.location.y = -200
                 setgoal.location.z = 8
                 setgoal.rotation.pitch = 0
                 setgoal.rotation.yaw = 0 
@@ -464,14 +462,9 @@ if __name__ == "__main__":
                 ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
                 print("1111111111111111111111")
 
-
-
         rate.sleep()
 
 
     del ReferencePathGenerator
     del carla_world
     del carla_client
-
-
-

@@ -27,7 +27,7 @@ from gym.utils import seeding
 
 class ZZZCarlaEnv(gym.Env):
     metadata = {'render.modes': []}
-    def __init__(self, zzz_client="127.0.0.1", port=2345, recv_buffer=4096):
+    def __init__(self, zzz_client="127.0.0.1", port=2333, recv_buffer=4096):
 
        
         self._restart_motivation = 0

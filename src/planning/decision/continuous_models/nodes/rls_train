@@ -29,7 +29,7 @@ class RLSNode(object):
 
         # Follow path for now
         model_trajectory = RLSPlanner()
-        self._decision_instance = MainDecision(path_decision=model_trajectory, speed_decision=model_trajectory, Planning_type = 1)
+        self._decision_instance = MainDecision(path_decision=model_trajectory, speed_decision=model_trajectory, Planning_type = 2)
 
         # ROS messages
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
@@ -49,7 +49,7 @@ class RLSNode(object):
                 rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
                     len(publish_msg.trajectory.poses), publish_msg.desired_speed)
             self._rate.sleep()
-            
+
 
     def dynamic_map_callback(self, msg, decision_dt = 0.75):
         # TODO: decision frequency

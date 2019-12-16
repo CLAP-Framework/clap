@@ -4,8 +4,7 @@ import msgpack
 import rospy
 
 from zzz_cognition_msgs.msg import MapState
-from zzz_planning_decision_lane_models.longitudinal import IDM
-from zzz_planning_decision_lane_models.lateral import LaneUtility
+from zzz_planning_decision_continuous_models.Werling_trajectory import Werling
 from zzz_driver_msgs.utils import get_speed
 
 class RLSPlanner(object):
@@ -13,15 +12,14 @@ class RLSPlanner(object):
     Parameter:
         mode: ZZZ TCP connection mode (client/server)
     """
-    def __init__(self, openai_server="127.0.0.1", port=2345, mode="client", recv_buffer=4096):
+    def __init__(self, openai_server="127.0.0.1", port=2333, mode="client", recv_buffer=4096):
         self._dynamic_map = None
         self._socket_connected = False
-        self._rule_based_longitudinal_model_instance = IDM()
-        self._rule_based_lateral_model_instance = LaneUtility(self._rule_based_longitudinal_model_instance)
+        self._rule_based_trajectory_model_instance = Werling()
         self._buffer_size = recv_buffer
         self._collision_signal = False
         self._collision_times = 0
-
+    
         # if mode == "client":
         #     rospy.loginfo("Connecting to RL server...")
         #     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -32,14 +30,21 @@ class RLSPlanner(object):
         #     # TODO: Implement server mode to make multiple connection to this node.
         #     #     In this mode, only rule based action is returned to system
         #     raise NotImplementedError("Server mode is still wating to be implemented.") 
-        # 
+        
     def speed_update(self, trajectory, dynamic_map):
             return 10   
 
     def trajectory_update(self, dynamic_map):
 
         self._dynamic_map = dynamic_map
-        self._rule_based_longitudinal_model_instance.update_dynamic_map(dynamic_map)
+        self._rule_based_trajectory_model_instance.update_dynamic_map(dynamic_map)
+
+        # Using Werling for rule-based trajectory planning
+        trajectory,desired_speed = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
+
+        return trajectory,desired_speed
+
+
 
         # Following reference path in junction # TODO(Zhong):should be in cognition part
         if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or dynamic_map.mmap.target_lane_index == -1:
