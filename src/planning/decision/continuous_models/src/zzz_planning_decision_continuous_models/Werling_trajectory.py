@@ -82,11 +82,13 @@ class Werling(object):
         wpempty = []
         for point in reference_path_from_map.map_lane.central_path_points:
             wpoint = [point.position.x,point.position.y]
-            wpointe = [0,0]
+            wpointe = [0]
             wp.append(wpoint)
             wpempty.append(wpointe)
         wp = np.array(wp)
         wpempty = np.array(wpempty)
+        wp2 = [Frenetrefx,Frenetrefy]
+        
         
         # obstacle lists
         ob = []
@@ -104,10 +106,10 @@ class Werling(object):
         c_speed = get_speed(ego_state)       # current speed [m/s]
 
         ffstate = get_frenet_state(dynamic_map.ego_state,wp,wpempty)
-        c_d =  ffstate.d  # current lateral position [m]
+        c_d =  -ffstate.d  # current lateral position [m]
         c_d_d = ffstate.vd  # current lateral speed [m/s]
         c_d_dd = ffstate.ad  # current latral acceleration [m/s]
-        s0 = ffstate.s  # current course position
+        s0 = -ffstate.s  # current course position
 
         trajectory = frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
         print("-----------------------")
@@ -129,7 +131,7 @@ class Werling(object):
             global_y.append(wp.position.y)
             #print("----------Frenetref=",wp.position.x,wp.position.y)
         
-        return np.array(global_x)[1:15], np.array(global_y)[1:15]
+        return np.array(global_x)[1:50], np.array(global_y)[1:50]
     
     def convert_XY_to_pathmsg(self,XX,YY,path_id = 'map'):
         msg = Path()
