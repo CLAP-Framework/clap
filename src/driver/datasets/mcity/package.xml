@@ -1,8 +1,8 @@
 <package>
-  <name>zzz_driver_datasets_kitti</name>
+  <name>zzz_driver_datasets_mcity</name>
   <version>0.1.0</version>
   <description>
-    Driver for dataset input from KITTI dataset
+    Driver for dataset input from MCity dataset
   </description>
   <license>BSD</license>
   <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>

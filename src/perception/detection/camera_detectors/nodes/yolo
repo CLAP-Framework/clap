@@ -35,7 +35,7 @@ def conversion_class_id(names, id):
     elif names[int(id)] == "bicycle" or names[int(id)] == "motorcycle":
         id_in_msg = ObjectClass.CYCLIST
     else:
-        return None
+        id_in_msg = ObjectClass.UNKNOWN
     return id_in_msg
 
 class YoloDetect():
@@ -128,7 +128,7 @@ class CameraProcessNode:
 
         start_time = time.time()
         detections = self.yolo.run(array)
-        print('time for yolo 2d detection= %.2f' %(time.time() - start_time))
+        rospy.logdebug('time for yolo 2d detection= %.2f', time.time() - start_time)
 
         msg_to_send = DetectionBox2DArray()
         msg_to_send.header = self.header
@@ -142,19 +142,16 @@ class CameraProcessNode:
                 msg_single.bbox.dimension.length_y = abs(y1 - y2)
                 msg_single.bbox.dimension.covariance = np.diag([1/obj_conf]*2).flatten().tolist()
 
-                # msg_class = ObjectClass()
-                # msg_class.comments = self.yolo.classes[int(cls_id)]
-                # msg_class.classid = cls_id # TODO: Add conversion
-                # msg_class.score = cls_conf
-                id_in_rosmsg = conversion_class_id(self.yolo.classes, cls_id)
+                msg_class = ObjectClass()
+                msg_class.comments = self.yolo.classes[int(cls_id)]
+                msg_class.classid = conversion_class_id(self.yolo.classes, cls_id)
+                if (msg_class.classid & 0xf) != ObjectClass.HUMAN:
+                    continue
 
-                if id_in_rosmsg is not None: 
-                    msg_class = ObjectClass()
-                    msg_class.comments = self.yolo.classes[int(cls_id)]
-                    msg_class.classid = id_in_rosmsg
-                    msg_class.score = cls_conf
-                    msg_single.classes.append(msg_class)
-                    msg_to_send.detections.append(msg_single)
+                msg_class.score = cls_conf
+                msg_single.classes.append(msg_class)
+
+                msg_to_send.detections.append(msg_single)
         
         # Publish regardless of whether the detector has results or not
         self.pub.publish(msg_to_send)

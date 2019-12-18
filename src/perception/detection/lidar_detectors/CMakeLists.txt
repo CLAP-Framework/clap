@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(zzz_perception_detection_lidar_detectors)
 
+set(CMAKE_CXX_STANDARD 11)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs

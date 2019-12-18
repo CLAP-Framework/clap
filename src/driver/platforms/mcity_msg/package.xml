@@ -1,0 +1,18 @@
+<package format="2">
+  <name>mcity_msg</name>
+  <version>0.0.0</version>
+  <description>
+    Message definitions for MCity platform
+  </description>
+  <maintainer email="shaobxu@gmail.com">Shaobing Xu</maintainer>
+  <author email="shaobxu@gmail.com">Shaobing Xu</author>
+  <license>closed source</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+</package>
