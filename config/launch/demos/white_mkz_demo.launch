@@ -12,6 +12,9 @@
         <param name="output_topic" value="/dsrc/bsm"/>
         <param name="msg_type" value="TrackingBoxArray"/>
     </node>
+    <node pkg="zzz_tools_calibration" type="broadcaster" name="calib_broadcast">
+        <param name="calib_file" value="/home/jacobz/ZZZ/config/sensors/white_mkz.json"/>
+    </node>
 
     <!-- Camera Perception -->
     <group if="$(arg enable_camera)">

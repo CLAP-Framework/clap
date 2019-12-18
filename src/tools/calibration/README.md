@@ -1,4 +1,3 @@
-'''
 This module read calibration settings from file and broadcast them by proper messages (Transform, CameraInfo, etc.)
 The content of the calibration file should contain following contents
 
@@ -78,73 +77,3 @@ Currently only json format is supported. Example json:
     ]
 }
 ```
-'''
-
-import json
-import time
-
-import rospy
-import tf.transformations as tft
-import tf2_ros as tf2
-
-from zzz_common.params import StaticCameraInfoBroadcaster
-from sensor_msgs.msg import CameraInfo
-from geometry_msgs.msg import TransformStamped
-
-############## NOTE: Change you settings here ###############
-# TODO: Move this script into a node and these should be ros parameters
-calib_file = "config/redmkz_demo.calib.json" # calibration file location
-caminfo_topic = "/intri_static" # this topic is used to contain aggregated intrinsics of camera, its behavior is like '/tf'
-pub_rate = 5 # frequency of publishing calibration data, unit is Hz
-#############################################################
-
-def create_transform(item):
-    transform = TransformStamped()
-    transform.header.stamp = rospy.Time.now()
-    transform.header.frame_id = item['frame_id']
-    transform.child_frame_id = item['child_frame_id']
-    transform.transform.translation.x = item['txyz'][0]
-    transform.transform.translation.y = item['txyz'][1]
-    transform.transform.translation.z = item['txyz'][2]
-    transform.transform.rotation.x = item['qxyzw'][0]
-    transform.transform.rotation.y = item['qxyzw'][1]
-    transform.transform.rotation.z = item['qxyzw'][2]
-    transform.transform.rotation.w = item['qxyzw'][3]
-    return transform
-
-def create_camera_info(item):
-    caminfo = CameraInfo()
-    caminfo.header.stamp = rospy.Time.now()
-    caminfo.header.frame_id = item['frame_id']
-
-    caminfo.width = item['width']    
-    caminfo.height = item['height']
-    caminfo.distortion_model = 'plumb_bob'
-
-    caminfo.K = list(item['K'])
-    caminfo.D = list(item['D'])
-    caminfo.R = list(item['R'])
-    caminfo.P = list(item['P'])
-
-    return caminfo
-
-if __name__ == '__main__':
-    calib_params = None
-    with open(calib_file, 'r') as fin:
-        calib_params = json.load(fin)
-
-    rospy.init_node('calib_broadcast', anonymous=True)
-    tfreporter = tf2.StaticTransformBroadcaster()
-    camreporter = StaticCameraInfoBroadcaster()
-
-    rate = rospy.Rate(pub_rate)
-    while not rospy.is_shutdown():
-        try:
-            for extri in calib_params['extrinsics']:
-                tfreporter.sendTransform(create_transform(extri))
-            for intri in calib_params['intrinsics']:
-                camreporter.sendCameraInfo(create_camera_info(intri))
-
-            rate.sleep()
-        except rospy.exceptions.ROSTimeMovedBackwardsException:
-            continue
