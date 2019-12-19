@@ -8,7 +8,6 @@ from zzz_planning_msgs.msg import DecisionTrajectory
 from zzz_control_msgs.msg import ControlCommand
 from zzz_control_latlon_controllers import MainController
 
-import threading
 
 class ControllerNode(object):
     def __init__(self):

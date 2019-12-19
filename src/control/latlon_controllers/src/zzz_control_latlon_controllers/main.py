@@ -8,6 +8,8 @@ from zzz_control_msgs.msg import ControlCommand
 from zzz_control_latlon_controllers.lateral import PurePersuitLateralController
 from zzz_control_latlon_controllers.longitudinal import PIDLongitudinalController
 
+from threading import Lock
+
 class MainController():
     """
     PurePersuitController is the combination of a PID controller for longitudinal control and a pure persuilt controller for lateral control
