@@ -123,7 +123,7 @@ class LocalMap(object):
         #print("                  wait: should update static map?")
         if self.should_update_static_map():
             self.update_static_map()
-        return self.static_local_map
+        return None
 
     def should_update_static_map(self):
         '''
