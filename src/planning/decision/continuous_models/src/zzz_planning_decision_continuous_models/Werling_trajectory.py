@@ -13,6 +13,7 @@ from zzz_navigation_msgs.msg import Lane
 from zzz_driver_msgs.utils import get_speed
 from zzz_cognition_msgs.msg import RoadObstacle
 from zzz_common.kinematics import get_frenet_state
+from zzz_common.geometry import dense_polyline2d
 
 SIM_LOOP = 500
 
@@ -20,15 +21,15 @@ SIM_LOOP = 500
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 2.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 1.0  # maximum curvature [1/m]
-MAX_ROAD_WIDTH = 7.0  # maximum road width [m]
-D_ROAD_W = 1.0  # road width sampling length [m]
-DT = 0.2  # time tick [s]
+MAX_ROAD_WIDTH = 3.5  # maximum road width [m]
+D_ROAD_W = 1.5  # road width sampling length [m]
+DT = 0.75  # time tick [s]
 MAXT = 5.0  # max prediction time [m]
 MINT = 4.0  # min prediction time [m]
 TARGET_SPEED = 30.0 / 3.6  # target speed [m/s]
 D_T_S = 5.0 / 3.6  # target speed sampling length [m/s]
 N_S_SAMPLE = 1  # sampling number of target speed
-ROBOT_RADIUS = 2.0  # robot radius [m]
+ROBOT_RADIUS = 4.0  # robot radius [m]
 
 # Cost weights
 KJ = 0.1
@@ -67,6 +68,8 @@ class Werling(object):
         self.yaw = []
         self.ds = []
         self.c = []
+
+        self.last_trajectory = []
     
     def update_dynamic_map(self, dynamic_map):
         self.dynamic_map = dynamic_map
@@ -74,27 +77,20 @@ class Werling(object):
     def trajectory_update(self, dynamic_map):
         print(__file__ + " start!!")
  
-        reference_path_from_map = dynamic_map.jmap.reference_path
-
-        # way points
-        Frenetrefx,Frenetrefy = self.conver_ndarray_to_XY(reference_path_from_map)
-        wp = []
-        wpempty = []
-        for point in reference_path_from_map.map_lane.central_path_points:
-            wpoint = [point.position.x,point.position.y]
-            wpointe = [0]
-            wp.append(wpoint)
-            wpempty.append(wpointe)
-        wp = np.array(wp)
-        wpempty = np.array(wpempty)
-        wp2 = [Frenetrefx,Frenetrefy]
+        reference_path_from_map = dynamic_map.jmap.reference_path.map_lane.central_path_points
         
+        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+        ref_path = dense_polyline2d(ref_path_ori, 1)
+        ref_path_tangets = np.zeros(len(ref_path))
+
+        Frenetrefx = ref_path[:,0]
+        Frenetrefy = ref_path[:,1]
         
         # obstacle lists
         ob = []
         if dynamic_map.jmap.obstacles is not None:
             for obs in dynamic_map.jmap.obstacles:
-                if obs.state.pose.pose.position.x - dynamic_map.ego_state.pose.pose.position.x < 50 and obs.state.pose.pose.position.y - dynamic_map.ego_state.pose.pose.position.y < 50:
+                if obs.state.pose.pose.position.x - dynamic_map.ego_state.pose.pose.position.x < 30 and obs.state.pose.pose.position.y - dynamic_map.ego_state.pose.pose.position.y < 30:
                     obstacle = [obs.state.pose.pose.position.x,obs.state.pose.pose.position.y]
                     ob.append(obstacle)
         ob = np.array(ob)
@@ -104,56 +100,44 @@ class Werling(object):
         # initial state
         ego_state = dynamic_map.ego_state
         c_speed = get_speed(ego_state)       # current speed [m/s]
+        # if self.last_trajectory is not None:
+        #     s0 = self.last_trajectory.s[1]
+        #     c_d = self.last_trajectory.d[1]
+        #     c_d_d = self.last_trajectory.d_d[1]
+        #     c_d_dd = self.last_trajectory.d_dd[1]
+            # c_speed = path.s_d[1]
 
-        ffstate = get_frenet_state(dynamic_map.ego_state,wp,wpempty)
-        c_d =  -ffstate.d  # current lateral position [m]
-        c_d_d = ffstate.vd  # current lateral speed [m/s]
-        c_d_dd = ffstate.ad  # current latral acceleration [m/s]
-        s0 = -ffstate.s  # current course position
+        ffstate = get_frenet_state(dynamic_map.ego_state, ref_path, ref_path_tangets)
+        c_d = - ffstate.d #-ffstate.d  # current lateral position [m]
+        c_d_d = 0 # ffstate.vd  # current lateral speed [m/s]
+        c_d_dd = 0 # ffstate.ad  # current latral acceleration [m/s]
+        s0 = ffstate.s # + c_speed * 0.3      # current course position
 
-        trajectory = frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
-        print("-----------------------")
-        if trajectory is not None:
-            print("-----------------------",trajectory.x[1])
-            print("-----------------------")
-            print("-----------------------")
+        generated_trajectory = frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
+        if generated_trajectory is not None:
+            desired_speed = generated_trajectory.s_d[-1] # TODO: Better speed design
+            trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
+            trajectory_array = dense_polyline2d(trajectory_array_ori,1)
+            # self.last_trajectory = trajectory
+        else:
+            trajectory_array = ref_path
+            desired_speed = 0
 
-        print("-----------------------")
-        return trajectory,10
+        return trajectory_array, desired_speed
 
-        # return reference_path_from_map,10
+    ############
+    ## TOOL BOXs
+    ############
 
-    def conver_ndarray_to_XY(self,path): #FIXME(nanshan )
-        global_x=[]
-        global_y=[]
-        for wp in path.map_lane.central_path_points:
-            global_x.append(wp.position.x)
-            global_y.append(wp.position.y)
-            #print("----------Frenetref=",wp.position.x,wp.position.y)
-        
-        return np.array(global_x)[1:50], np.array(global_y)[1:50]
-    
-    def convert_XY_to_pathmsg(self,XX,YY,path_id = 'map'):
-        msg = Path()
-        print("....................Finish,Werling",len(XX))
-
-        for i in range(1,len(XX)):
-            pose = PoseStamped()
-            pose.pose.position.x = XX[i]
-            pose.pose.position.y = YY[i]
-            msg.poses.append(pose)
-        msg.header.frame_id = path_id 
-        return msg
-
+    def convert_path_to_ndarray(self, path):
+        point_list = [(point.position.x, point.position.y) for point in path]
+        return np.array(point_list)
 
 def frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob):
 
     fplist = calc_frenet_paths(c_speed, c_d, c_d_d, c_d_dd, s0)
-    print("______________________________________________________",len(fplist))
     fplist = calc_global_paths(fplist, csp)
-    print("_____________",len(fplist))
     fplist = check_paths(fplist, ob)
-    print("_____________",len(fplist))
     # find minimum cost path
     mincost = float("inf")
     bestpath = None
@@ -161,7 +145,6 @@ def frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob):
         if mincost >= fp.cf:
             mincost = fp.cf
             bestpath = fp
-
     return bestpath
 
 
@@ -176,7 +159,7 @@ def generate_target_course(x, y):
         ry.append(iy)
         ryaw.append(csp.calc_yaw(i_s))
         rk.append(csp.calc_curvature(i_s))
-        # print("================================",ix)
+
     return rx, ry, ryaw, rk, csp
 
 
@@ -259,6 +242,9 @@ def calc_global_paths(fplist, csp):
 
 def check_collision(fp, ob):
 
+    if len(ob) == 0:
+        return True
+
     for i in range(len(ob[:, 0])):
         d = [((ix - ob[i, 0])**2 + (iy - ob[i, 1])**2)
             for (ix, iy) in zip(fp.x, fp.y)]
@@ -275,16 +261,17 @@ def check_paths(fplist, ob):
 
     okind = []
     for i, _ in enumerate(fplist):
-        if any([v > MAX_SPEED for v in fplist[i].s_d]):  # Max speed check
-            continue
-        elif any([abs(a) > MAX_ACCEL for a in fplist[i].s_dd]):  # Max accel check
-            continue
-        elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
-            continue
-        elif not check_collision(fplist[i], ob):
+        # if any([v > MAX_SPEED for v in fplist[i].s_d]):  # Max speed check
+        #     continue
+        # elif any([abs(a) > MAX_ACCEL for a in fplist[i].s_dd]):  # Max accel check
+        #     continue
+        # elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
+            # continue
+        if not check_collision(fplist[i], ob):
             continue
 
         okind.append(i)
+
 
     return [fplist[i] for i in okind]
 

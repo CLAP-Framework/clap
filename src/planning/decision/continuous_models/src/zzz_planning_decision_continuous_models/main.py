@@ -54,20 +54,11 @@ class MainDecision(object):
 
         elif self.Planning_type == 2:
             # Keep replanning
-            trajectory,desired_speed = self._path_model_instance.trajectory_update(dynamic_map)
+            trajectory, desired_speed = self._path_model_instance.trajectory_update(dynamic_map)
             msg = DecisionTrajectory()
-            if trajectory is not None:
-                msg.trajectory = self.convert_XY_to_pathmsg(trajectory.x,trajectory.y)
-                msg.desired_speed = desired_speed
-            else:
-                trajectory = reference_path_from_map
-                # desired_speed = self._speed_model_instance.speed_update(trajectory, dynamic_map)
-                if trajectory is not None:
-                    send_trajectory = self.process_reference_path(trajectory,dynamic_map,desired_speed)
-                # Convert to Message type
-                if send_trajectory is not None:
-                    msg.trajectory = self.convert_ndarray_to_pathmsg(send_trajectory) # TODO: move to library
-                    msg.desired_speed = desired_speed  #FIXME(NANSHAN)
+            msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory)
+            msg.desired_speed = desired_speed
+
             return msg
 
         elif self.Planning_type == 3:
@@ -94,14 +85,14 @@ class MainDecision(object):
 
     def convert_XY_to_pathmsg(self,XX,YY,path_id = 'map'):
         msg = Path()
-        print("....................Finish,Werling",len(XX))
+        print("....................Finish,Werling",XX,YY)
 
         for i in range(1,len(XX)):
             pose = PoseStamped()
             pose.pose.position.x = XX[i]
             pose.pose.position.y = YY[i]
-            print('trajectoryx=',XX[i])
-            print('trajectoryy=',YY[i])
+            # print('trajectoryx=',XX[i])
+            # print('trajectoryy=',YY[i])
             msg.poses.append(pose)
         msg.header.frame_id = path_id 
         return msg
@@ -170,14 +161,14 @@ class MainDecision(object):
         point_list = [(point.position.x, point.position.y) for point in path]
         return np.array(point_list)
 
-    def convert_ndarray_to_pathmsg(self, path):   #FIXME(dns )
+    def convert_ndarray_to_pathmsg(self, path):
         msg = Path()
         for wp in path:
             pose = PoseStamped()
             pose.pose.position.x = wp[0]
             pose.pose.position.y = wp[1]
             msg.poses.append(pose)
-        msg.header.frame_id = "map"  # FIXME(NANSHAN):
+        msg.header.frame_id = "map" 
 
         return msg
 
