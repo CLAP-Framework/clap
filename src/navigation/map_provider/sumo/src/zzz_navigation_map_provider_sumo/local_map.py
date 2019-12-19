@@ -9,7 +9,9 @@ import math
 import time
 
 import rospy
+import numpy as np
 from zzz_navigation_msgs.msg import Lane, LanePoint, Map
+from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 
@@ -196,6 +198,42 @@ class LocalMap(object):
                 self.static_local_map.lanes.append(lane_wrapped)
 
     def wrap_lane(self, lane):
+        '''
+        Wrap lane information into ROS message
+        '''
+        lane_wrapped = Lane()
+        lane_wrapped.index = lane.getIndex()
+        # lane_wrapped.width = lane.getWidth()
+        last_x = last_y = last_s = None
+
+        discrete_points = []
+        if len(lane.getShape()) <= 2:
+            point_list = [(wp[0], wp[1]) for wp in lane.getShape()]
+            points_array = np.array(point_list)
+            discrete_points = dense_polyline2d(points_array, 2)  
+        else:
+            discrete_points = lane.getShape()
+
+        for wp in discrete_points:
+            point = LanePoint()
+            x, y = self.convert_to_origin_XY(wp[0], wp[1])
+            # Calculate mileage
+            if last_s is None:
+                point.s = 0
+            else:
+                point.s = last_s + math.sqrt((x-last_x)*(x-last_x) + (y-last_y)*(y-last_y))
+            point.position.x = x
+            point.position.y = y
+            # TODO: add more lane point info
+
+            # Update
+            last_s = point.s
+            last_x = point.position.x
+            last_y = point.position.y
+            lane_wrapped.central_path_points.append(point)
+        return lane_wrapped            
+
+    def wrap_lane2(self, lane):
         '''
         Wrap lane information into ROS message
         '''

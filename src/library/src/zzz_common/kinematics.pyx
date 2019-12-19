@@ -164,7 +164,9 @@ cpdef get_frenet_state(cartesian_state, np.ndarray polyline, tangents):
     v = np.array([
         cartesian_state.twist.twist.linear.x,
         cartesian_state.twist.twist.linear.y])
-    frenet.vs, frenet.vd = v.dot(rot.T)
+        
+    # frenet.vs, frenet.vd = v.dot(rot.T)
+    frenet.vs, frenet.vd = ((v.T).dot(rot.T)).T
     frenet.omega = cartesian_state.twist.twist.angular.z
     
     a = np.array([

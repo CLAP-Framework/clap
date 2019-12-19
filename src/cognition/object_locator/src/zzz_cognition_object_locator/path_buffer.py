@@ -83,9 +83,10 @@ class PathBuffer:
         ego_state = tstates.ego_state # for easy access
 
         # Process segment clear request
-        if self._reference_path_changed:
-            self._reference_path_segment.clear()
-            self._reference_path_changed = False
+        with self._reference_path_lock:
+            if self._reference_path_changed:
+                self._reference_path_segment.clear()
+                self._reference_path_changed = False
         # tstates.reference_path = self._reference_path_buffer
         # reference_path = tstates.reference_path # for easy access
 
@@ -186,6 +187,8 @@ class PathBuffer:
                 nearest_dis = d
 
         if front_vehicle is not None:
-            rospy.logdebug("reference lane: front vehicle dis: %f", nearest_dis)
+            rospy.loginfo("front vehicle pos {}-{}, ego pos {}-{}, front distance {}".format(
+                vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y,
+                tstates.ego_state.pose.pose.position.x, tstates.ego_state.pose.pose.position.y, nearest_dis))
 
         return front_vehicle

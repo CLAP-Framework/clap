@@ -20,13 +20,17 @@ class MainController():
         self.ego_state = None
         self.desired_trajectory = None
         self.desired_speed = 30.0
+        self._trajectory_lock = Lock()
+        self._ego_state_lock = Lock()
 
     def update_decision(self, decision):
-        self.desired_trajectory = decision.trajectory
-        self.desired_speed = decision.desired_speed
+        with self._trajectory_lock:
+            self.desired_trajectory = decision.trajectory
+            self.desired_speed = decision.desired_speed
 
     def update_pose(self, pose):
-        self.ego_state = pose.state
+        with self._ego_state_lock:
+            self.ego_state = pose.state
 
     def ready_for_control(self, short_distance_thres = 5):
         if self.desired_trajectory is None or len(self.desired_trajectory.poses) == 0:
@@ -59,18 +63,20 @@ class MainController():
 
         rospy.logdebug("received target speed:%f, current_speed: %f", self.desired_speed, get_speed(self.ego_state))
         
-        target_speed = self.desired_speed
-        trajectory = self.desired_trajectory
-        current_speed = get_speed(self.ego_state)
         ego_pose = self.ego_state.pose.pose
 
-        accel = self._lon_controller.run_step(target_speed, current_speed)
-        steer = self._lat_controller.run_step(ego_pose, trajectory, current_speed)
+        with self._trajectory_lock:
+            target_speed = self.desired_speed
+            trajectory = self.desired_trajectory
+            current_speed = get_speed(self.ego_state)
 
-        rospy.logdebug("accel = %f, steer = %f", accel, steer)
+            accel = self._lon_controller.run_step(target_speed, current_speed)
+            steer = self._lat_controller.run_step(ego_pose, trajectory, current_speed)
 
-        control_msg = ControlCommand()
-        control_msg.accel = accel
-        control_msg.steer = steer
+            rospy.logdebug("accel = %f, steer = %f ***", accel, steer)
 
-        return control_msg
+            control_msg = ControlCommand()
+            control_msg.accel = accel
+            control_msg.steer = steer
+
+            return control_msg
