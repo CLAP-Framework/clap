@@ -441,15 +441,15 @@ class RosAgent(AutonomousAgent):
         if self.world_info_publisher:
             #extract map name
             map_name = os.path.basename(data['map_file'])[:-4] 
-            #if self.current_map_name != map_name:
-            self.current_map_name = map_name
-            world_info = CarlaWorldInfo()
-            world_info.map_name = self.current_map_name
-            world_info.opendrive = data['opendrive']
-            self.world_info_publisher.publish(world_info)
-
-        if self.map_file_publisher:
-            self.map_file_publisher.publish(data['map_file'])
+            if self.current_map_name != map_name:
+                self.current_map_name = map_name
+                world_info = CarlaWorldInfo()
+                world_info.map_name = self.current_map_name
+                world_info.opendrive = data['opendrive']
+                self.world_info_publisher.publish(world_info)
+                
+                if self.map_file_publisher:
+                    self.map_file_publisher.publish(data['map_file'])
 
 
     def gps_to_world(self, lon, lat):
