@@ -14,13 +14,13 @@ class DecisionNode(object):
         params = parse_private_args(
             decision_trajectory_topic="decision_trajectory",
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
-            hz = 10,
+            rate=10,
         )
 
         model_lon = IDM()
         model_lat = LaneUtility(model_lon)
         self._decision_instance = MainDecision(lon_decision=model_lon, lat_decision=model_lat)
-        self._rate = rospy.Rate(params.hz)
+        self._rate = rospy.Rate(params.rate)
 
         self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
