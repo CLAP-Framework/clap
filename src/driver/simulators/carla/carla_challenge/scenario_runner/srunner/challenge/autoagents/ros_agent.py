@@ -495,7 +495,7 @@ class RosAgent(AutonomousAgent):
 
         # get transform 
         world_position = target_vehicle.get('world_position')
-        heading = target_vehicle.get('heading')
+        velocity = target_vehicle.get('velocity')
 
         # wrap vehicle info
         vehicle_target = TrackingBox()
@@ -514,9 +514,9 @@ class RosAgent(AutonomousAgent):
         vehicle_target.bbox.dimension.length_y = 1
         vehicle_target.bbox.dimension.length_z = 1
 
-        vehicle_target.twist.twist.linear.x = heading[0]
-        vehicle_target.twist.twist.linear.y = -heading[1]
-        vehicle_target.twist.twist.linear.z = heading[2]
+        vehicle_target.twist.twist.linear.x = velocity[0]
+        vehicle_target.twist.twist.linear.y = -velocity[1]
+        vehicle_target.twist.twist.linear.z = velocity[2]
         
         # vehicle_target.bbox.pose.pose.position.x = t_loc[0]
         # vehicle_target.bbox.pose.pose.position.y = t_loc[1]

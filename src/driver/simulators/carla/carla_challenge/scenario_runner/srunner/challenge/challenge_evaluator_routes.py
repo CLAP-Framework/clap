@@ -1235,6 +1235,12 @@ class ChallengeEvaluator(object):
         print('World Initial Setttings {}'.format(settings))
 
         for route_idx, route_description in enumerate(route_descriptions_list):
+            
+            # if route_description['town_name'] == 'Town04':
+            #     pass
+            # else:
+            #     continue
+
             for repetition in range(self.repetitions):
                 # check if we have enough wall time to run this specific route
                 if not self.within_available_time():
