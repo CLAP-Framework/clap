@@ -21,15 +21,15 @@ SIM_LOOP = 500
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 2.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 1.0  # maximum curvature [1/m]
-MAX_ROAD_WIDTH = 3.5  # maximum road width [m]
-D_ROAD_W = 1.5  # road width sampling length [m]
-DT = 0.75  # time tick [s]
+MAX_ROAD_WIDTH = 7.0  # maximum road width [m]
+D_ROAD_W = 1.0  # road width sampling length [m]
+DT = 0.2  # time tick [s]
 MAXT = 5.0  # max prediction time [m]
 MINT = 4.0  # min prediction time [m]
 TARGET_SPEED = 30.0 / 3.6  # target speed [m/s]
 D_T_S = 5.0 / 3.6  # target speed sampling length [m/s]
 N_S_SAMPLE = 1  # sampling number of target speed
-ROBOT_RADIUS = 4.0  # robot radius [m]
+ROBOT_RADIUS = 3.5  # robot radius [m]
 
 # Cost weights
 KJ = 0.1
@@ -76,6 +76,7 @@ class Werling(object):
 
     def trajectory_update(self, dynamic_map):
         print(__file__ + " start!!")
+
  
         reference_path_from_map = dynamic_map.jmap.reference_path.map_lane.central_path_points
         
@@ -90,10 +91,14 @@ class Werling(object):
         ob = []
         if dynamic_map.jmap.obstacles is not None:
             for obs in dynamic_map.jmap.obstacles:
-                if obs.state.pose.pose.position.x - dynamic_map.ego_state.pose.pose.position.x < 30 and obs.state.pose.pose.position.y - dynamic_map.ego_state.pose.pose.position.y < 30:
+                if abs(obs.state.pose.pose.position.x - dynamic_map.ego_state.pose.pose.position.x) < 30 and abs(obs.state.pose.pose.position.y - dynamic_map.ego_state.pose.pose.position.y) < 30:
                     obstacle = [obs.state.pose.pose.position.x,obs.state.pose.pose.position.y]
                     ob.append(obstacle)
         ob = np.array(ob)
+
+        # if check_collision(self.last_trajectory,ob) == False and self.last_trajectory is not None:
+        #     return self.last_trajectory,10
+
 
         tx, ty, tyaw, tc, csp = generate_target_course(Frenetrefx,Frenetrefy)
 
@@ -111,17 +116,33 @@ class Werling(object):
         c_d = - ffstate.d #-ffstate.d  # current lateral position [m]
         c_d_d = 0 # ffstate.vd  # current lateral speed [m/s]
         c_d_dd = 0 # ffstate.ad  # current latral acceleration [m/s]
-        s0 = ffstate.s # + c_speed * 0.3      # current course position
+        s0 = ffstate.s + c_speed * 0.75      # current course position
+
+        #check_collision(self.last_trajectory,ob) == True or
 
         generated_trajectory = frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
+           
+
         if generated_trajectory is not None:
-            desired_speed = generated_trajectory.s_d[-1] # TODO: Better speed design
-            trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
-            trajectory_array = dense_polyline2d(trajectory_array_ori,1)
-            # self.last_trajectory = trajectory
+            if len(self.last_trajectory) < 5 or abs(dynamic_map.ego_state.pose.pose.position.x - self.last_trajectory[0][0])>0.5 or abs(dynamic_map.ego_state.pose.pose.position.y - self.last_trajectory[0][1])>0.5:
+                desired_speed = generated_trajectory.s_d[-1] # TODO: Better speed design
+                trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
+                trajectory_array = dense_polyline2d(trajectory_array_ori,1)
+                self.last_trajectory = trajectory_array
+                print("111111111111111111111111111")
+            else :
+                trajectory_array = self.last_trajectory
+                desired_speed = 10 #TODO read from the trajectory
+                print("222222222222222222222222222")
+        elif len(self.last_trajectory) > 5 or c_speed > 0:
+            trajectory_array = self.last_trajectory
+            desired_speed = 10 #TODO read from the trajectory
+            print("252525252525252525252525")
+     
         else:
-            trajectory_array = ref_path
-            desired_speed = 0
+            trajectory_array =  ref_path
+            desired_speed = 10
+            print("3333333333333333333333333333")
 
         return trajectory_array, desired_speed
 
@@ -261,12 +282,12 @@ def check_paths(fplist, ob):
 
     okind = []
     for i, _ in enumerate(fplist):
-        # if any([v > MAX_SPEED for v in fplist[i].s_d]):  # Max speed check
-        #     continue
-        # elif any([abs(a) > MAX_ACCEL for a in fplist[i].s_dd]):  # Max accel check
-        #     continue
-        # elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
-            # continue
+        if any([v > MAX_SPEED for v in fplist[i].s_d]):  # Max speed check
+            continue
+        elif any([abs(a) > MAX_ACCEL for a in fplist[i].s_dd]):  # Max accel check
+            continue
+        elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
+            continue
         if not check_collision(fplist[i], ob):
             continue
 

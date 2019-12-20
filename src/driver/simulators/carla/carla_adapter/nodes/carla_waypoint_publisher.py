@@ -44,6 +44,10 @@ class CarlaToRosWaypointConverter(object):
 
     def __init__(self, carla_world, setgoal):
         self.world = carla_world
+
+        #only for circles
+        self.world
+
         self.map = carla_world.get_map()
         self.ego_vehicle = None
         self.role_name = rospy.get_param("~role_name", 'ego_vehicle')

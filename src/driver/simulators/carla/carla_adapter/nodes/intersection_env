@@ -231,7 +231,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
     if if_random == 1:
 
         #set_ramdom_vehicle_number
-        count = 100
+        count = 500
 
         for spawn_point in spawn_points:
             if try_spawn_random_vehicle_at(spawn_point,blueprints,carla_world):
@@ -239,10 +239,11 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
             if count <= 0:
                 break
 
-        while count > 0:
-            time.sleep(2.0)
-            if try_spawn_random_vehicle_at(random.choice(spawn_points,blueprint,carla_world)):
-                count -= 1
+        # while count > 0:
+        #     time.sleep(2.0)
+        #     blueprint = random.choice(blueprints)
+        #     if try_spawn_random_vehicle_at(random.choice(spawn_points,blueprint,carla_world)):
+        #         count -= 1
 
         # print('random spawned %d vehicles, press Ctrl+C to exit.' % 10)
 
@@ -401,6 +402,8 @@ if __name__ == "__main__":
     carla_world = carla_client.get_world()
     rospy.loginfo("Connected to Carla.")
     actor_list = []
+    set_goal_flag = 0
+    has_set = 0 
 
     # Publish and Subscribe messages
     starting_time = rospy.Time.now().to_sec()
@@ -440,27 +443,30 @@ if __name__ == "__main__":
             ego_x = pose_buffer.state.pose.pose.position.x
             ego_y = pose_buffer.state.pose.pose.position.y
 
-            # if math.pow((ego_x+21.5),2) + math.pow((ego_y-205),2) < 64:
-            #     setgoal = carla_world.get_map().get_spawn_points()[0]
-            #     setgoal.location.x = -11
-            #     setgoal.location.y = -134.5
-            #     setgoal.location.z = 0
-            #     setgoal.rotation.pitch = 0
-            #     setgoal.rotation.yaw = 0 
-            #     setgoal.rotation.roll = 0
-            #     ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
-            #     print("222222222222222222222")
+            if math.pow((ego_x+21.5),2) + math.pow((ego_y-205),2) < 64:
+                # setgoal_flag = 1
+            # if setgoal_flag = 1 and has_set = 0
+                setgoal = carla_world.get_map().get_spawn_points()[0]
+                setgoal.location.x = -11
+                setgoal.location.y = -134.5
+                setgoal.location.z = 0
+                setgoal.rotation.pitch = 0
+                setgoal.rotation.yaw = 0 
+                setgoal.rotation.roll = 0
+                ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
+                print("222222222222222222222")
+                # has_set = 1
 
-            # if math.pow((ego_x+39.5),2) + math.pow((ego_y-134.5),2) < 64:
-            #     setgoal = carla_world.get_map().get_spawn_points()[0]
-            #     setgoal.location.x = -67
-            #     setgoal.location.y = -200
-            #     setgoal.location.z = 8
-            #     setgoal.rotation.pitch = 0
-            #     setgoal.rotation.yaw = 0 
-            #     setgoal.rotation.roll = 0
-            #     ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
-            #     print("1111111111111111111111")
+            if math.pow((ego_x+39.5),2) + math.pow((ego_y-134.5),2) < 64:
+                setgoal = carla_world.get_map().get_spawn_points()[0]
+                setgoal.location.x = -67
+                setgoal.location.y = -200
+                setgoal.location.z = 8
+                setgoal.rotation.pitch = 0
+                setgoal.rotation.yaw = 0 
+                setgoal.rotation.roll = 0
+                ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
+                print("1111111111111111111111")
 
         rate.sleep()
 
