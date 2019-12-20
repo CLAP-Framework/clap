@@ -7,11 +7,10 @@ from collections import deque
 import tempfile
 import math
 import time
-import carla #read lane marker directly from carla
 
 import rospy
 import numpy as np
-from zzz_navigation_msgs.msg import Lane, LanePoint, LaneBoundary, Map
+from zzz_navigation_msgs.msg import Lane, LanePoint, Map
 from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
@@ -36,10 +35,6 @@ class LocalMap(object):
         self._current_edge_id = None # road id string
         self._reference_lane_list = deque(maxlen=20000)
         self._lane_search_radius = 4
-
-        client = carla.Client('localhost', 2000)
-        client.set_timeout(10.0)
-        self._world = client.get_world()
 
     def setup_hdmap(self, file=None, content=None, mtype=None):
         if not (file or content):
@@ -97,8 +92,6 @@ class LocalMap(object):
 
         for wp in reference_path.poses:
             # TODO: Takes too much time for processing
-            print("running-------------------")
-            
             wp_map_x, wp_map_y = self.convert_to_map_XY(wp.pose.position.x, wp.pose.position.y)
 
             # Find the closest lane of the reference path points
@@ -202,16 +195,10 @@ class LocalMap(object):
         '''
         Wrap lane information into ROS message
         '''
-        # jxy: deal with each point in the lane center line.
-        # Now I will put all the lane boundary line information in.
-        # Directly get information from carla with the center line point as the position.
-
         lane_wrapped = Lane()
         lane_wrapped.index = lane.getIndex()
         # lane_wrapped.width = lane.getWidth()
-        last_x = last_y = last_s = last_tangent = None
-        start = time.time()
-        count = 0
+        last_x = last_y = last_s = None
         for wp in lane.getShape():
             point = LanePoint()
             x, y = self.convert_to_origin_XY(wp[0], wp[1])
@@ -220,78 +207,15 @@ class LocalMap(object):
                 point.s = 0
             else:
                 point.s = last_s + math.sqrt((x-last_x)*(x-last_x) + (y-last_y)*(y-last_y))
-                point.tangent = 3.1415927/2 - math.atan2((y-last_y), (x-last_x))
             point.position.x = x
             point.position.y = y
-
-            flag_straight = 1
-            if last_tangent is not None and abs(point.tangent - last_tangent) > 0.0873:
-                # 5 degree
-                flag_straight = 0
-            last_tangent = point.tangent
-            # TODO: add more lane point info: jxy dealing with this
+            # TODO: add more lane point info
 
             # Update
             last_s = point.s
             last_x = point.position.x
             last_y = point.position.y
             lane_wrapped.central_path_points.append(point)
-
-            # jxy: add lane boundary information
-            left_bound = LaneBoundary()
-            right_bound = LaneBoundary()
-
-            count = count + 1
-
-            if (flag_straight == 0 and count % 3 == 1) or count % 10 == 1:
-                # too slow... cost about 7s, so divide by 10, but distance becomes 10 times (5m). If direction changes, reduce the gap.
-                rospy.loginfo("location x:%f y:%f", x, y)
-                location = carla.Location()
-                location.x = x
-                location.y = y
-                waypoint = self._world.get_map().get_waypoint(location)
-
-                angle = 3.1415927/2 - point.tangent
-                left_bound.boundary_point.s = waypoint.s
-                left_bound.boundary_point.tangent = point.tangent # simplified, theoretically it should be the lane boundary direction
-                left_bound.boundary_point.position.x = x + waypoint.lane_width/2.0 * math.cos(angle + 3.1415927/2) # notice that the lane width is not constant, it can vary with s
-                left_bound.boundary_point.position.y = y + waypoint.lane_width/2.0 * math.sin(angle + 3.1415927/2)
-                
-                if str(waypoint.left_lane_marking.type) == 'Broken' or str(waypoint.left_lane_marking.type) == 'BrokenBroken':
-                    left_bound.boundary_type = 1
-                elif str(waypoint.left_lane_marking.type) == 'Solid' or str(waypoint.left_lane_marking.type) == 'SolidSolid' or str(waypoint.left_lane_marking.type) == 'BrokenSolid':
-                    left_bound.boundary_type = 3
-                elif str(waypoint.left_lane_marking.type) == 'Curb':
-                    left_bound.boundary_type = 6
-                else:
-                    left_bound.boundary_type = 0
-
-                right_bound.boundary_point.s = waypoint.s
-                right_bound.boundary_point.tangent = point.tangent # simplified, theoretically it should be the lane boundary direction
-                right_bound.boundary_point.position.x = x - waypoint.lane_width/2.0 * math.cos(angle + 3.1415927/2) # notice that the lane width is not constant, it can vary with s
-                right_bound.boundary_point.position.y = y - waypoint.lane_width/2.0 * math.sin(angle + 3.1415927/2)
-            
-                if str(waypoint.right_lane_marking.type) == 'Broken' or str(waypoint.right_lane_marking.type) == 'BrokenBroken':
-                    right_bound.boundary_type = 1
-                elif str(waypoint.right_lane_marking.type) == 'Solid' or str(waypoint.right_lane_marking.type) == 'SolidSolid' or str(waypoint.right_lane_marking.type) == 'BrokenSolid':
-                    right_bound.boundary_type = 3
-                elif str(waypoint.right_lane_marking.type) == 'Curb':
-                    right_bound.boundary_type = 6
-                else:
-                    right_bound.boundary_type = 0
-                
-                #left_bound.boundary_type = 
-                print "left marker type:"
-                print left_bound.boundary_type
-                print waypoint.left_lane_marking.type
-                print "\n\n"
-                
-                lane_wrapped.left_boundaries.append(left_bound)
-                lane_wrapped.right_boundaries.append(right_bound)
-
-        end = time.time()
-        print("\n\n\n\n\n\n\n\n\n\n\n\n")
-        print end-start
 
         return lane_wrapped
 
