@@ -5,7 +5,7 @@ import rospy
 from zzz_common.params import parse_private_args
 from zzz_perception_msgs.msg import DetectionBox2DArray
 from sensor_msgs.msg import Image
-from zzz_visualization_rviz_box_visualizer.detection2d import DetectionBox2DVisualizer
+from zzz_visualization.detection2d import DetectionBox2DVisualizer
 
 class Node():
     def __init__(self):

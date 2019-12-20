@@ -3,7 +3,7 @@ import rospy
 import math
 
 from visualization_msgs.msg import Marker, MarkerArray
-from zzz_visualization_rviz_box_visualizer.utils import parse_color
+from zzz_visualization.utils import parse_color
 
 class DetectionBoxVisualizer:
     def __init__(self, **params):

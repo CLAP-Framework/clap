@@ -26,7 +26,7 @@
             <param name="input_topic" value="objects_projected"/>
             <param name="output_topic" value="objects_transformed"/>
         </node>
-        <node pkg="zzz_visualization_rviz_box_visualizer" type="detection2d"
+        <node pkg="zzz_visualization" type="detection2d"
             name="dbox_visualize_img" output="screen" ns="/zzz/perception">
             <param name="input_topic" value="objects2d_detected"/>
             <param name="image_topic" value="$(arg left_camera_topic)/image_color"/>
@@ -68,7 +68,7 @@
             <param name="input_topic" value="objects_detected"/>
             <param name="output_topic" value="objects_lshape"/>
         </node>
-        <node pkg="zzz_visualization_rviz_box_visualizer" type="detection"
+        <node pkg="zzz_visualization" type="detection"
             name="dbox_visualize" output="screen" ns="/zzz/perception">
             <param name="input_topic" value="objects_detected"/>
             <param name="marker_lifetime" value="0.5"/>
@@ -95,7 +95,7 @@
         <param name="detection_topic" value="objects_transformed"/>
         <param name="tracking_topic" value="objects_tracked"/>
     </node>
-    <node pkg="zzz_visualization_rviz_box_visualizer" type="tracking"
+    <node pkg="zzz_visualization" type="tracking"
           name="box_visualize" output="screen" ns="/zzz/perception">
         <param name="input_topic" value="objects_tracked"/>
         <param name="output_topic" value="carla/debug_marker"/>

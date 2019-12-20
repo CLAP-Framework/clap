@@ -4,7 +4,7 @@ import numpy as np
 
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
-from zzz_visualization_rviz_box_visualizer.utils import parse_color
+from zzz_visualization.utils import parse_color
 
 class TrackingBoxVisualizer:
     def __init__(self, **params):

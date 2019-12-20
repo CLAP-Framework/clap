@@ -1,8 +1,8 @@
 <package format="2">
-  <name>zzz_visualization_web_dash</name>
+  <name>zzz</name>
   <version>0.1.0</version>
   <description>
-    Plot.ly Dash based visualization
+    This is a meta package that wraps up all dependencies of zzz.
   </description>
   <license>BSD</license>
   <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>
@@ -13,8 +13,7 @@
   <url type="bugtracker">https://github.com/cmpute/zzz/issues</url>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>zzz_perception_msgs</exec_depend>
-  <exec_depend>visualization_msgs</exec_depend>
-  <export></export>
+  <build_depend>zzz_msgs</build_depend>
+
+  <build_depend>zzz_cognition_object_locator</build_depend>
 </package>

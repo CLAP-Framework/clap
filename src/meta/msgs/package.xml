@@ -1,0 +1,23 @@
+<package format="2">
+  <name>zzz_msgs</name>
+  <version>0.1.0</version>
+  <description>
+    This is a meta package that wraps up all message definitions of zzz.
+  </description>
+  <license>BSD</license>
+  <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>
+  <author email="zyxin@umich.edu">Yuanxin Zhong</author>
+
+  <url type="website">https://github.com/cmpute/zzz</url>
+  <url type="repository">https://github.com/cmpute/zzz</url>
+  <url type="bugtracker">https://github.com/cmpute/zzz/issues</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>zzz_cognition_msgs</build_depend>
+  <build_depend>zzz_control_msgs</build_depend>
+  <build_depend>zzz_driver_msgs</build_depend>
+  <build_depend>zzz_monitor_msgs</build_depend>
+  <build_depend>zzz_navigation_msgs</build_depend>
+  <build_depend>zzz_perception_msgs</build_depend>
+  <build_depend>zzz_planning_msgs</build_depend>
+</package>

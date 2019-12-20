@@ -6,7 +6,7 @@ import numpy as np
 import cv_bridge
 
 from sensor_msgs.msg import Image
-from zzz_visualization_rviz_box_visualizer.utils import parse_color
+from zzz_visualization.utils import parse_color
 
 class DetectionBox2DVisualizer:
     def __init__(self, **params):
