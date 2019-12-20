@@ -90,7 +90,6 @@ class LocalMap(object):
 
         for wp in reference_path.poses:
             # TODO: Takes too much time for processing
-            print("@@@@@@@@ working")
             wp_map_x, wp_map_y = self.convert_to_map_XY(wp.pose.position.x, wp.pose.position.y)
 
             # Find the closest lane of the reference path points
