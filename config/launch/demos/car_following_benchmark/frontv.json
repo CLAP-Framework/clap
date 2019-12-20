@@ -1,0 +1,11 @@
+{
+    "sensors": [
+        {
+            "type": "sensor.camera.rgb",
+            "id": "sky",
+            "x": 0, "y": 0, "z": 30,
+            "roll": 0.0, "pitch": -90.0, "yaw": 0,
+            "width": 720, "height": 1280, "fov": 40
+        }
+    ]
+}

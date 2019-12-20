@@ -5,7 +5,7 @@ import io
 import subprocess
 from collections import deque
 import tempfile
-import math
+import math, random
 
 import rospy
 from zzz_navigation_msgs.msg import Lane, LanePoint, Map
@@ -52,7 +52,8 @@ class LocalMap(object):
             file = file_handle.name
             file_handle.write(content)
             file_handle.close()
-            converted_file = os.path.join(tempfile.gettempdir(), "sumomap.temp")
+            # use random number here to prevent multiple instances conflict
+            converted_file = os.path.join(tempfile.gettempdir(), "sumo_map_%d.temp" % (random.randint(0, 999)))
             file_created = True
 
         assert os.path.exists(file)
@@ -67,7 +68,7 @@ class LocalMap(object):
             command = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
             exitcode = command.wait()
             if exitcode != 0:
-                rospy.logerr("SUMO netconvert failed, (exit code: %d)" % exitcode)
+                rospy.logerr("SUMO netconvert failed, (exit code: %d). You can try to upgrade SUMO to latest version!" % exitcode)
             else:
                 rospy.logdebug("SUMO netconvert succeed, stderr:\n %s", command.stderr.read())
 

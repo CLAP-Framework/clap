@@ -41,6 +41,7 @@ class Node(object):
         request = ReroutingRequest()
         request.reason = ReroutingRequest.REASON_TRIP_FINISHED
         self._rerouting_required_publisher.publish(request)
+        rospy.loginfo("Rerouting request sent!")
 
     def loop(self):
         while not rospy.is_shutdown():

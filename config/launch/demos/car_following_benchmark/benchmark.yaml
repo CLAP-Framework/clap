@@ -6,7 +6,7 @@ carla:
   town: "Town04"
   # enable/disable synchronous mode. If enabled ros-bridge waits until
   # expected data is received for all sensors
-  synchronous_mode: true
+  synchronous_mode: false
   # within synchronous mode: wait for a vehicle control command before next tick?
   synchronous_mode_wait_for_vehicle_control_command: true
   # set the fixed timestep length
