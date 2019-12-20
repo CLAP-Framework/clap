@@ -7,6 +7,9 @@ from zzz_driver_msgs.utils import get_speed
 from zzz_cognition_msgs.msg import RoadObstacle
 
 class IDM(object):
+    '''
+    https://en.wikipedia.org/wiki/Intelligent_driver_model
+    '''
 
     def __init__(self):
         self.T = 1.6

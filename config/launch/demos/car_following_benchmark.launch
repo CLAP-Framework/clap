@@ -5,8 +5,8 @@
         <node pkg="carla_ros_bridge" name="carla_ros_bridge" type="bridge.py" output="screen"/>
         <node pkg="carla_ego_vehicle" type="carla_ego_vehicle.py" name="vehicle_egov" output="screen">
             <param name="sensor_definition_file" value="$(dirname)/car_following_benchmark_egov.json" />
-            <param name="vehicle_filter" value="vehicle.*"/>
-            <param name="spawn_point" value=""/>
+            <param name="vehicle_filter" value="vehicle.lincoln.mkz2017"/>
+            <param name="spawn_point" value="-354.8, 37, 2, 0, 0, 0"/>
             <param name="role_name" value="egov"/>
             <param name="spawn_ego_vehicle" value="True"/>
         </node>
@@ -33,6 +33,9 @@
         </node>
 
         <!-- Core Modules -->
+        <node pkg="carla_waypoint_publisher" type="carla_waypoint_publisher.py" name="carla_waypoint_publisher" output="screen">
+            <param name="role_name" value="egov" />
+        </node>
         <node pkg="zzz_navigation_pose_reporter" type="manual" name="pose_reporter" output="screen" ns="zzz/navigation">
             <param name="map_origin" value="[49,8,0]"/>
             <param name="odom_input_topic" value="/carla/egov/odometry"/>
@@ -48,7 +51,7 @@
         </node>
         <node pkg="zzz_cognition_object_locator" type="put_buffer" name="put_buffer" output="screen" ns="zzz/cognition">
             <param name="pose_topic" value="/egov/zzz/navigation/ego_pose"/>
-            <param name="reference_path_topic" value="/egov/zzz/navigation/reference_path"/>
+            <param name="reference_path_topic" value="/carla/egov/waypoints"/>
             <param name="rerouting_requried_topic" value="/egov/zzz/navigation/rerouting"/>
         </node>
         <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility" name="idm_lane_utility" output="screen" ns="zzz/planning">

@@ -1,17 +1,20 @@
 #!/usr/bin/env python
 
 import sys
+
 import rospy
-
-from zzz_common.params import parse_private_args
-
-from zzz_driver_msgs.msg import ChassisReport, ControlReport
-from zzz_navigation_msgs.msg import MapString
-from zzz_control_msgs.msg import ControlCommand
-from zzz_perception_msgs.msg import TrackingBoxArray, TrackingBox, ObjectClass
-from carla_msgs.msg import CarlaWorldInfo, CarlaEgoVehicleControl, CarlaEgoVehicleStatus
+from carla_msgs.msg import (CarlaEgoVehicleControl, CarlaEgoVehicleStatus,
+                            CarlaWorldInfo)
+from derived_object_msgs.msg import Object, ObjectArray
 from nav_msgs.msg import Path
-from derived_object_msgs.msg import ObjectArray, Object
+from zzz_common.params import parse_private_args
+from zzz_control_msgs.msg import ControlCommand
+from zzz_driver_msgs.msg import ChassisReport, ControlReport
+from zzz_navigation_msgs.msg import MapString, ReroutingRequest
+from zzz_perception_msgs.msg import ObjectClass, TrackingBox, TrackingBoxArray
+
+import utm
+
 
 def convert_CarlaWorldInfo(msg, pub):
     assert type(msg) == CarlaWorldInfo
@@ -104,6 +107,17 @@ def convert_ObjectArray(msg, pub):
         new_msg.targets.append(new_obj)
     pub.publish(new_msg)
 
+def convert_routing_request(msg, pub):
+    assert type(msg) == ReroutingRequest
+
+    if msg.reason == ReroutingRequest.REASON_MANUAL_SPECIFIED:
+        map_proj = utm.from_latlon(46, 8) # This is fixed for Carla maps
+        gnss_proj = utm.from_latlon(pub.destination.longitude, pub.destination.latitude)
+        goal = PoseStamped()
+        goal.pose.position.x = gnss_proj[0] - map_proj[0]
+        goal.pose.position.y = gnss_proj[1] - map_proj[1]
+        pub.publish(goal)
+
 if __name__ == "__main__":
     rospy.init_node("convert_topic")
 
@@ -131,6 +145,9 @@ if __name__ == "__main__":
     elif params.msg_type == "ObjectArray":
         pub = rospy.Publisher(params.output_topic, TrackingBoxArray, queue_size=1, latch=True)
         rospy.Subscriber(params.input_topic, ObjectArray, convert_ObjectArray, pub)
+    elif params.msg_type == "ReroutingRequest":
+        pub = rospy.Publisher(params.output_topic, PoseStamped, queue_size=1, latch=True)
+        rospy.Subscriber(params.input_topic, ReroutingRequest, convert_routing_request, pub)
     else:
         rospy.logerr("Invalid input message type")
         sys.exit(-1)

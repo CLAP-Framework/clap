@@ -38,7 +38,9 @@ class Node(object):
         self._rerouting_required_publisher = rospy.Publisher(params.rerouting_requried_topic, ReroutingRequest, queue_size=1)
 
     def rerouting_callback(self):
-        self._rerouting_required_publisher.publish(ReroutingRequest())
+        request = ReroutingRequest()
+        request.reason = ReroutingRequest.REASON_TRIP_FINISHED
+        self._rerouting_required_publisher.publish(request)
 
     def loop(self):
         while not rospy.is_shutdown():
