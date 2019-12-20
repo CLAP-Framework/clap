@@ -1,6 +1,8 @@
 import numpy as np
 import rospy
 from easydict import EasyDict as edict
+from threading import Lock
+import copy
 
 from zzz_cognition_msgs.msg import LaneState, MapState, RoadObstacle
 from zzz_cognition_msgs.utils import convert_tracking_box
@@ -16,9 +18,17 @@ from zzz_perception_msgs.msg import (DetectionBoxArray, ObjectSignals,
 
 class NearestLocator:
     def __init__(self, lane_dist_thres=5):
+        
+        self._static_map_lock = Lock()
         self._static_map_buffer = None
+
+        self._ego_vehicle_state_lock = Lock()
         self._ego_vehicle_state_buffer = None
+
+        self._surrounding_object_list_lock = Lock()
         self._surrounding_object_list_buffer = None
+
+        self._traffic_light_detection_lock = Lock()
         self._traffic_light_detection_buffer = None
         
         self._lane_dist_thres = lane_dist_thres
@@ -31,22 +41,26 @@ class NearestLocator:
 
     def receive_static_map(self, static_map):
         assert type(static_map) == Map
-        self._static_map_buffer = static_map
-        rospy.loginfo("Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
-            len(static_map.lanes), int(static_map.in_junction), static_map.target_lane_index)
+        with self._static_map_lock:
+            self._static_map_buffer = static_map
+            rospy.loginfo("Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
+                len(static_map.lanes), int(static_map.in_junction), static_map.target_lane_index)
 
     def receive_object_list(self, object_list):
         assert type(object_list) == TrackingBoxArray
-        if self._ego_vehicle_state_buffer != None:
-            self._surrounding_object_list_buffer = convert_tracking_box(object_list, self._ego_vehicle_state_buffer)
+        with self._surrounding_object_list_lock:
+            if self._ego_vehicle_state_buffer != None:
+                self._surrounding_object_list_buffer = convert_tracking_box(object_list, self._ego_vehicle_state_buffer)
 
     def receive_ego_state(self, state):
         assert type(state) == RigidBodyStateStamped
-        self._ego_vehicle_state_buffer = state
+        with self._ego_vehicle_state_lock:
+            self._ego_vehicle_state_buffer = state
 
     def receive_traffic_light_detection(self, detection):
         assert type(detection) == DetectionBoxArray
-        self._traffic_light_detection_buffer = detection
+        with self._traffic_light_detection_lock:
+            self._traffic_light_detection_buffer = detection
 
     # ====== Data Updator =======
     
@@ -63,11 +77,14 @@ class NearestLocator:
         # Skip if not ready
         if not self._ego_vehicle_state_buffer:
             return None
-        tstates.ego_state = self._ego_vehicle_state_buffer
+
+        with self._ego_vehicle_state_lock:
+            tstates.ego_state = copy.deepcopy(self._ego_vehicle_state_buffer) 
 
         # Update buffer information
-        tstates.surrounding_object_list = self._surrounding_object_list_buffer or []
-        tstates.static_map = self._static_map_buffer or navigation_default(Map)
+        tstates.surrounding_object_list = copy.deepcopy(self._surrounding_object_list_buffer or [])
+
+        tstates.static_map = copy.deepcopy(self._static_map_buffer or navigation_default(Map)) 
         static_map = tstates.static_map # for easier access
         tstates.static_map_lane_path_array = get_lane_array(tstates.static_map.lanes)
         tstates.static_map_lane_tangets = [[point.tangent for point in lane.central_path_points] for lane in tstates.static_map.lanes]

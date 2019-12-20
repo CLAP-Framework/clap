@@ -189,6 +189,8 @@ class PathBuffer:
                 nearest_dis = d
 
         if front_vehicle is not None:
-            rospy.logdebug("reference lane: front vehicle dis: %f", nearest_dis)
+            rospy.loginfo("front vehicle pos {}-{}, ego pos {}-{}, front distance {}".format(
+                vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y,
+                tstates.ego_state.pose.pose.position.x, tstates.ego_state.pose.pose.position.y, nearest_dis))
 
         return front_vehicle

@@ -9,7 +9,9 @@ import math
 import time
 
 import rospy
+import numpy as np
 from zzz_navigation_msgs.msg import Lane, LanePoint, Map
+from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 
