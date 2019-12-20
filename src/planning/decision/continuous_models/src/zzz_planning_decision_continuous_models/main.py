@@ -12,11 +12,12 @@ from zzz_driver_msgs.utils import get_speed, get_yaw
 
 
 class MainDecision(object):
-    def __init__(self, path_decision=None, speed_decision=None):
+    def __init__(self, path_decision=None, speed_decision=None, Planning_type=None):
         self._dynamic_map_buffer = None
 
         self._path_model_instance = path_decision
         self._speed_model_instance = speed_decision
+        self.Planning_type = Planning_type
         
     def receive_dynamic_map(self, dynamic_map):
         self._dynamic_map_buffer = dynamic_map
@@ -29,20 +30,38 @@ class MainDecision(object):
         if self._dynamic_map_buffer is None:
             return None
         dynamic_map = self._dynamic_map_buffer
-
         reference_path_from_map = dynamic_map.jmap.reference_path
-        Planning_type = 1;
 
-        if Planning_type == 1:
+        trajectory = reference_path_from_map
+        desired_speed = 0
+
+        if self.Planning_type == 1:
             # Only follow path
             trajectory = reference_path_from_map
             desired_speed = self._speed_model_instance.speed_update(trajectory, dynamic_map)
 
-        elif Planning_type == 2:
-            # Keep replanning
-            trajectory = self._path_model_instance.trajectory_update(dynamic_map)
+            # Process reference path  What happened here?? 
+            if trajectory is not None:
+                send_trajectory = self.process_reference_path(trajectory,dynamic_map,desired_speed)
 
-        elif Planning_type == 3:
+            # Convert to Message type
+            if send_trajectory is not None:
+                msg = DecisionTrajectory()
+                msg.trajectory = self.convert_ndarray_to_pathmsg(send_trajectory) # TODO: move to library
+                msg.desired_speed = desired_speed  #FIXME(NANSHAN)
+            return msg
+
+
+        elif self.Planning_type == 2:
+            # Keep replanning
+            trajectory, desired_speed = self._path_model_instance.trajectory_update(dynamic_map)
+            msg = DecisionTrajectory()
+            msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory)
+            msg.desired_speed = desired_speed
+
+            return msg
+
+        elif self.Planning_type == 3:
             # Replanning only when dynamic obstacles predict to collide with me
 
             # Collision check
@@ -50,7 +69,7 @@ class MainDecision(object):
             if Collision_and_Replan == 1:
                 trajectory = self._path_model_instance.trajectory_update(dynamic_map)
 
-        elif Planning_type == 4:
+        elif self.Planning_type == 4:
             # Replanning only when fixed obstacles on my path
 
             # Collision check
@@ -64,7 +83,21 @@ class MainDecision(object):
             self._speed_model_instance.speed_update(trajectory, dynamic_map)
 
 
-        # Process path  What happened here?? 
+    def convert_XY_to_pathmsg(self,XX,YY,path_id = 'map'):
+        msg = Path()
+        print("....................Finish,Werling",XX,YY)
+
+        for i in range(1,len(XX)):
+            pose = PoseStamped()
+            pose.pose.position.x = XX[i]
+            pose.pose.position.y = YY[i]
+            # print('trajectoryx=',XX[i])
+            # print('trajectoryy=',YY[i])
+            msg.poses.append(pose)
+        msg.header.frame_id = path_id 
+        return msg
+
+    def process_reference_path(self,trajectory,dynamic_map,desired_speed):
         resolution=0.5
         time_ahead=5
         distance_ahead=10
@@ -79,16 +112,8 @@ class MainDecision(object):
         nearest_dis = abs(nearest_dis)
         front_path = dense_centrol_path[nearest_idx:]
         dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path, axis=0), axis = 1))
-        send_trajectory = front_path[:np.searchsorted(dis_to_ego, desired_speed*time_ahead+distance_ahead)-1]
+        return front_path[:np.searchsorted(dis_to_ego, desired_speed*time_ahead+distance_ahead)-1]
 
-
-
-        # Convert to Message type
-        msg = DecisionTrajectory()
-        msg.trajectory = self.convert_ndarray_to_pathmsg(send_trajectory) # TODO: move to library
-        msg.desired_speed = desired_speed  #FIXME(NANSHAN)
-
-        return msg
 
     def collision_check_fixed(self, dynamic_map):
         return 0
@@ -136,14 +161,14 @@ class MainDecision(object):
         point_list = [(point.position.x, point.position.y) for point in path]
         return np.array(point_list)
 
-    def convert_ndarray_to_pathmsg(self, path):#FIXME(dns )
+    def convert_ndarray_to_pathmsg(self, path):
         msg = Path()
         for wp in path:
             pose = PoseStamped()
             pose.pose.position.x = wp[0]
             pose.pose.position.y = wp[1]
             msg.poses.append(pose)
-        msg.header.frame_id = "map"  # FIXME(NANSHAN):
+        msg.header.frame_id = "map" 
 
         return msg
 

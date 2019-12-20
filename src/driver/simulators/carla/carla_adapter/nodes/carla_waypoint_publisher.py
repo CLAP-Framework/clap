@@ -52,14 +52,8 @@ class CarlaToRosWaypointConverter(object):
 
         # set initial goal
 
-        # self.goal = self.world.get_map().get_spawn_points()[0]
         self.goal = setgoal;
         
-        # self.goal.location.x = 2
-        # self.goal.location.y = 73
-        # self.goal.location.z = 0
-
-
         self.current_route = None
         self.goal_subscriber = rospy.Subscriber(
             "/carla/{}/goal".format(self.role_name), PoseStamped, self.on_goal)

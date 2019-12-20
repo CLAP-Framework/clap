@@ -31,7 +31,8 @@ class DNSMainDecision(object):
     def update_dynamic_map(self, dynamic_map):
         self.dynamic_map = dynamic_map
         self.vehicle_list = dynamic_map.jmap.obstacles
-        # TODO(zyxin): Wait for Carla fix this issue
+        # TODO(zyxin
+        #  Wait for Carla fix this issue
         # self.vehicle_list = [obj for obj in dynamic_map.jmap.obstacles if obj.cls.classid & ObjectClass.LEVEL_MASK_0 == ObjectClass.VEHICLE]
         # self.pedestrian_list = [obj for obj in dynamic_map.jmap.obstacles if obj.cls.classid & ObjectClass.LEVEL_MASK_0 == ObjectClass.HUMAN]
     
