@@ -493,25 +493,44 @@ class RosAgent(AutonomousAgent):
             if speed < min(matched_vehicle_state[2] * 0.5, matched_vehicle_state[2] - 6 * 0.05):
                 speed = matched_vehicle_state[2]
 
+        # get transform 
+        world_position = target_vehicle.get('world_position')
+        heading = target_vehicle.get('heading')
+
         # wrap vehicle info
         vehicle_target = TrackingBox()
         vehicle_target.uid = target_vehicle_id
 
-        vehicle_target.bbox.pose.pose.position.x = t_loc[0]
-        # todo fixme(yuanli)
-        vehicle_target.bbox.pose.pose.position.y = t_loc[1]
-        vehicle_target.bbox.pose.pose.position.z = 0
+        # todo, temp solution for calculating speed + head
+        vehicle_target.bbox.pose.pose.position.x = world_position[0]
+        vehicle_target.bbox.pose.pose.position.y = -world_position[1]
+        vehicle_target.bbox.pose.pose.position.z = world_position[2]
         vehicle_target.bbox.pose.pose.orientation.x = quaternion[0]
         vehicle_target.bbox.pose.pose.orientation.y = quaternion[1]
         vehicle_target.bbox.pose.pose.orientation.z = quaternion[2]
         vehicle_target.bbox.pose.pose.orientation.w = quaternion[3]
+        
         vehicle_target.bbox.dimension.length_x = 1
         vehicle_target.bbox.dimension.length_y = 1
         vehicle_target.bbox.dimension.length_z = 1
 
-        vehicle_target.twist.twist.linear.x = speed_x
-        vehicle_target.twist.twist.linear.y = speed_y
-        vehicle_target.twist.twist.linear.z = 0
+        vehicle_target.twist.twist.linear.x = heading[0]
+        vehicle_target.twist.twist.linear.y = -heading[1]
+        vehicle_target.twist.twist.linear.z = heading[2]
+        
+        # vehicle_target.bbox.pose.pose.position.x = t_loc[0]
+        # vehicle_target.bbox.pose.pose.position.y = t_loc[1]
+        # vehicle_target.bbox.pose.pose.position.z = 0
+        # vehicle_target.bbox.pose.pose.orientation.x = quaternion[0]
+        # vehicle_target.bbox.pose.pose.orientation.y = quaternion[1]
+        # vehicle_target.bbox.pose.pose.orientation.z = quaternion[2]
+        # vehicle_target.bbox.pose.pose.orientation.w = quaternion[3]
+        # vehicle_target.bbox.dimension.length_x = 1
+        # vehicle_target.bbox.dimension.length_y = 1
+        # vehicle_target.bbox.dimension.length_z = 1
+        # vehicle_target.twist.twist.linear.x = speed_x
+        # vehicle_target.twist.twist.linear.y = speed_y
+        # vehicle_target.twist.twist.linear.z = 0
         
         self.objects_storage[target_vehicle_id] = (t_loc[0], t_loc[1], speed)
         return vehicle_target

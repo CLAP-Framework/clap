@@ -81,6 +81,9 @@ PENALTY_WRONG_WAY = 2
 PENALTY_SIDEWALK_INVASION = 2
 PENALTY_STOP = 2
 
+# agent stack process pid - start.sh
+stack_process_pid = 0
+
 # Util functions
 
 
@@ -1051,8 +1054,7 @@ class ChallengeEvaluator(object):
         if self.track == 4:
             settings.no_rendering_mode = True
 
-
-        print('!!!! load_world - settings {}'.format(settings))
+        print('Load World Settings {}'.format(settings))
         self.world.apply_settings(settings)
 
         self.world.on_tick(self._update_timestamp)
@@ -1141,6 +1143,11 @@ class ChallengeEvaluator(object):
         # create agent
         agent_class_name = self.module_agent.__name__.title().replace('_', '')
         self.agent_instance = getattr(self.module_agent, agent_class_name)(args.config)
+
+
+        global stack_process_pid
+        stack_process_pid = self.agent_instance.stack_process.pid
+        print('*******************\n start shell pid - {}\n*****************\n'.format(stack_process_pid))
         
         # todo, disable valid_sensors_configuration
         # print("!!!! track - {}".format(self.track))
@@ -1197,6 +1204,7 @@ class ChallengeEvaluator(object):
             scenario.scenario.scenario_tree.tick_once()
 
         # main loop!
+        print('********* run route ***********\n')
         self.run_route(_route_description['trajectory'])
 
     def run(self, args):
@@ -1224,7 +1232,7 @@ class ChallengeEvaluator(object):
 
         world = client.get_world()
         settings = world.get_settings()
-        print('!!!! world initial setttings {}'.format(settings))
+        print('World Initial Setttings {}'.format(settings))
 
         for route_idx, route_description in enumerate(route_descriptions_list):
             for repetition in range(self.repetitions):
@@ -1313,7 +1321,17 @@ class ChallengeEvaluator(object):
         self.report_challenge_statistics(args.filename, args.show_to_participant)
 
 
+def force_quit_handler(signum, frame):
+    print('****************************\n Scenario Runner Abort Running...\n******************************\n')
+    global stack_process_pid
+    os.killpg(stack_process_pid, signal.SIGTERM)
+    time.sleep(2)
+    sys.exit(-1)
+
+
 if __name__ == '__main__':
+
+    signal.signal(signal.SIGINT, force_quit_handler)
 
     DESCRIPTION = ("CARLA AD Challenge evaluation: evaluate your Agent in CARLA scenarios\n")
 
