@@ -95,6 +95,7 @@ class NearestLocator:
         dynamic_map.header.frame_id = "map"
         dynamic_map.header.stamp = rospy.Time.now()
         dynamic_map.ego_state = tstates.ego_state.state
+
         if static_map.in_junction or len(static_map.lanes) == 0:
             rospy.logdebug("In junction due to static map report junction location")
             dynamic_map.model = MapState.MODEL_JUNCTION_MAP
@@ -174,13 +175,10 @@ class NearestLocator:
         dist_list = np.array([dist_from_point_to_polyline2d(
             tstates.ego_state.state.pose.pose.position.x, tstates.ego_state.state.pose.pose.position.y,
             lane, return_end_distance=True)
-            for lane in tstates.static_map_lane_path_array])  
+            for lane in tstates.static_map_lane_path_array])
+
         ego_lane_index = self.locate_object_in_lane(tstates.ego_state.state, tstates)
         ego_lane_index_rounded = int(round(ego_lane_index))
-        # rospy.logdebug("ego position %f, %f", tstates.ego_state.state.pose.pose.position.x,tstates.ego_state.state.pose.pose.position.y)
-        # for lane in tstates.static_map_lane_path_array:
-        #     for pos in lane:
-        #         rospy.logdebug("lane center position %f, %f", pos[0], pos[1])
 
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
         self._ego_vehicle_distance_to_lane_tail = dist_list[:, 4]
