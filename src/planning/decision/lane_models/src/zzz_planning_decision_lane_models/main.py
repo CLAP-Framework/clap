@@ -16,11 +16,12 @@ from zzz_planning_decision_lane_models.local_trajectory import PolylineTrajector
 class MainDecision(object):
     def __init__(self, lon_decision=None, lat_decision=None, local_trajectory=None):
         self._dynamic_map_buffer = None
+        self._static_map_buffer =None #FIXME(ksj)
         self._static_map_buffer = None
 
         self._longitudinal_model_instance = lon_decision
         self._lateral_model_instance = lat_decision
-        self._local_trajectory_instance = PolylineTrajectory() # MPCTrajectory()
+        self._local_trajectory_instance = local_trajectory
         self._local_trajectory_instance_for_ref = PolylineTrajectory() # TODO(Temps): Should seperate into continous models
 
         self._dynamic_map_lock = Lock()
@@ -30,6 +31,10 @@ class MainDecision(object):
         with self._dynamic_map_lock:
             self._dynamic_map_buffer = dynamic_map
 
+    #FIXME(ksj)
+    def receive_static_map(self, static_map):
+        with self._dynamic_map_lock:
+            self._static_map_buffer = static_map
     # update running in main node thread loop
     def update(self):
         '''
@@ -37,6 +42,9 @@ class MainDecision(object):
         '''
         # update_dynamic_local_map
         if self._dynamic_map_buffer is None:
+            return None
+        #FIXME(ksj)
+        if self._static_map_buffer is None:
             return None
 
         trajectory = None

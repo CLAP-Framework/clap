@@ -37,11 +37,11 @@ class MPCTrajectory(object):
         self.dmin=-0.02
 
     def get_trajectory(self, dynamic_map, target_lane_index, desired_speed,resolution=0.5):
-        # TODO: get smooth spline (write another module to generate spline)
-        ego_x = dynamic_map.ego_state.pose.pose.position.x
-        ego_y = dynamic_map.ego_state.pose.pose.position.y
-        ego_vx = dynamic_map.ego_state.twist.twist.linear.x 
-        ego_vy = dynamic_map.ego_state.twist.twist.linear.y
+        rospy.loginfo("----\n using mpc trajectory")
+        ego_x = dynamic_map.ego_ffstate.s
+        ego_y = dynamic_map.ego_ffstate.d
+        ego_vx = dynamic_map.ego_ffstate.vs 
+        ego_vy = dynamic_map.ego_ffstate.vd
         ego_v = math.sqrt(ego_vx*ego_vx + ego_vy*ego_vy)
         ego_theta = math.atan2(ego_vy,ego_vx)
 
@@ -49,8 +49,10 @@ class MPCTrajectory(object):
             target_lane = dynamic_map.jmap.reference_path
         else:
             target_lane = dynamic_map.mmap.lanes[int(target_lane_index)]
-        # destination y position is the centre of the target lane    
-        y_des=target_lane.map_lane.central_path_points[0].position.y
+        # destination y position is the centre of the target lane 
+        # FIXME(ksj)   
+        y_des=target_lane_index*target_lane.map_lane.width
+        rospy.logdebug("current lateral position %f, target lateral position %f", ego_y, y_des)
         # control input
         vdr = desired_speed
         delta_r = 0.0
@@ -71,7 +73,7 @@ class MPCTrajectory(object):
         #get state constraints
         xmax,xmin,ymax,ymin = self.get_state_constraints(dynamic_map,target_lane_index,desired_speed)
 
-        A,b = self.get_constraint_matrix(Aex,Bex,xmax,xmin,ymax,ymin,xr,yr,s0)
+        A,b,Cx,Cy = self.get_constraint_matrix(Aex,Bex,xmax,xmin,ymax,ymin,xr,yr,s0)
 
         # solve qp with cvxopt
         P=matrix(H)
@@ -159,112 +161,112 @@ class MPCTrajectory(object):
         ymin=np.zeros(self.Np).reshape(self.Np,1)
 
         ego_lane_index_rounded = int(round(dynamic_map.mmap.ego_lane_index))
-        rospy.logdebug("ego lane index = %d, lanes number = %d, target lane index = %d", 
-                    ego_lane_index_rounded,len(dynamic_map.mmap.lanes),target_lane_index)
-        if len(dynamic_map.mmap.lanes[ego_lane_index_rounded].front_vehicles)>0:
-            front_vehicle = dynamic_map.mmap.lanes[ego_lane_index_rounded].front_vehicles[0]
-            front_vehicle_exist_flag = 1
-        else:
-            front_vehicle_exist_flag = 0
+
+        ego_lane = dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane
+        ego_lane_right_boundary = (ego_lane_index_rounded-0.5)*ego_lane.width
+        ego_lane_left_boundary = (ego_lane_index_rounded+0.5)*ego_lane.width
+
+        target_lane = dynamic_map.mmap.lanes[int(target_lane_index)].map_lane
+        target_lane_left_boundary =  (target_lane_index+0.5)*target_lane.width
+        target_lane_right_boundary =  (target_lane_index-0.5)*target_lane.width
+
+        rospy.logdebug("lanes number = %d, ego lane index = %d, ego lane width = %f, target lane index = %d, target lane width = %f",
+                    len(dynamic_map.mmap.lanes),ego_lane_index_rounded,ego_lane.width, target_lane_index, target_lane.width)
+
+        # if len(dynamic_map.mmap.lanes[ego_lane_index_rounded].front_vehicles)>0:
+        #     front_vehicle = dynamic_map.mmap.lanes[ego_lane_index_rounded].front_vehicles[0]
+        #     front_vehicle_exist_flag = 1
+        # else:
+        #     front_vehicle_exist_flag = 0
         
-        if len(dynamic_map.mmap.lanes[ego_lane_index_rounded].rear_vehicles)>0:
-            rear_vehicle = dynamic_map.mmap.lanes[ego_lane_index_rounded].rear_vehicles[0]
-            rear_vehicle_exist_flag = 1
-        else:
-            rear_vehicle_exist_flag = 0
+        # if len(dynamic_map.mmap.lanes[ego_lane_index_rounded].rear_vehicles)>0:
+        #     rear_vehicle = dynamic_map.mmap.lanes[ego_lane_index_rounded].rear_vehicles[0]
+        #     rear_vehicle_exist_flag = 1
+        # else:
+        #     rear_vehicle_exist_flag = 0
         
-        if len(dynamic_map.mmap.lanes[target_lane_index].front_vehicles)>0:
-            target_front_vehicle = dynamic_map.mmap.lanes[target_lane_index].front_vehicles[0]
-            target_front_vehicle_exist_flag = 1
-        else:
-            target_front_vehicle_exist_flag = 0
+        # if len(dynamic_map.mmap.lanes[target_lane_index].front_vehicles)>0:
+        #     target_front_vehicle = dynamic_map.mmap.lanes[target_lane_index].front_vehicles[0]
+        #     target_front_vehicle_exist_flag = 1
+        # else:
+        #     target_front_vehicle_exist_flag = 0
         
-        if len(dynamic_map.mmap.lanes[target_lane_index].rear_vehicles)>0:
-            target_rear_vehicle = dynamic_map.mmap.lanes[target_lane_index].rear_vehicles[0]
-            target_rear_vehicle_exist_flag = 1
-        else:
-            target_rear_vehicle_exist_flag = 0
+        # if len(dynamic_map.mmap.lanes[target_lane_index].rear_vehicles)>0:
+        #     target_rear_vehicle = dynamic_map.mmap.lanes[target_lane_index].rear_vehicles[0]
+        #     target_rear_vehicle_exist_flag = 1
+        # else:
+        #     target_rear_vehicle_exist_flag = 0
         
         for i in np.arange(self.Np):
-            ego_lane_central_y = dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane.central_path_points[0].position.y
-            ego_lane_width = dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane.width
-            ego_lane_left_boundary = ego_lane_central_y - ego_lane_width/2.0
-            ego_lane_right_boundary = ego_lane_central_y + ego_lane_width/2.0
-
-            target_lane_central_y = dynamic_map.mmap.lanes[int(target_lane_index)].map_lane.central_path_points[0].position.y
-            target_lane_width = dynamic_map.mmap.lanes[int(target_lane_index)].map_lane.width
-            target_lane_left_boundary = target_lane_central_y - target_lane_width/2.0
-            target_lane_right_boundary = target_lane_central_y + target_lane_width/2.0
-
             if (i<self.N1):
-                if front_vehicle_exist_flag==1:
-                    front_gap = safeGap(desired_speed)
-                    front_predict_state = predictCA(front_vehicle.state,i*self.DT)
-                    xmax[i]=front_predict_state.pose.pose.position.x - front_gap
-                else:
-                    xmax[i]=1000.0
+                # if front_vehicle_exist_flag==1:
+                #     front_gap = safeGap(desired_speed)
+                #     front_predict_state = predictCA(front_vehicle.state,i*self.DT)
+                #     xmax[i]=front_predict_state.pose.pose.position.x - front_gap
+                # else:
+                #     xmax[i]=1000.0
                 
-                if rear_vehicle_exist_flag==1:  
-                    rear_predict_state = predictCA(rear_vehicle.state,i*self.DT)
-                    rear_gap = safeGap(rear_predict_state.twist.twist.linear.x)
-                    xmin[i]=rear_predict_state.pose.pose.position.x + rear_gap
-                else:
-                    xmin[i]=-1000.0
+                # if rear_vehicle_exist_flag==1:  
+                #     rear_predict_state = predictCA(rear_vehicle.state,i*self.DT)
+                #     rear_gap = safeGap(rear_predict_state.twist.twist.linear.x)
+                #     xmin[i]=rear_predict_state.pose.pose.position.x + rear_gap
+                # else:
+                #     xmin[i]=-1000.0
     
                 ymin[i]=ego_lane_left_boundary
                 ymax[i]=ego_lane_right_boundary
 
             elif (i<self.N2):
-                if front_vehicle_exist_flag==1 and target_front_vehicle_exist_flag==1:
-                    front_gap = safeGap(desired_speed)
-                    front_predict_state = predictCA(front_vehicle.state, i*self.DT)
-                    target_front_predict_state = predictCA(target_front_vehicle.state,i*self.DT)
-                    xmax[i]=min(front_predict_state.pose.pose.position.x, target_front_predict_state.pose.pose.position.x)-front_gap
-                elif front_vehicle_exist_flag==1 and target_front_vehicle_exist_flag==0:
-                    front_gap = safeGap(desired_speed)
-                    front_predict_state = predictCA(front_vehicle.state,i*self.DT)
-                    xmax[i]=front_predict_state.pose.pose.position.x - front_gap
-                elif front_vehicle_exist_flag==0 and target_front_vehicle_exist_flag==1:
-                    front_gap = safeGap(desired_speed)
-                    target_front_predict_state = predictCA(target_front_vehicle.state,i*self.DT)
-                    xmax[i]=target_front_predict_state.pose.pose.position.x - front_gap
-                else:
-                    xmax[i]=1000.0
+                # if front_vehicle_exist_flag==1 and target_front_vehicle_exist_flag==1:
+                #     front_gap = safeGap(desired_speed)
+                #     front_predict_state = predictCA(front_vehicle.state, i*self.DT)
+                #     target_front_predict_state = predictCA(target_front_vehicle.state,i*self.DT)
+                #     xmax[i]=min(front_predict_state.pose.pose.position.x, target_front_predict_state.pose.pose.position.x)-front_gap
+                # elif front_vehicle_exist_flag==1 and target_front_vehicle_exist_flag==0:
+                #     front_gap = safeGap(desired_speed)
+                #     front_predict_state = predictCA(front_vehicle.state,i*self.DT)
+                #     xmax[i]=front_predict_state.pose.pose.position.x - front_gap
+                # elif front_vehicle_exist_flag==0 and target_front_vehicle_exist_flag==1:
+                #     front_gap = safeGap(desired_speed)
+                #     target_front_predict_state = predictCA(target_front_vehicle.state,i*self.DT)
+                #     xmax[i]=target_front_predict_state.pose.pose.position.x - front_gap
+                # else:
+                #     xmax[i]=1000.0
                 
-                if rear_vehicle_exist_flag==1 and target_rear_vehicle_exist_flag==1:
-                    rear_predict_state = predictCA(rear_vehicle.state, i*self.DT)
-                    target_rear_predict_state = predictCA(target_rear_vehicle.state,i*self.DT)
-                    rear_gap = safeGap(rear_predict_state.twist.twist.linear.x)
-                    target_rear_gap = safeGap(target_rear_predict_state.twist.twist.linear.x)
-                    xmin[i]=max(rear_predict_state.pose.pose.position.x+rear_gap, target_rear_predict_state.pose.pose.position.x+target_rear_gap)
-                elif rear_vehicle_exist_flag==1 and target_rear_vehicle_exist_flag==0:
-                    rear_predict_state = predictCA(rear_vehicle.state,i*self.DT)
-                    rear_gap = safeGap(rear_predict_state.twist.twist.linear.x)
-                    xmin[i]=rear_predict_state.pose.pose.position.x + rear_gap
-                elif rear_vehicle_exist_flag==0 and target_rear_vehicle_exist_flag==1:
-                    target_rear_predict_state = predictCA(target_rear_vehicle.state,i*self.DT)
-                    target_rear_gap = safeGap(target_rear_predict_state.twist.twist.linear.x)
-                    xmin[i]=target_rear_predict_state.pose.pose.position.x + target_rear_gap
-                else:
-                    xmin[i]=-1000.0
+                # if rear_vehicle_exist_flag==1 and target_rear_vehicle_exist_flag==1:
+                #     rear_predict_state = predictCA(rear_vehicle.state, i*self.DT)
+                #     target_rear_predict_state = predictCA(target_rear_vehicle.state,i*self.DT)
+                #     rear_gap = safeGap(rear_predict_state.twist.twist.linear.x)
+                #     target_rear_gap = safeGap(target_rear_predict_state.twist.twist.linear.x)
+                #     xmin[i]=max(rear_predict_state.pose.pose.position.x+rear_gap, target_rear_predict_state.pose.pose.position.x+target_rear_gap)
+                # elif rear_vehicle_exist_flag==1 and target_rear_vehicle_exist_flag==0:
+                #     rear_predict_state = predictCA(rear_vehicle.state,i*self.DT)
+                #     rear_gap = safeGap(rear_predict_state.twist.twist.linear.x)
+                #     xmin[i]=rear_predict_state.pose.pose.position.x + rear_gap
+                # elif rear_vehicle_exist_flag==0 and target_rear_vehicle_exist_flag==1:
+                #     target_rear_predict_state = predictCA(target_rear_vehicle.state,i*self.DT)
+                #     target_rear_gap = safeGap(target_rear_predict_state.twist.twist.linear.x)
+                #     xmin[i]=target_rear_predict_state.pose.pose.position.x + target_rear_gap
+                # else:
+                #     xmin[i]=-1000.0
 
                 ymin[i]=min(ego_lane_left_boundary, target_lane_left_boundary)
                 ymax[i]=max(ego_lane_right_boundary, target_lane_right_boundary)
 
             else:
-                if target_front_vehicle_exist_flag==1:
-                    front_gap = safeGap(desired_speed)
-                    target_front_predict_state = predictCA(target_front_vehicle.state,i*self.DT)
-                    xmax[i]=target_front_predict_state.pose.pose.position.x - front_gap
-                else:
-                    xmax[i]=1000.0
+                # if target_front_vehicle_exist_flag==1:
+                #     front_gap = safeGap(desired_speed)
+                #     target_front_predict_state = predictCA(target_front_vehicle.state,i*self.DT)
+                #     xmax[i]=target_front_predict_state.pose.pose.position.x - front_gap
+                # else:
+                #     xmax[i]=1000.0
                 
-                if target_rear_vehicle_exist_flag==1:  
-                    target_rear_predict_state = predictCA(target_rear_vehicle.state,i*self.DT)
-                    target_rear_gap = safeGap(target_rear_predict_state.twist.twist.linear.x)
-                    xmin[i]=target_rear_predict_state.pose.pose.position.x + target_rear_gap
-                else:
-                    xmin[i]=-1000.0
+                # if target_rear_vehicle_exist_flag==1:  
+                #     target_rear_predict_state = predictCA(target_rear_vehicle.state,i*self.DT)
+                #     target_rear_gap = safeGap(target_rear_predict_state.twist.twist.linear.x)
+                #     xmin[i]=target_rear_predict_state.pose.pose.position.x + target_rear_gap
+                # else:
+                #     xmin[i]=-1000.0
 
                 ymax[i]=target_lane_right_boundary
                 ymin[i]=target_lane_left_boundary
@@ -285,8 +287,8 @@ class MPCTrajectory(object):
     def get_constraint_matrix(self,Aex,Bex,xmax,xmin,ymax,ymin,xr,yr,s0):
         Cx=np.zeros([self.Np,4*self.Np])
         Cy=np.zeros([self.Np,4*self.Np])
-        ub=np.zeros(2*self.Np).reshape(self.Np,1)
-        lb=np.zeros(2*self.Np).reshape(self.Np,1)
+        ub=np.zeros(2*self.Np).reshape(2*self.Np,1)
+        lb=np.zeros(2*self.Np).reshape(2*self.Np,1)
 
         for i in np.arange(self.Np):
             Cx[i,4*i]=1.0
@@ -302,10 +304,12 @@ class MPCTrajectory(object):
         bymin=-ymin+yr+np.dot(np.dot(Cy,Aex),s0)
         bxmax=xmax-xr-np.dot(np.dot(Cx,Aex),s0)
         bxmin=-xmin+xr+np.dot(np.dot(Cx,Aex),s0)
-        print("array size are: ",bymax.shape,"--",bymin.shape,"--",bxmax.shape,"--",bxmin.shape,"--",ub.shape,"--",lb.shape)
-        A=np.vstack((MBy,-MBy,MBx,-MBx,np.eye(2*self.Np),-np.eye(2*self.Np)))
-        b=np.vstack((bymax,bymin,bxmax,bxmin,ub,-lb))
-        return A, b
+        #FIXME(ksj):ignore longitudinal constraints
+        # A=np.vstack((MBy,-MBy,MBx,-MBx,np.eye(2*self.Np),-np.eye(2*self.Np)))
+        # b=np.vstack((bymax,bymin,bxmax,bxmin,ub,-lb))
+        A=np.vstack((MBy,-MBy,np.eye(2*self.Np),-np.eye(2*self.Np)))
+        b=np.vstack((bymax,bymin,ub,-lb))
+        return A, b, Cx, Cy
 
 
         

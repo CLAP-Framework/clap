@@ -89,7 +89,7 @@ class LocalMap(object):
         assert type(reference_path)==Path
         self._reference_lane_list.clear()
         # todo this loop needs to be optimised later
-
+        #FIXME(ksj)
         for wp in reference_path.poses:
             # TODO: Takes too much time for processing
             wp_map_x, wp_map_y = self.convert_to_map_XY(wp.pose.position.x, wp.pose.position.y)
@@ -197,7 +197,7 @@ class LocalMap(object):
         '''
         lane_wrapped = Lane()
         lane_wrapped.index = lane.getIndex()
-        # lane_wrapped.width = lane.getWidth()
+        lane_wrapped.width = lane.getWidth()#FIXME(ksj)
         last_x = last_y = last_s = None
         for wp in lane.getShape():
             point = LanePoint()
