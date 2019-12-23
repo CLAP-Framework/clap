@@ -18,17 +18,15 @@ class DecisionNode(object):
         params = parse_private_args(
             decision_trajectory_topic="decision_trajectory",
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
-            static_map_topic="/zzz/navigation/local_static_map",
             RVIZ_decision_trajectory_topic="decision_trajectory_path", 
             hz = 10,
         )
         model_lon = IDM()
         model_lat = LaneUtility(model_lon)
-        model_local = PolylineTrajectory()
+        model_local = MPCTrajectory()
 
         self._decision_instance = MainDecision(lon_decision=model_lon, lat_decision=model_lat, local_trajectory=model_local)
         self._rate = rospy.Rate(params.hz)
-        self._staticc_map_subscriber = rospy.Subscriber(params.static_map_topic, Map, self._decision_instance.receive_static_map)#FIXME(ksj)
         self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
         self._rviz_decision_trajectory_publisher = rospy.Publisher(params.RVIZ_decision_trajectory_topic, Path, queue_size=1)

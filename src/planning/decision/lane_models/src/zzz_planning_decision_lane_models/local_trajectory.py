@@ -6,6 +6,28 @@ from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from zzz_cognition_msgs.msg import MapState
 from zzz_driver_msgs.utils import get_speed, get_yaw
 
+from convert_frenet_to_world import calc_global_paths
+class Frenet_path:
+
+    def __init__(self):
+        self.t = [] # time
+        self.d = []
+        self.d_d = []
+        self.d_dd = []
+        self.d_ddd = []
+        self.s = []
+        self.s_d = []
+        self.s_dd = []
+        self.s_ddd = []
+        self.cd = 0.0
+        self.cv = 0.0
+        self.cf = 0.0
+
+        self.x = []
+        self.y = []
+        self.yaw = []
+        self.ds = []
+        self.c = []
 
 class MPCTrajectory(object):
     def __init__(self):
@@ -13,7 +35,7 @@ class MPCTrajectory(object):
         # N2 is lane change finish horizon
         # DT is discrete time step; TL is one-order delay of vehicle speed control
         # L is the wheelbase
-        self.Np=20
+        self.Np=30
         self.N1=5
         self.N2=15
         self.DT=0.2
@@ -44,6 +66,7 @@ class MPCTrajectory(object):
         ego_vy = dynamic_map.ego_ffstate.vd
         ego_v = math.sqrt(ego_vx*ego_vx + ego_vy*ego_vy)
         ego_theta = math.atan2(ego_vy,ego_vx)
+        ego_lane_index_rounded = int(round(dynamic_map.mmap.ego_lane_index))
 
         if target_lane_index == -1:
             target_lane = dynamic_map.jmap.reference_path
@@ -51,7 +74,7 @@ class MPCTrajectory(object):
             target_lane = dynamic_map.mmap.lanes[int(target_lane_index)]
         # destination y position is the centre of the target lane 
         # FIXME(ksj)   
-        y_des=target_lane_index*target_lane.map_lane.width
+        y_des=(target_lane_index-ego_lane_index_rounded)*target_lane.map_lane.width
         rospy.logdebug("current lateral position %f, target lateral position %f", ego_y, y_des)
         # control input
         vdr = desired_speed
@@ -88,7 +111,42 @@ class MPCTrajectory(object):
         xp=np.dot(Cx,Xex)+xr
         yp=np.dot(Cy,Xex)+yr
 
-        trajectory = np.hstack((xp,yp))
+        print("ref x: ",xr)
+        print("ref y: ",yr)
+
+        print("frenet ego pos: ", ego_x, ego_y)
+        print("frenet path x: ", xp)
+        print("frenet path y: ", yp)
+
+        print("y max : ",ymax)
+        print("y min : ",ymin)
+
+        
+        ego_lane = dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane
+
+        wx = [pos.position.x for pos in ego_lane.central_path_points]
+        wy = [pos.position.y for pos in ego_lane.central_path_points]
+
+        # print("lane x: ", wx)
+        # print("lane y: ", wy)
+
+        fplist = []
+        
+        for i in np.arange(len(xp)):
+            fp = Frenet_path()
+            fp.s = xp[i]
+            fp.d = yp[i]
+            fplist.append(fp)
+
+        fplist = calc_global_paths(fplist,wx,wy)
+
+        xw = [fp.x for fp in fplist]
+        yw = [fp.y for fp in fplist]
+        print("ego position: ",dynamic_map.ego_state.pose.pose.position.x,dynamic_map.ego_state.pose.pose.position.y )
+        print("trajectory x :", xw)
+        print("trajectory y :", yw)
+
+        trajectory = np.hstack((xw,yw))
 
         return trajectory
 
@@ -163,15 +221,18 @@ class MPCTrajectory(object):
         ego_lane_index_rounded = int(round(dynamic_map.mmap.ego_lane_index))
 
         ego_lane = dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane
-        ego_lane_right_boundary = (ego_lane_index_rounded-0.5)*ego_lane.width
-        ego_lane_left_boundary = (ego_lane_index_rounded+0.5)*ego_lane.width
+        ego_lane_right_boundary = (-0.5)*ego_lane.width
+        ego_lane_left_boundary = (0.5)*ego_lane.width
 
         target_lane = dynamic_map.mmap.lanes[int(target_lane_index)].map_lane
-        target_lane_left_boundary =  (target_lane_index+0.5)*target_lane.width
-        target_lane_right_boundary =  (target_lane_index-0.5)*target_lane.width
+        target_lane_left_boundary =  (target_lane_index-ego_lane_index_rounded+0.5)*target_lane.width
+        target_lane_right_boundary =  (target_lane_index-ego_lane_index_rounded-0.5)*target_lane.width
 
         rospy.logdebug("lanes number = %d, ego lane index = %d, ego lane width = %f, target lane index = %d, target lane width = %f",
                     len(dynamic_map.mmap.lanes),ego_lane_index_rounded,ego_lane.width, target_lane_index, target_lane.width)
+
+        rospy.logdebug("ego lane left boundary = %f, ego lane right boundary = %f, target lane left boundary = %f, target lane right boundary = %f",
+                    ego_lane_left_boundary,ego_lane_right_boundary,target_lane_left_boundary,target_lane_right_boundary)
 
         # if len(dynamic_map.mmap.lanes[ego_lane_index_rounded].front_vehicles)>0:
         #     front_vehicle = dynamic_map.mmap.lanes[ego_lane_index_rounded].front_vehicles[0]
@@ -213,8 +274,8 @@ class MPCTrajectory(object):
                 # else:
                 #     xmin[i]=-1000.0
     
-                ymin[i]=ego_lane_left_boundary
-                ymax[i]=ego_lane_right_boundary
+                ymax[i]=ego_lane_left_boundary
+                ymin[i]=ego_lane_right_boundary
 
             elif (i<self.N2):
                 # if front_vehicle_exist_flag==1 and target_front_vehicle_exist_flag==1:
@@ -250,8 +311,8 @@ class MPCTrajectory(object):
                 # else:
                 #     xmin[i]=-1000.0
 
-                ymin[i]=min(ego_lane_left_boundary, target_lane_left_boundary)
-                ymax[i]=max(ego_lane_right_boundary, target_lane_right_boundary)
+                ymax[i]=max(ego_lane_left_boundary, target_lane_left_boundary)
+                ymin[i]=min(ego_lane_right_boundary, target_lane_right_boundary)
 
             else:
                 # if target_front_vehicle_exist_flag==1:
@@ -268,8 +329,8 @@ class MPCTrajectory(object):
                 # else:
                 #     xmin[i]=-1000.0
 
-                ymax[i]=target_lane_right_boundary
-                ymin[i]=target_lane_left_boundary
+                ymin[i]=target_lane_right_boundary
+                ymax[i]=target_lane_left_boundary
                 
         return xmax,xmin,ymax,ymin
 
