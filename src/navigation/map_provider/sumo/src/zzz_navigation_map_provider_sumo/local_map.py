@@ -15,6 +15,8 @@ from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 
+from threading import Lock
+
 if 'SUMO_HOME' in os.environ:
     tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
     sys.path.append(tools)
@@ -27,6 +29,9 @@ class LocalMap(object):
         self._ego_vehicle_x = None # location in meters
         self._ego_vehicle_y = None
 
+        self._ego_vehicle_x_buffer = None
+        self._ego_vehicle_y_buffer = None
+
         self._hdmap = None # HDMap instance loaded from SUMO
 
         self._offset_x = offset_x # map center offset in meters
@@ -35,6 +40,8 @@ class LocalMap(object):
         self._current_edge_id = None # road id string
         self._reference_lane_list = deque(maxlen=20000)
         self._lane_search_radius = 4
+
+        self._ego_pose_lock = Lock()
 
     def setup_hdmap(self, file=None, content=None, mtype=None):
         if not (file or content):
@@ -90,18 +97,18 @@ class LocalMap(object):
         self._reference_lane_list.clear()
         # todo this loop needs to be optimised later
 
-        for wp in reference_path.poses:
-            # TODO: Takes too much time for processing
-            wp_map_x, wp_map_y = self.convert_to_map_XY(wp.pose.position.x, wp.pose.position.y)
+        # for wp in reference_path.poses:
+        #     # TODO: Takes too much time for processing
+        #     wp_map_x, wp_map_y = self.convert_to_map_XY(wp.pose.position.x, wp.pose.position.y)
 
-            # Find the closest lane of the reference path points
-            lanes = self._hdmap.getNeighboringLanes(wp_map_x, wp_map_y, self._lane_search_radius, includeJunctions=False)
-            if len(lanes) > 0:
-                _, closestLane = min((dist, lane) for lane, dist in lanes)
-                # Discard duplicate lane ids
-                if len(self._reference_lane_list) != 0 and closestLane.getID() == self._reference_lane_list[-1].getID():
-                    continue
-                self._reference_lane_list.append(closestLane)
+        #     # Find the closest lane of the reference path points
+        #     lanes = self._hdmap.getNeighboringLanes(wp_map_x, wp_map_y, self._lane_search_radius, includeJunctions=False)
+        #     if len(lanes) > 0:
+        #         _, closestLane = min((dist, lane) for lane, dist in lanes)
+        #         # Discard duplicate lane ids
+        #         if len(self._reference_lane_list) != 0 and closestLane.getID() == self._reference_lane_list[-1].getID():
+        #             continue
+        #         self._reference_lane_list.append(closestLane)
 
         return True
 
@@ -116,8 +123,21 @@ class LocalMap(object):
         return x,y
 
     def receive_new_pose(self, x, y):
-        self._ego_vehicle_x = x
-        self._ego_vehicle_y = y
+
+        with self._ego_pose_lock:
+            self._ego_vehicle_x_buffer = x
+            self._ego_vehicle_y_buffer = y
+        
+
+    def update(self):
+
+        with self._ego_pose_lock:
+            self._ego_vehicle_x = self._ego_vehicle_x_buffer
+            self._ego_vehicle_y = self._ego_vehicle_y_buffer
+
+        if self._ego_vehicle_x is None:
+            return None
+
         if self.should_update_static_map():
             self.update_static_map()
             return self.static_local_map
