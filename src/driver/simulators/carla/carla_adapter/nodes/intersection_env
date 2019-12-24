@@ -231,7 +231,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
     if if_random == 1:
 
         #set_ramdom_vehicle_number
-        count = 500
+        count = 150
 
         for spawn_point in spawn_points:
             if try_spawn_random_vehicle_at(spawn_point,blueprints,carla_world):
@@ -280,7 +280,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
         for num in range(140,190):
             if num%10 == 0:
                 spawn_point = carla_world.get_map().get_spawn_points()[0]
-                spawn_point.location.x = 0.5
+                spawn_point.location.x = -1.5
                 spawn_point.location.y = num
                 spawn_point.location.z = 2
                 spawn_point.rotation.pitch = 0
@@ -309,7 +309,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
             if vehicle is not None:
                 actor_list.append(vehicle)
                 vehicle.set_autopilot()                                                 #autopilot
-                # vehicle.apply_control(carla.VehicleControl(throttle=3.0, steer=0.0))      #given control command
+                # vehicle.apply_control(carla.VehicleControl(throttle=0.5, steer=0.0))      #given control command
                 print('fixed spawned %r at %s' % (vehicle.type_id, spawn_point.location))
 
 def generate_pedestrians(carla_world,carla_client,if_random,delay = 0.05):
@@ -425,7 +425,7 @@ if __name__ == "__main__":
     ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
 
     # Generate surrounding vehicles
-    generate_traffic(carla_world ,0)  #0 for fix point, 1 for random
+    generate_traffic(carla_world ,1)  #0 for fix point, 1 for random
 
     # Generate pedestrians
     generate_pedestrians(carla_world,carla_client,0)
