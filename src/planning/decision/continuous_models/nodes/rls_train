@@ -27,7 +27,6 @@ class RLSNode(object):
         )
         self._rate = rospy.Rate(params.hz)
 
-        # Follow path for now
         model_trajectory = RLSPlanner()
         self._decision_instance = MainDecision(path_decision=model_trajectory, speed_decision=model_trajectory, Planning_type = 2)
 
@@ -40,7 +39,6 @@ class RLSNode(object):
 
     def loop(self):
         while not rospy.is_shutdown():
-
             publish_msg = self._decision_instance.update_trajectory()
             if publish_msg:
                 self._decision_trajectory_publisher.publish(publish_msg)

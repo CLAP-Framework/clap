@@ -122,6 +122,10 @@ class Werling(object):
 
         generated_trajectory = frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
            
+        # in_intersection = self.if_intersection(dynamic_map)
+        # if in_intersection is not True:
+        #     return ref_path,10
+
 
         if generated_trajectory is not None:
             if len(self.last_trajectory) < 5 or abs(dynamic_map.ego_state.pose.pose.position.x - self.last_trajectory[0][0])>0.5 or abs(dynamic_map.ego_state.pose.pose.position.y - self.last_trajectory[0][1])>0.5:
@@ -134,7 +138,7 @@ class Werling(object):
                 trajectory_array = self.last_trajectory
                 desired_speed = 10 #TODO read from the trajectory
                 print("222222222222222222222222222")
-        elif len(self.last_trajectory) > 5 or c_speed > 0:
+        elif len(self.last_trajectory) > 5 and c_speed > 0:
             trajectory_array = self.last_trajectory
             desired_speed = 10 #TODO read from the trajectory
             print("252525252525252525252525")
@@ -145,6 +149,22 @@ class Werling(object):
             print("3333333333333333333333333333")
 
         return trajectory_array, desired_speed
+    
+    def if_intersection(self,dynamic_map):
+        if -11 < dynamic_map.ego_state.pose.pose.position.x < 17 and -148 < -dynamic_map.ego_state.pose.pose.position.y < -125:
+            print("----------------------------------------------------------------intersection")
+
+            return True
+        elif -97 < dynamic_map.ego_state.pose.pose.position.x < -67 and -149 < -dynamic_map.ego_state.pose.pose.position.y < -126:
+            print("---------------------------------------------------------------- intersection")
+
+            return True
+        elif -13 < dynamic_map.ego_state.pose.pose.position.x < -21 and -215 < -dynamic_map.ego_state.pose.pose.position.y < -183:
+            print("---------------------------------------------------------------- intersection")
+
+            return True
+        else:
+            return False
 
     ############
     ## TOOL BOXs
