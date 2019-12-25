@@ -6,6 +6,7 @@ import rospy
 from zzz_cognition_msgs.msg import MapState
 from zzz_planning_decision_continuous_models.Werling_trajectory import Werling
 from zzz_driver_msgs.utils import get_speed
+from carla import Location, Rotation, Transform
 
 class RLSPlanner(object):
     """
@@ -20,62 +21,85 @@ class RLSPlanner(object):
         self._collision_signal = False
         self._collision_times = 0
     
-        # if mode == "client":
-        #     rospy.loginfo("Connecting to RL server...")
-        #     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #     self.sock.connect((openai_server, port))
-        #     self._socket_connected = True
-        #     rospy.loginfo("Connected...")
-        # else:
-        #     # TODO: Implement server mode to make multiple connection to this node.
-        #     #     In this mode, only rule based action is returned to system
-        #     raise NotImplementedError("Server mode is still wating to be implemented.") 
+        if mode == "client":
+            rospy.loginfo("Connecting to RL server...")
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect((openai_server, port))
+            self._socket_connected = True
+            rospy.loginfo("Connected...")
+        else:
+            # TODO: Implement server mode to make multiple connection to this node.
+            #     In this mode, only rule based action is returned to system
+            raise NotImplementedError("Server mode is still wating to be implemented.") 
         
     def speed_update(self, trajectory, dynamic_map):
-            return 10   
+        return 10   
 
     def trajectory_update(self, dynamic_map):
 
         self._dynamic_map = dynamic_map
         self._rule_based_trajectory_model_instance.update_dynamic_map(dynamic_map)
 
-        # Using Werling for rule-based trajectory planning
-        trajectory,desired_speed = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
-
-        return trajectory,desired_speed
-
-
-
-        # Following reference path in junction # TODO(Zhong):should be in cognition part
-        if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or dynamic_map.mmap.target_lane_index == -1:
+        # Using Werling for rule-based trajectory planning in lanes
+        if dynamic_map.model == 1:
+            trajectory,desired_speed = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
             # send done to OPENAI
             collision = int(self._collision_signal)
             self._collision_signal = False
             leave_current_mmap = 1
-            sent_RL_msg = [0,0,100,0,12,-100,0,0,100,1,12,-100,1,0]
+            sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
             sent_RL_msg.append(collision)
             sent_RL_msg.append(leave_current_mmap)
+            sent_RL_msg.append(0.0) # RL.point
+            sent_RL_msg.append(0.0)
+            print("-----------------------------",sent_RL_msg)
             self.sock.sendall(msgpack.packb(sent_RL_msg))
+            RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
 
-            return -1, self._rule_based_longitudinal_model_instance.longitudinal_speed(-1)
+            return trajectory,desired_speed
 
-        RL_state = self.wrap_state()
-        rospy.logdebug("sending state: ego_y:%.1f, ego_v:%.1f", RL_state[0],RL_state[1])
-        sent_RL_msg = RL_state
+        
+        elif dynamic_map.model == 0: # in junction
+            trajectory,desired_speed = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
+            delta_T = 0.75
+            RLpoint = self.get_RL_point_from_trajectory(trajectory , delta_T)
 
-        collision = int(self._collision_signal)
-        self._collision_signal = False
-        leave_current_mmap = 0
-        sent_RL_msg.append(collision)
-        sent_RL_msg.append(leave_current_mmap)
+            RL_state = self.wrap_state()
+            rospy.logdebug("sending state: ego_x:%.1f, ego_y:%.1f", RL_state[0],RL_state[1])
+            sent_RL_msg = RL_state
 
-        self.sock.sendall(msgpack.packb(sent_RL_msg))
-        RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
-        # RLS_action = 0
-        rospy.logdebug("received action:%d", RLS_action)
+            # Why always false here?
+            collision = int(self._collision_signal)
+            self._collision_signal = False
 
-        # discretize action # TODO(Zhong): continous action
-        return self.get_decision_from_discrete_action(RLS_action)
+            leave_current_mmap = 0
+            sent_RL_msg.append(collision)
+            sent_RL_msg.append(leave_current_mmap)
+            sent_RL_msg.append(RLpoint.location.x)
+            sent_RL_msg.append(RLpoint.location.y)
+            print("-----------------------------",sent_RL_msg)
+            self.sock.sendall(msgpack.packb(sent_RL_msg))
+            RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
+            rospy.logdebug("received action:%f, %f", RLS_action[0],RLS_action[1])
+
+            return trajectory, desired_speed #self.get_decision_from_continuous_action(RLS_action, delta_T)
+
+
+        # # Following reference path in junction # TODO(Zhong):should be in cognition part
+        # if dynamic_map.model == 1:
+        #     # send done to OPENAI
+        #     collision = int(self._collision_signal)
+        #     self._collision_signal = False
+        #     leave_current_mmap = 1
+        #     sent_RL_msg = [0,0,100,0,12,-100,0,0,100,1,12,-100,1,0]
+        #     sent_RL_msg.append(collision)
+        #     sent_RL_msg.append(leave_current_mmap)
+        #     self.sock.sendall(msgpack.packb(sent_RL_msg))
+
+        #     return -1, self._rule_based_longitudinal_model_instance.longitudinal_speed(-1)
+
+        
+
 
     def wrap_state(self):
 
@@ -87,18 +111,39 @@ class RLSPlanner(object):
             # obstacle 2 : x0(12), y0(13), vx0(14), vy0(15)
 
         state = []
-        ego_x = self._dynamic_map.mmap.ego_state.pose.x
-        ego_y = self._dynamic_map.mmap.ego_state.pose.y
-
-
+        ego_x = self._dynamic_map.ego_state.pose.pose.position.x
+        ego_y = self._dynamic_map.ego_state.pose.pose.position.y
+        ego_vx = self._dynamic_map.ego_state.twist.twist.linear.x
+        ego_vy = self._dynamic_map.ego_state.twist.twist.linear.y
+        
+        state.append(ego_x)
         state.append(ego_y)
-        state.append(ego_v)
-        for i,lane in enumerate(self._dynamic_map.mmap.lanes):
-            self.get_state_from_lane(lane,i,state)
+        state.append(ego_vx)
+        state.append(ego_vy)
+
+        i = 0
+        for obs in self._dynamic_map.jmap.obstacles: # according to distance??
+            if i < 3:
+                state.append(obs.state.pose.pose.position.x)
+                state.append(obs.state.pose.pose.position.y)
+                state.append(obs.state.twist.twist.linear.x)
+                state.append(obs.state.twist.twist.linear.y)
+                i = i+1
+            else:
+                break
 
         return state
 
     def RL_model_matching(self):
+        pass
+
+    def get_RL_point_from_trajectory(self, trajectory, delta_T):
+        RLpoint = Transform()
+        RLpoint.location.x = 0
+        RLpoint.location.y = 0
+        return RLpoint
+
+    def get_decision_from_continuous_action(self, action, delta_T, acc = 2,  hard_brake = 4):
         pass
 
     def get_decision_from_discrete_action(self, action, acc = 2, decision_dt = 0.75, hard_brake = 4):
@@ -153,9 +198,6 @@ class RLSPlanner(object):
 
         if action == 10:
             return right_lane_index, current_speed-acc*decision_dt
-
-    def get_decision_from_continuous_action(self, action):
-        pass
 
 
     def get_state_from_lane(self,lane,lane_index,state,

@@ -22,6 +22,7 @@ import numpy as np
 import gym
 from gym import core, error, spaces, utils
 from gym.utils import seeding
+# from carla import Location, Rotation, Transform
 
 ##########################################
 
@@ -59,8 +60,8 @@ class ZZZCarlaEnv(gym.Env):
 
         self.state_dimention = 16
 
-        low  = np.array([-50,  -50,   0, 0,  0, -100, 0,  0,   0, 0,  0, -100, 0,  0,0,0])
-        high = np.array([1, 17, 100, 1, 12,    0, 1, 12, 100, 1, 12,    0, 1, 12,0,0])    
+        low  = np.array([-50,  -50,   0, 0,  -50, -50, 0,  0,   -50, -50,  0, 0, -50,  -50,0,0])
+        high = np.array([50, 50, 60, 60, 50, 50, 60, 60, 50, 50, 60, 60,50, 50, 60, 60])    
 
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
         self.seed()
@@ -69,28 +70,35 @@ class ZZZCarlaEnv(gym.Env):
     def step(self, action):
 
         # send action to zzz planning module
-        # self.sock_conn.sendall(msgpack.packb(int(action)))
+        
+        action = action.astype(int)
+        action = action.tolist()
+        print("-------------",type(action),action)
+        self.sock_conn.sendall(msgpack.packb(action))
         
         # wait next state
-        # received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
-        self.state = np.array([0,  0,   0, 0,  0, -100, 0,  0,   0, 0,  0, -100, 0,  0,0,0])
-        # collision = received_msg[14]
-        # leave_current_mmap = received_msg[15]
+        received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
+        # self.state = np.array([0,  0,   0, 0,  0, -100, 0,  0,   0, 0,  0, -100, 0,  0,0,0])
+        self.state = received_msg[0:16]
+        collision = received_msg[16]
+        leave_current_mmap = received_msg[17]
+        RLpointx = received_msg[18]
+        RLpointy = received_msg[19]
     
         # calculate reward
-        reward = 1
+        reward = abs(action[0]-RLpointx) + abs(action[1]-RLpointy)
 
-        # if collision:
-        #     reward = 0
+        if collision:
+            reward = 0
 
         # judge if finish
         done = False
 
-        # if collision:
-        #     done = True
+        if collision:
+            done = True
         
-        # if leave_current_mmap:
-        #     done = True
+        if leave_current_mmap:
+            done = True
 
         return np.array(self.state), reward, done, {}
 

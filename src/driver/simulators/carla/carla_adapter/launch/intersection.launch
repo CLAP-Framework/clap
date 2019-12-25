@@ -5,7 +5,7 @@
     <arg name="static_sensors_file" default="$(find zzz_driver_simulators_carla_adapter)/config/static_sensors.example.json"/>
     <arg name="ego_actor" default='ego_vehicle'/>
     <arg name="ego_spawn" default="True"/> <!-- By default we use script to spawn vehicles -->
-    <arg name="ego_spawn_point" default="-39.5,-134.5,0,0,0,0"/> <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
+    <arg name="ego_spawn_point" default="-10,-90,0,0,0,180"/> <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
 
     <rosparam file="$(arg carla_settings_file)" command="load" />
 

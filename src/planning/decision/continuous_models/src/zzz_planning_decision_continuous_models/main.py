@@ -48,7 +48,8 @@ class MainDecision(object):
             if send_trajectory is not None:
                 msg = DecisionTrajectory()
                 msg.trajectory = self.convert_ndarray_to_pathmsg(send_trajectory) # TODO: move to library
-                msg.desired_speed = desired_speed  #FIXME(NANSHAN)
+                msg.desired_speed = desired_speed 
+
             return msg
 
 
