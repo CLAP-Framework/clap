@@ -40,7 +40,7 @@ class detection3dPseudeLidarNode(object):
             KITTI="2015", 
             datapath='/scratch/datasets/kitti2015/testing/', 
             # XXX: need to download weights
-            loadmodel=os.environ.get('ZZZ_ROOT')+"/zzz/src/perception/detection/camera_filters/src/pseudo_lidar/psmnet/kitti_3d/finetune_300.tar",
+            loadmodel=os.environ.get('ZZZ_ROOT')+"/src/perception/detection/camera_filters/src/pseudo_lidar/psmnet/kitti_3d/finetune_300.tar",
             model='stackhourglass', 
             maxdisp=192,
             no_cuda=False,

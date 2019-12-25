@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# TODO: Clean this
+
 import os
 import rospy
 import threading

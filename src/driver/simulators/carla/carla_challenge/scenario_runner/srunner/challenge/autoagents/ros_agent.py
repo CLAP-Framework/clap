@@ -71,7 +71,7 @@ class RosAgent(AutonomousAgent):
         self.track = Track.ALL_SENSORS_HDMAP_WAYPOINTS
         self.stack_thread = None
         # self.sensor_definition_file = rospy.get_param('~sensor_definition_file')
-        self.sensor_definition_file = os.environ['ZZZ_ROOT'] + "/zzz/src/driver/simulators/carla/carla_adapter/config/vehicle_sensors.example.json"
+        self.sensor_definition_file = os.environ['ZZZ_ROOT'] + "/src/driver/simulators/carla/carla_adapter/config/vehicle_sensors.example.json"
 
         # get start_script from environment
         team_code_path = os.environ['TEAM_CODE_ROOT']
