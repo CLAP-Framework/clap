@@ -19,9 +19,9 @@ SIM_LOOP = 500
 
 # Parameter
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
-MAX_ACCEL = 2.0  # maximum acceleration [m/ss]
-MAX_CURVATURE = 1.0  # maximum curvature [1/m]
-MAX_ROAD_WIDTH = 5.0  # maximum road width [m]
+MAX_ACCEL = 4.0  # maximum acceleration [m/ss]
+MAX_CURVATURE = 2.0  # maximum curvature [1/m]
+MAX_ROAD_WIDTH = 7.0  # maximum road width [m]
 D_ROAD_W = 1.0  # road width sampling length [m]
 DT = 0.2  # time tick [s]
 MAXT = 5.0  # max prediction time [m]
@@ -96,39 +96,25 @@ class Werling(object):
                     ob.append(obstacle)
         ob = np.array(ob)
 
-        # if check_collision(self.last_trajectory,ob) == False and self.last_trajectory is not None:
-        #     return self.last_trajectory,10
-
-
         tx, ty, tyaw, tc, csp = generate_target_course(Frenetrefx,Frenetrefy)
 
         # initial state
         ego_state = dynamic_map.ego_state
         c_speed = get_speed(ego_state)       # current speed [m/s]
-        # if self.last_trajectory is not None:
-        #     s0 = self.last_trajectory.s[1]
-        #     c_d = self.last_trajectory.d[1]
-        #     c_d_d = self.last_trajectory.d_d[1]
-        #     c_d_dd = self.last_trajectory.d_dd[1]
-            # c_speed = path.s_d[1]
-
         ffstate = get_frenet_state(dynamic_map.ego_state, ref_path, ref_path_tangets)
         c_d = - ffstate.d #-ffstate.d  # current lateral position [m]
-        c_d_d = 0 # ffstate.vd  # current lateral speed [m/s]
-        c_d_dd = 0 # ffstate.ad  # current latral acceleration [m/s]
-        s0 = ffstate.s + c_speed * 0.75      # current course position
 
-        #check_collision(self.last_trajectory,ob) == True or
+        if -ffstate.d * ffstate.vd > 0:
+            c_d_d = 0
+        else:
+            c_d_d = ffstate.vd  # current lateral speed [m/s]
+        c_d_dd = 0 # ffstate.ad  # current latral acceleration [m/s]
+        s0 = ffstate.s + c_speed * 0.5      # current course position
 
         generated_trajectory = frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
-           
-        # in_intersection = self.if_intersection(dynamic_map)
-        # if in_intersection is not True:
-        #     return ref_path,10
-
 
         if generated_trajectory is not None:
-            if len(self.last_trajectory) < 5 or abs(dynamic_map.ego_state.pose.pose.position.x - self.last_trajectory[0][0])>0.5 or abs(dynamic_map.ego_state.pose.pose.position.y - self.last_trajectory[0][1])>0.5:
+            if len(self.last_trajectory) < 5 or abs(dynamic_map.ego_state.pose.pose.position.x - self.last_trajectory[0][0])>1 or abs(dynamic_map.ego_state.pose.pose.position.y - self.last_trajectory[0][1])>1:
                 desired_speed = generated_trajectory.s_d[-1] # TODO: Better speed design
                 trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
                 trajectory_array = dense_polyline2d(trajectory_array_ori,1)
@@ -150,21 +136,21 @@ class Werling(object):
 
         return trajectory_array, desired_speed
     
-    def if_intersection(self,dynamic_map):
-        if -11 < dynamic_map.ego_state.pose.pose.position.x < 17 and -148 < -dynamic_map.ego_state.pose.pose.position.y < -125:
-            print("----------------------------------------------------------------intersection")
+    # def if_intersection(self,dynamic_map):
+    #     if -11 < dynamic_map.ego_state.pose.pose.position.x < 17 and -148 < -dynamic_map.ego_state.pose.pose.position.y < -125:
+    #         print("----------------------------------------------------------------intersection")
 
-            return True
-        elif -97 < dynamic_map.ego_state.pose.pose.position.x < -67 and -149 < -dynamic_map.ego_state.pose.pose.position.y < -126:
-            print("---------------------------------------------------------------- intersection")
+    #         return True
+    #     elif -97 < dynamic_map.ego_state.pose.pose.position.x < -67 and -149 < -dynamic_map.ego_state.pose.pose.position.y < -126:
+    #         print("---------------------------------------------------------------- intersection")
 
-            return True
-        elif -13 < dynamic_map.ego_state.pose.pose.position.x < -21 and -215 < -dynamic_map.ego_state.pose.pose.position.y < -183:
-            print("---------------------------------------------------------------- intersection")
+    #         return True
+    #     elif -13 < dynamic_map.ego_state.pose.pose.position.x < -21 and -215 < -dynamic_map.ego_state.pose.pose.position.y < -183:
+    #         print("---------------------------------------------------------------- intersection")
 
-            return True
-        else:
-            return False
+    #         return True
+    #     else:
+    #         return False
 
     ############
     ## TOOL BOXs
