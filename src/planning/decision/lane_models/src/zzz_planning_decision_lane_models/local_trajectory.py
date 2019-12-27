@@ -35,7 +35,7 @@ class MPCTrajectory(object):
         # N2 is lane change finish horizon
         # DT is discrete time step; TL is one-order delay of vehicle speed control
         # L is the wheelbase
-        self.Np=30
+        self.Np=20
         self.N1=5
         self.N2=15
         self.DT=0.2
@@ -57,6 +57,7 @@ class MPCTrajectory(object):
         self.vmin=-5.0
         self.dmax=0.02
         self.dmin=-0.02
+        self._local_trajectory_generator_ref = PolylineTrajectory()
 
     def get_trajectory(self, dynamic_map, target_lane_index, desired_speed,resolution=0.5):
         rospy.loginfo("----\n using mpc trajectory")
@@ -66,7 +67,19 @@ class MPCTrajectory(object):
         ego_vy = dynamic_map.ego_ffstate.vd
         ego_v = math.sqrt(ego_vx*ego_vx + ego_vy*ego_vy)
         ego_theta = math.atan2(ego_vy,ego_vx)
+
+        print("ego state in frenet: ", ego_x, ego_y, ego_vx, ego_vy, ego_theta)
         ego_lane_index_rounded = int(round(dynamic_map.mmap.ego_lane_index))
+        ego_lane = dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane
+
+        wx = [pos.position.x for pos in ego_lane.central_path_points]
+        wy = [pos.position.y for pos in ego_lane.central_path_points]
+
+        # print("lane x: ", wx)
+        # print("lane y: ", wy)
+
+        print("ego state in world : ", dynamic_map.ego_state.pose.pose.position.x, dynamic_map.ego_state.pose.pose.position.y, dynamic_map.ego_state.twist.twist.linear.x,dynamic_map.ego_state.twist.twist.linear.y)
+
 
         if target_lane_index == -1:
             target_lane = dynamic_map.jmap.reference_path
@@ -77,6 +90,8 @@ class MPCTrajectory(object):
         y_des=(target_lane_index-ego_lane_index_rounded)*target_lane.map_lane.width
         rospy.logdebug("current lateral position %f, target lateral position %f", ego_y, y_des)
         # control input
+
+        print("desired speed: ", desired_speed)
         vdr = desired_speed
         delta_r = 0.0
 
@@ -105,48 +120,54 @@ class MPCTrajectory(object):
         h=matrix(b)
 
         sv=solvers.qp(P,q,G,h)
+        print(sv['status'])
 
-        uopt=sv['x']
-        Xex=np.dot(Aex,s0)+np.dot(Bex,uopt)
-        xp=np.dot(Cx,Xex)+xr
-        yp=np.dot(Cy,Xex)+yr
+        if (sv['status']=="optimal"):
+            rospy.loginfo("--------------------------------------------\n Optimal Found")
+            uopt=sv['x']
+            Xex=np.dot(Aex,s0)+np.dot(Bex,uopt)
+            xp=np.dot(Cx,Xex)+xr
+            yp=np.dot(Cy,Xex)+yr
 
-        print("ref x: ",xr)
-        print("ref y: ",yr)
+            print("ref x: ",xr)
+            print("ref y: ",yr)
 
-        print("frenet ego pos: ", ego_x, ego_y)
-        print("frenet path x: ", xp)
-        print("frenet path y: ", yp)
+            
+            print("frenet path x: ", xp)
+            print("frenet path y: ", yp)
 
-        print("y max : ",ymax)
-        print("y min : ",ymin)
+            print("y max : ",ymax)
+            print("y min : ",ymin)
 
-        
-        ego_lane = dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane
+            
+            ego_lane = dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane
 
-        wx = [pos.position.x for pos in ego_lane.central_path_points]
-        wy = [pos.position.y for pos in ego_lane.central_path_points]
+            wx = [pos.position.x for pos in ego_lane.central_path_points]
+            wy = [pos.position.y for pos in ego_lane.central_path_points]
 
-        # print("lane x: ", wx)
-        # print("lane y: ", wy)
+            print("lane x: ", wx)
+            print("lane y: ", wy)
 
-        fplist = []
-        
-        for i in np.arange(len(xp)):
-            fp = Frenet_path()
-            fp.s = xp[i]
-            fp.d = yp[i]
-            fplist.append(fp)
+            fplist = []
+            
+            for i in np.arange(len(xp)):
+                fp = Frenet_path()
+                fp.s = xp[i]
+                fp.d = yp[i]
+                fplist.append(fp)
 
-        fplist = calc_global_paths(fplist,wx,wy)
+            fplist = calc_global_paths(fplist,wx,wy)
 
-        xw = [fp.x for fp in fplist]
-        yw = [fp.y for fp in fplist]
-        print("ego position: ",dynamic_map.ego_state.pose.pose.position.x,dynamic_map.ego_state.pose.pose.position.y )
-        print("trajectory x :", xw)
-        print("trajectory y :", yw)
+            xw = [fp.x for fp in fplist]
+            yw = [fp.y for fp in fplist]
+            print("ego position: ",dynamic_map.ego_state.pose.pose.position.x,dynamic_map.ego_state.pose.pose.position.y )
+            print("trajectory x :", xw)
+            print("trajectory y :", yw)
 
-        trajectory = np.hstack((xw,yw))
+            trajectory = np.hstack((xw,yw))
+        else:
+            rospy.loginfo("=====================================\n Using reference")
+            trajectory = self._local_trajectory_generator_ref.get_trajectory(dynamic_map, target_lane_index, desired_speed)
 
         return trajectory
 
@@ -196,7 +217,7 @@ class MPCTrajectory(object):
                         [0.0, 0.0, 0.0, 1.0-self.DT/self.TL]])
             Bd=np.array([[0.0, 0.0],
                         [0.0, 0.0],
-                        [0.0, vr[i]*self.DT/self.L*math.cos(delta_r)/math.cos(delta_r)],
+                        [0.0, vr[i]*self.DT/self.L/math.cos(delta_r)/math.cos(delta_r)],
                         [self.DT/self.TL, 0.0]])
 
             Bex[4*i:4*(i+1),2*i:2*(i+1)]=Bd
@@ -208,7 +229,7 @@ class MPCTrajectory(object):
                 Bex[0:4,0:2]=Bd
             else:
                 Aex[4*i:4*(i+1),0:4]=np.dot(Ad,Aex[4*(i-1):4*i])
-                for j in np.arange(i-1):
+                for j in np.arange(i):
                     Bex[4*i:4*(i+1),2*j:2*(j+1)]=np.dot(Ad,Bex[4*(i-1):4*i,2*j:2*(j+1)])
         return Aex, Bex, Qex, Rex
 
@@ -381,6 +402,12 @@ class PolylineTrajectory(object):
         # TODO: get smooth spline (write another module to generate spline)
         ego_x = dynamic_map.ego_state.pose.pose.position.x
         ego_y = dynamic_map.ego_state.pose.pose.position.y
+
+        ego_fx = dynamic_map.ego_ffstate.s
+        ego_fy = dynamic_map.ego_ffstate.d
+        ego_fvx = dynamic_map.ego_ffstate.vs 
+        ego_fvy = dynamic_map.ego_ffstate.vd
+        rospy.loginfo("ego state in frenet: s = %f, d=%f, vs=%f, vd=%f", ego_fx, ego_fy, ego_fvx, ego_fvy)
         if target_lane_index == -1:
             target_lane = dynamic_map.jmap.reference_path
         else:
