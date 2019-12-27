@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# TODO: Clean this
+# TODO: Remove this node out from cognition module. Or at least clarify the usages.
 
 import os
 import rospy

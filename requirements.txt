@@ -5,6 +5,7 @@ intervaltree
 plotly
 dash
 filterpy
-pcl.py
+pcl-py
 scipy
 shapely
+cvxopt

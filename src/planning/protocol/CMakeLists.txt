@@ -7,8 +7,6 @@ find_package(catkin REQUIRED genmsg std_msgs # essential dependency
 
 add_message_files(DIRECTORY msg FILES
     DecisionTrajectory.msg
-    PlannedTrajectory.msg
-    VehicleState.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs nav_msgs)
