@@ -4,4 +4,4 @@
 uint8 reason
 
 # The destination for the rerouting request
-# sensor_msgs/NavSatFix destination
+sensor_msgs/NavSatFix destination

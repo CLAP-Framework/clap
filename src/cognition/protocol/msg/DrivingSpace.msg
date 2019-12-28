@@ -1,4 +1,5 @@
 # This message represents a homogeneous representation of driving space (static and dynamic map)
+# TODO: Duplicate message? This should be the junction map
 
 Header header
 

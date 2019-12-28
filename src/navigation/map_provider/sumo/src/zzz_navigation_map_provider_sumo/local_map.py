@@ -70,6 +70,8 @@ class LocalMap(object):
             exitcode = command.wait()
             if exitcode != 0:
                 rospy.logerr("SUMO netconvert failed, (exit code: %d)" % exitcode)
+            else:
+                rospy.logdebug("SUMO netconvert succeed, stderr:\n %s", command.stderr.read())
 
         self._hdmap = sumolib.net.readNet(converted_file)
         self._offset_x, self._offset_y = self._hdmap.getLocationOffset()
@@ -87,9 +89,8 @@ class LocalMap(object):
         if self._hdmap is None:
             return False
 
-        assert type(reference_path)==Path
         self._reference_lane_list.clear()
-        # todo this loop needs to be optimised later
+        # TODO: this loop needs to be optimised later
 
         for wp in reference_path.poses:
             # TODO: Takes too much time for processing
@@ -156,7 +157,6 @@ class LocalMap(object):
         ''' 
         Update information in the static map if current location changed dramatically
         '''
-        map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
         rospy.logdebug("Updating static map")
         self.static_local_map = self.init_static_map() ## Return this one
         self.update_lane_list()
@@ -198,7 +198,6 @@ class LocalMap(object):
         '''
         lane_wrapped = Lane()
         lane_wrapped.index = lane.getIndex()
-        # lane_wrapped.width = lane.getWidth()
         last_x = last_y = last_s = None
         for wp in lane.getShape():
             point = LanePoint()
@@ -210,6 +209,7 @@ class LocalMap(object):
                 point.s = last_s + math.sqrt((x-last_x)*(x-last_x) + (y-last_y)*(y-last_y))
             point.position.x = x
             point.position.y = y
+            point.width = lane.getWidth()
             # TODO: add more lane point info
 
             # Update

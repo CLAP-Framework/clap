@@ -2,7 +2,9 @@ from zzz_common.kinematics import get_absolute_state
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_cognition_msgs.msg import LaneState, MapState, RoadObstacle, JunctionMapState
 from zzz_perception_msgs.msg import TrackingBoxArray, ObjectClass, DimensionWithCovariance
+
 import numpy as np
+import tf
 
 def default_msg(msg_type):
     '''
@@ -56,33 +58,21 @@ def convert_tracking_box(array, pose):
         else:
             obstacle.cls.classid = ObjectClass.UNKNOWN
             obstacle.cls.score = 1
+
         # Convert obstacle shape
-        obstacle.dimension = obj.bbox.dimension
+        obstacle.shape_type = RoadObstacle.SHAPE_BOX
+        obstacle.sbox = obj.bbox.dimension
 
-        #print("twist before transform: %f %f %f\n", obstacle.state.twist.twist.linear.x, obstacle.state.twist.twist.linear.y, obstacle.state.twist.twist.linear.z)
-        
-        # jxy: Convert velocity (twist)
-        
-        x = obj.bbox.pose.pose.orientation.x
-        y = obj.bbox.pose.pose.orientation.y
-        z = obj.bbox.pose.pose.orientation.z
-        w = obj.bbox.pose.pose.orientation.w
-
-        rotation_mat = np.array([[1-2*y*y-2*z*z, 2*x*y+2*w*z, 2*x*z-2*w*y], [2*x*y-2*w*z, 1-2*x*x-2*z*z, 2*y*z+2*w*x], [2*x*z+2*w*y, 2*y*z-2*w*x, 1-2*x*x-2*y*y]])
-        rotation_mat_inverse = np.linalg.inv(rotation_mat) #those are the correct way to deal with quaternion
+        # TODO(zyxin): These lines correct faults in rotation?
+        ori = obj.bbox.pose.pose.orientation
+        rotation_mat = tf.transformations.quaternion_matrix([ori.x, ori.y, ori.z, ori.w])[:3, :3]
+        rotation_mat_inverse = np.linalg.inv(rotation_mat)
 
         vel_self = np.array([[obj.twist.twist.linear.x], [obj.twist.twist.linear.y], [obj.twist.twist.linear.z]])
         vel_world = np.matmul(rotation_mat_inverse, vel_self)
-        #print("shape: ", vel_self.shape, vel_world.shape)
-        #check if it should be reversed
         obstacle.state.twist.twist.linear.x = vel_world[0]
         obstacle.state.twist.twist.linear.y = vel_world[1]
         obstacle.state.twist.twist.linear.z = vel_world[2]
-
-        #print("quaternion: %f %f %f %f\n", x, y, z, w)
-
-        #print("transformed twist: %f %f %f\n", obstacle.state.twist.twist.linear.x, obstacle.state.twist.twist.linear.y, obstacle.state.twist.twist.linear.z)
-
         obstacles.append(obstacle)
 
     return obstacles
