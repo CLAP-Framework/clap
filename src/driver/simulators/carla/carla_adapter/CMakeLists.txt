@@ -6,6 +6,9 @@ catkin_package()
 
 catkin_install_python(PROGRAMS
   nodes/convert_topic
+  nodes/intersection_env
   scripts/spawn_agent
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+

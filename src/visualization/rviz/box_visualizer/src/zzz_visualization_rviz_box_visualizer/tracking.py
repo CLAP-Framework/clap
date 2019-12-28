@@ -1,4 +1,4 @@
-from easydict import EasyDict
+from addict import Dict as edict
 import rospy
 import numpy as np
 
@@ -8,7 +8,7 @@ from zzz_visualization_rviz_box_visualizer.utils import parse_color
 
 class TrackingBoxVisualizer:
     def __init__(self, **params):
-        self._params = EasyDict(params)
+        self._params = edict(params)
         self._tracker_set = set()
         
         if isinstance(self._params.label_color, list):

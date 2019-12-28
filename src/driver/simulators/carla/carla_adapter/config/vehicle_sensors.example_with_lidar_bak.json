@@ -1,0 +1,51 @@
+{
+    "sensors": [
+        {
+            "type": "sensor.camera.rgb",
+            "id": "Center",
+            "x": 0.7, "y": 0.0, "z": 1.60,
+            "roll":0.0, "pitch":0.0, "yaw": 0.0,
+            "width": 800, "height": 600, "fov":100
+        },
+        {
+            "type": "sensor.camera.rgb",
+            "id": "Left",
+            "x": 0.7, "y": -0.4, "z": 1.60,
+            "roll": 0.0, "pitch": 0.0, "yaw": -45.0,
+            "width": 800, "height": 600, "fov": 100
+        },
+        {
+            "type": "sensor.camera.rgb",
+            "id": "Right",
+            "x": 0.7, "y": 0.4, "z": 1.60,
+            "roll": 0.0, "pitch": 0.0, "yaw": 45.0,
+            "width": 800, "height": 600, "fov": 100
+        },
+        {
+            "type": "sensor.camera.rgb",
+            "id": "Sky",
+            "x": 0, "y": 0, "z": 50,
+            "roll": 0.0, "pitch": -90.0, "yaw": 0,
+            "width": 1920, "height": 1080, "fov": 100
+        },
+        {
+            "type": "sensor.lidar.ray_cast",
+            "id": "Lidar",
+            "x": 0, "y": 0, "z": 2.40,
+            "roll": 0.0, "pitch": 0.0, "yaw": -45.0,
+	        "range": 5000,
+            "channels": 100,
+            "points_per_second": 1000000,
+            "upper_fov": 2.0,
+            "lower_fov": -26.8,
+            "rotation_frequency": 20,
+            "sensor_tick": 0.05
+        },
+        
+        {
+            "type": "sensor.other.gnss",
+            "id": "GPS",
+            "x": 0.7, "y": -0.4, "z": 1.60
+        }
+    ]
+}

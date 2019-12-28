@@ -21,7 +21,8 @@ class PurePersuitLateralController():
         """
 
         control_point = self._control_point(ego_pose, trajectory, current_speed)
-
+        if len(control_point) < 2:
+            return 0.0
         return self._purepersuit_control(control_point, ego_pose)
 
     def _control_point(self, ego_pose, trajectory, current_speed, resolution = 0.1):

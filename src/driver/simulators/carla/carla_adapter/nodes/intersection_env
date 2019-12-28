@@ -1,0 +1,470 @@
+#!/usr/bin/env python
+
+import math
+import random
+import sys
+import thread
+import time
+
+import numpy as np
+import rospy
+from nav_msgs.msg import Path
+
+import carla
+from carla import Location, Rotation, Transform
+#from carla_waypoint_publisher import CarlaReferecePathGenerator
+from carla_waypoint_publisher import CarlaToRosWaypointConverter
+from zzz_driver_msgs.msg import RigidBodyStateStamped
+from zzz_navigation_msgs.msg import Lane, LanePoint, Map, MapString
+
+RUNNING_TIME = 300
+CX = -0.4771
+CY = 0.1983
+
+###########
+# Event 4 Environment Setting
+###########
+
+def spawn_traffic_circle_agents(max_agents, world, blueprints, spawn_points, verbose=False):
+    '''
+    Continuously spawns agents around the traffic circle in Town03.
+
+    Parameters
+    ----------
+    max_agents : int
+        The maximum number of agents allowed in the scenario at any given time.
+    actors : list
+        A list of actors that have been spawned into the Carla world
+    world : carla.World
+        The Carla world in which to spawn actors.
+    verbose : bool, optional
+        Used to determine whether some information should be displayed.
+    '''
+
+    sp_indices = [
+        8, 9, 47, 48, 55, 56, 57, 58, 145, 146, 153, 154, 164, 182, 183
+        # 0, 7, 8, 112, 113, 114, 118, 120, 121, 122, 123, 146, 149, 210, 211,218,219, 229, 247, 248, 257
+    ]
+
+    actor_list = world.get_actors()
+    vehicle_list = actor_list.filter("*vehicle*")
+    num_agents = len(vehicle_list)
+
+    if num_agents < max_agents:
+        blueprint = random.choice(blueprints)
+        blueprint.set_attribute('role_name', 'autopilot')
+
+        spawn_point = spawn_points[random.choice(sp_indices)]
+        min_d = 100
+        for vehicle in vehicle_list:
+            d = vehicle.get_location().distance(spawn_point.location)
+            if d < min_d:
+                min_d = d
+        if min_d > 20:
+            new_vehicle = world.try_spawn_actor(blueprint, spawn_point)
+            if new_vehicle:
+                if "vehicle" in new_vehicle.type_id:
+                    new_vehicle.set_autopilot(True)
+
+
+def remove_non_traffic_circle_agents(world, verbose=False):
+    '''
+    Monitors the Carla scene and actively removes the agents that have
+    wondered too far away from the traffic circle in Town03.
+
+    Parameters
+    ----------
+    actors : list
+        A list of actors that have been spawned into the Carla world
+    verbose : bool, optional
+        Used to determine whether some information should be displayed.
+    '''
+    circle_center = carla.Location(0, 0, 0) # map/circle center
+    dist_range = 100.0 # 100 meters from traffic circle center
+    actor_list = world.get_actors()
+    vehicle_list = actor_list.filter("*vehicle*")
+
+    for vehicle in vehicle_list:
+        dist_from_origin = vehicle.get_location().distance(circle_center)
+        
+        if dist_from_origin > dist_range or vehicle.get_location().x<-60:
+            vehicle.destroy()
+
+##########
+# Event 4 Map Setting
+##########
+
+
+def in_roundabout(ego_x,ego_y,r_thres = 27):
+
+    cx = CX
+    cy = CY
+
+    d_to_center = np.sqrt(cx*cx+cy*cy)
+
+    if d_to_center > r_thres:
+        return False
+    
+    return True
+
+def build_lane(r,lane_index,ego_x,ego_y):
+    angle_ratio = 0.8
+    lane = Lane()
+    cx = CX
+    cy = CY
+    lane.length = 2*np.pi*r
+    lane.index = lane_index
+    ego_vehicle_angle =np.arctan2(ego_y-cy,ego_x-cx)
+
+    for angle in (ego_vehicle_angle+np.linspace(-np.pi*angle_ratio,np.pi*angle_ratio,1000*angle_ratio)):
+        point = LanePoint()
+        point.position.x = cx + r*np.cos(angle)
+        point.position.y = cy + r*np.sin(angle)
+        point.tangent = angle + np.pi/2
+        point.tangent = (point.tangent + np.pi)%(2*np.pi)-np.pi
+        point.width = 3.7
+        lane.central_path_points.append(point)
+
+    return lane
+
+
+def build_multilane_map(ego_x,ego_y,target_lane_index):
+
+    static_map = Map()
+    static_map.in_junction = False
+    static_map.target_lane_index = target_lane_index
+    lane_inside = build_lane(19.8,1,ego_x,ego_y)
+    lane_outside = build_lane(23.5,0,ego_x,ego_y)
+    static_map.lanes.append(lane_outside)
+    static_map.lanes.append(lane_inside)
+
+    return static_map
+
+def build_reference_path(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane):
+
+    current_route = ReferencePathGenerator.current_route
+    # print("----------------------------------------ReferencePathGenerator.current_route: %d", len(ReferencePathGenerator.current_route))
+
+    if current_route is None:
+        goal_x = 90
+        goal_y = -171
+        ReferencePathGenerator.calculate_route(ego_x,-ego_y,goal_x,goal_y)
+        msg = ReferencePathGenerator.publish_waypoints()
+        publisher_reference_lane.publish(msg)
+        
+#global published_exit_path
+#published_exit_path = False
+
+def build_exit_map(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane,ready_to_exit):
+    
+    rospy.logerr("VEHICLE EXITING!")
+
+    global published_exit_path
+    if ready_to_exit or published_exit_path:
+        static_map = Map()
+        static_map.in_junction = True
+        goal_x = 90
+        goal_y = -171
+        if not published_exit_path:
+            ReferencePathGenerator.calculate_route(ego_x,-ego_y,goal_x,goal_y)
+            msg = ReferencePathGenerator.publish_waypoints()
+            publisher_reference_lane.publish(msg)
+            published_exit_path = True
+    else:
+        static_map = build_multilane_map(ego_x,ego_y,0)
+
+    return static_map
+
+# global pose_buffer
+pose_buffer = None
+
+def pose_callback(msg):
+    global pose_buffer
+    pose_buffer = msg
+
+
+
+def generate_map(*args):
+    # global pose_buffer
+    if pose_buffer is None:
+        return
+
+    publisher_map, publisher_reference_lane, ReferencePathGenerator, starting_time = args
+
+    pose = pose_buffer
+    ego_x = pose.state.pose.pose.position.x
+    ego_y = pose.state.pose.pose.position.y
+    current_time = pose.header.stamp.to_sec()
+
+    cx = CX
+    cy = CY
+    d_to_center = np.sqrt((ego_x-cx)*(ego_x-cx)+(ego_y-cy)*(ego_y-cy))
+    ego_vehicle_angle = np.arctan2(ego_y-cy,ego_x-cx)
+
+    if d_to_center > 22.5 and d_to_center< 24.5 and ego_vehicle_angle < -0.1*np.pi and ego_vehicle_angle > -0.2*np.pi:
+        ready_to_exit = True
+    else:
+        ready_to_exit = False
+
+    if current_time-starting_time < RUNNING_TIME:
+        static_map = build_multilane_map(ego_x,ego_y,1)
+        publisher_map.publish(static_map)
+        build_reference_path(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane)
+    else:
+        static_map = build_exit_map(ego_x,ego_y,ReferencePathGenerator,publisher_reference_lane,ready_to_exit)
+        publisher_map.publish(static_map)
+
+
+def generate_traffic(carla_world,if_random,delay = 0.05):
+    
+    # generate surrounding vehicles
+    blueprints = carla_world.get_blueprint_library().filter('vehicle.*')
+    
+    blueprints = [x for x in blueprints if int(x.get_attribute('number_of_wheels')) == 4]
+    blueprints = [x for x in blueprints if not x.id.endswith('isetta')]
+    
+    spawn_points = list(carla_world.get_map().get_spawn_points())
+
+    print('found %d spawn points.' % len(spawn_points))
+
+    #if choose random spawn points
+    if if_random == 1:
+
+        #set_ramdom_vehicle_number
+        count = 100
+
+        for spawn_point in spawn_points:
+            if try_spawn_random_vehicle_at(spawn_point,blueprints,carla_world):
+                count -= 1
+            if count <= 0:
+                break
+
+        while count > 0:
+            time.sleep(2.0)
+            if try_spawn_random_vehicle_at(random.choice(spawn_points,blueprint,carla_world)):
+                count -= 1
+
+        # print('random spawned %d vehicles, press Ctrl+C to exit.' % 10)
+
+
+    #fix spawn points
+    else:      
+        spawn_points = []
+
+        #spawn one vehicle
+        
+        for num in range(10,60):
+            if num%10 == 0:
+                spawn_point = carla_world.get_map().get_spawn_points()[0]
+                spawn_point.location.x = num
+                spawn_point.location.y = -207
+                spawn_point.location.z = 2
+                spawn_point.rotation.pitch = 0
+                spawn_point.rotation.yaw = 180 
+                spawn_point.rotation.roll = 0
+                spawn_points.append(spawn_point)
+
+        for num in range(20,70):
+            if num%10 == 0:
+                spawn_point = carla_world.get_map().get_spawn_points()[0]
+                spawn_point.location.x = num
+                spawn_point.location.y = -137
+                spawn_point.location.z = 6
+                spawn_point.rotation.pitch = 0
+                spawn_point.rotation.yaw = 180 
+                spawn_point.rotation.roll = 0
+                spawn_points.append(spawn_point)
+
+
+        for num in range(140,190):
+            if num%10 == 0:
+                spawn_point = carla_world.get_map().get_spawn_points()[0]
+                spawn_point.location.x = 0.5
+                spawn_point.location.y = num
+                spawn_point.location.z = 2
+                spawn_point.rotation.pitch = 0
+                spawn_point.rotation.yaw = 270 
+                spawn_point.rotation.roll = 0
+                spawn_points.append(spawn_point)
+
+        for num in range(0,120):
+            if num%10 == 0:
+                spawn_point = carla_world.get_map().get_spawn_points()[0]
+                spawn_point.location.x = -75
+                spawn_point.location.y = -num
+                spawn_point.location.z = 2
+                spawn_point.rotation.pitch = 0
+                spawn_point.rotation.yaw = 270 
+                spawn_point.rotation.roll = 0
+                spawn_points.append(spawn_point)
+
+        for spawn_point in spawn_points:
+            blueprint = random.choice(blueprints)
+            if blueprint.has_attribute('color'):
+                color = random.choice(blueprint.get_attribute('color').recommended_values)
+                blueprint.set_attribute('color', color)
+            blueprint.set_attribute('role_name', 'autopilot')
+            vehicle = carla_world.try_spawn_actor(blueprint, spawn_point)
+            if vehicle is not None:
+                actor_list.append(vehicle)
+                vehicle.set_autopilot()                                                 #autopilot
+                # vehicle.apply_control(carla.VehicleControl(throttle=3.0, steer=0.0))      #given control command
+                print('fixed spawned %r at %s' % (vehicle.type_id, spawn_point.location))
+
+def generate_pedestrians(carla_world,carla_client,if_random,delay = 0.05):
+    # generate pedestrians
+    blueprintsWalkers = carla_world.get_blueprint_library().filter("walker.*")
+    spawn_points = []
+
+    for num in range(10,140):
+        if num%15 == 0:
+            spawn_point = carla_world.get_map().get_spawn_points()[0]
+            spawn_point.location.x = -13
+            spawn_point.location.y = num
+            spawn_point.location.z = 0
+            spawn_point.rotation.pitch = 0
+            spawn_point.rotation.yaw = 90 
+            spawn_point.rotation.roll = 0
+            spawn_points.append(spawn_point)
+
+    for spawn_point in spawn_points:
+        player = carla_world.try_spawn_actor(random.choice(blueprintsWalkers),spawn_point)
+        player_control = carla.WalkerControl()
+        player_control.speed = 2
+        pedestrian_heading = 90
+        player_rotation = carla.Rotation(0,pedestrian_heading,0)
+        player_control.direction = player_rotation.get_forward_vector()
+        # player_control.direction.x = 1
+        # player_control.direction.y = 0
+        # player_control.direction.z = 0
+        if player is not None:
+            player.apply_control(player_control)   
+
+
+    spawn_points = []
+
+    for num in range(-10,50):
+        if num%10 == 0:
+            spawn_point = carla_world.get_map().get_spawn_points()[0]
+            spawn_point.location.x = num
+            spawn_point.location.y = 128
+            spawn_point.location.z = 0
+            spawn_point.rotation.pitch = 0
+            spawn_point.rotation.yaw = 180 
+            spawn_point.rotation.roll = 0
+            spawn_points.append(spawn_point)
+    for spawn_point in spawn_points:
+        player = carla_world.try_spawn_actor(random.choice(blueprintsWalkers),spawn_point)
+        player_control = carla.WalkerControl()
+        player_control.speed = 3
+        pedestrian_heading = 180
+        player_rotation = carla.Rotation(0,pedestrian_heading,0)
+        player_control.direction = player_rotation.get_forward_vector()
+        # player_control.direction.x = 1
+        # player_control.direction.y = 0
+        # player_control.direction.z = 0
+        if player is not None:
+            player.apply_control(player_control)  
+
+def try_spawn_random_vehicle_at(transform,blueprints,carla_world):
+        blueprint = random.choice(blueprints)
+        if blueprint.has_attribute('color'):
+            color = random.choice(blueprint.get_attribute('color').recommended_values)
+            blueprint.set_attribute('color', color)
+        blueprint.set_attribute('role_name', 'autopilot')
+        vehicle = carla_world.try_spawn_actor(blueprint, transform)
+        if vehicle is not None:
+            actor_list.append(vehicle)
+            vehicle.set_autopilot()
+            print('random spawned %r at %s' % (vehicle.type_id, transform.location))
+            return True
+        return False
+
+def change_the_world(carla_world):
+    weather = carla_world.get_weather()
+    weather.cloudyness = 0
+    weather.precipitation = 0
+    weather.precipitation_deposits = 0
+    weather.wind_intensity = 0
+    weather.sun_azimuth_angle = 90
+    weather.sun_altitude_angle = 90
+    
+    carla_world.set_weather(weather)
+
+if __name__ == "__main__":
+    rospy.init_node("intersection_env")
+
+    host = rospy.get_param("/carla/host", "127.0.0.1")
+    port = rospy.get_param("/carla/port", 2000)
+    carla_client = carla.Client(host=host, port=port)
+    carla_client.set_timeout(2)
+    carla_world = carla_client.get_world()
+    rospy.loginfo("Connected to Carla.")
+    actor_list = []
+
+    # Publish and Subscribe messages
+    starting_time = rospy.Time.now().to_sec()
+    _local_map_publisher = rospy.Publisher("/zzz/navigation/local_static_map", Map, queue_size=1)
+    _reference_path_publisher = rospy.Publisher("/carla/ego_vehicle/waypoints", Path, queue_size=1, latch=True)
+    _pose_subscriber = rospy.Subscriber("/zzz/navigation/ego_pose", RigidBodyStateStamped, pose_callback)
+
+    # Change enviornment
+    change_the_world(carla_world)
+    
+    # Generate Reference Path
+    setgoal = carla_world.get_map().get_spawn_points()[0]
+    setgoal.location.x = -67
+    setgoal.location.y = -200
+    setgoal.location.z = 8
+    setgoal.rotation.pitch = 0
+    setgoal.rotation.yaw = 0 
+    setgoal.rotation.roll = 0
+    ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
+
+    # Generate surrounding vehicles
+    generate_traffic(carla_world ,0)  #0 for fix point, 1 for random
+
+    # Generate pedestrians
+    generate_pedestrians(carla_world,carla_client,0)
+
+
+    global published_exit_path
+    published_exit_path = False
+
+    rate = rospy.Rate(20)
+    while not rospy.is_shutdown():
+        # generate_map(_local_map_publisher, _reference_path_publisher, ReferencePathGenerator, starting_time)    
+       
+        # Keep Generating Reference Path
+        if pose_buffer is not None:
+            ego_x = pose_buffer.state.pose.pose.position.x
+            ego_y = pose_buffer.state.pose.pose.position.y
+
+            # if math.pow((ego_x+21.5),2) + math.pow((ego_y-205),2) < 64:
+            #     setgoal = carla_world.get_map().get_spawn_points()[0]
+            #     setgoal.location.x = -11
+            #     setgoal.location.y = -134.5
+            #     setgoal.location.z = 0
+            #     setgoal.rotation.pitch = 0
+            #     setgoal.rotation.yaw = 0 
+            #     setgoal.rotation.roll = 0
+            #     ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
+            #     print("222222222222222222222")
+
+            # if math.pow((ego_x+39.5),2) + math.pow((ego_y-134.5),2) < 64:
+            #     setgoal = carla_world.get_map().get_spawn_points()[0]
+            #     setgoal.location.x = -67
+            #     setgoal.location.y = -200
+            #     setgoal.location.z = 8
+            #     setgoal.rotation.pitch = 0
+            #     setgoal.rotation.yaw = 0 
+            #     setgoal.rotation.roll = 0
+            #     ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
+            #     print("1111111111111111111111")
+
+        rate.sleep()
+
+
+    del ReferencePathGenerator
+    del carla_world
+    del carla_client

@@ -1,6 +1,6 @@
-easydict
+addict
 pathlib
-cython >= 0.29
+cython >= 0.29 # This is for pcl-py to be correctly built
 utm
 intervaltree
 plotly
@@ -9,4 +9,4 @@ filterpy
 pcl-py
 scipy >= 1.2.0
 shapely
-google-cloud-storage
+cvxopt

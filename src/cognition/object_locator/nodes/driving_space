@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+
+# TODO: Remove this node out from cognition module. Or at least clarify the usages.
+
+import os
+import rospy
+import threading
+
+from zzz_common.params import parse_private_args
+from zzz_driver_msgs.msg import RigidBodyStateStamped
+from zzz_navigation_msgs.msg import Map
+from zzz_cognition_msgs.msg import DrivingSpace
+from zzz_perception_msgs.msg import DetectionBoxArray, TrackingBoxArray
+from zzz_cognition_object_locator import DrivingSpaceConstructor
+from visualization_msgs.msg import Marker, MarkerArray
+
+class DrivingSpaceNode(object):
+    def __init__(self):
+
+        params = parse_private_args(
+            objects_topic = "/zzz/perception/objects_tracked",
+            map_input_topic="/zzz/navigation/local_static_map",
+            pose_topic = "/zzz/navigation/ego_pose",
+            traffic_light_topic = "/zzz/perception/traffic_lights",
+            driving_space_topic = "driving_space",
+        )
+
+        self._driving_space = DrivingSpaceConstructor()
+
+        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.pose_callback)
+        self._surrounding_vehicle_subscriber = rospy.Subscriber(params.objects_topic, TrackingBoxArray, self._driving_space.receive_object_list)
+        self._static_map_subscriber = rospy.Subscriber(params.map_input_topic, Map, self._driving_space.receive_static_map)
+        self._driving_space_publisher = rospy.Publisher(params.driving_space_topic, DrivingSpace, queue_size=1)
+        self._traffic_light_subscriber = rospy.Subscriber(params.traffic_light_topic, DetectionBoxArray,
+            self._driving_space.receive_traffic_light_detection)
+
+        #visualization
+        self._obstacles_markerarray_publisher = rospy.Publisher("obstacles_markerarray", MarkerArray, queue_size=1)
+        self._lanes_markerarray_publisher = rospy.Publisher("lanes_markerarray", MarkerArray, queue_size=1)
+        self._ego_markerarray_publisher = rospy.Publisher("ego_markerarray", MarkerArray, queue_size=1)
+
+    def pose_callback(self, msg):
+        self._driving_space.receive_ego_state(msg)
+        self._driving_space.update_driving_space()
+
+        self._driving_space_publisher.publish(self._driving_space.driving_space)
+        self._obstacles_markerarray_publisher.publish(self._driving_space._obstacles_markerarray)
+        self._lanes_markerarray_publisher.publish(self._driving_space._lanes_markerarray)
+        self._ego_markerarray_publisher.publish(self._driving_space._ego_markerarray)
+
+if __name__ == "__main__":
+    rospy.init_node("driving_space", log_level=rospy.INFO)
+    
+    node = DrivingSpaceNode()
+    rospy.spin()

@@ -1,13 +1,29 @@
 
+
+
+
 import rospy
 import numpy as np
 import math
-
+from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from zzz_perception_msgs.msg import ObjectClass
 from zzz_driver_msgs.utils import get_speed, get_yaw
 from zzz_cognition_msgs.msg import MapState
 from intervaltree import Interval, IntervalTree
-from zzz_common.geometry import dist_from_point_to_polyline2d
+from geometry_msgs.msg import PoseStamped
+import frenet_optimal_trajectory
+from zzz_planning_msgs.msg import DecisionTrajectory
+from nav_msgs.msg import Path
+
+import cubic_spline_planner
+
+import copy
+
+
+
+
+
+
 
 class ReachableSet(object):
 
@@ -16,7 +32,6 @@ class ReachableSet(object):
         self.vehicle_list = []
         self.pedestrian_list = []
         self.collision_points = []
-
     def update_dynamic_map(self, dynamic_map):
         self.dynamic_map = dynamic_map
         self.vehicle_list = dynamic_map.jmap.obstacles
@@ -27,39 +42,92 @@ class ReachableSet(object):
     def check_trajectory(self, decision_trajectory, desired_speed):
 
         decision_trajectory_array = self.convert_trajectory_to_ndarray(decision_trajectory)
-        if len(decision_trajectory_array) == 0:
-            return False, desired_speed
-        self.collision_points = []
+        Frenetrefx,Frenetrefy=self.conver_ndarray_to_XY(decision_trajectory_array)
+
+        rospy.loginfo("DNSSSSSSSS: i am in node trajectory111=[%f] ",decision_trajectory_array[1,0] )#FIXME(nanshan)
+        rospy.loginfo("DNSSSSSSSS: i am in node FreFrenetrefx=[%f] ",Frenetrefx[1] )#FIXME(nanshan)
+
+        rospy.loginfo("DNSSSSSSSS: i am in node trajectory111=[%f] ",decision_trajectory_array[1,1] )#FIXME(nanshan)
+        rospy.loginfo("DNSSSSSSSS: i am in node FreFrenetrefy=[%f] ",Frenetrefy[1] )#FIXME(nanshan)
+
+        rospy.loginfo("DNSSSSSSSS: i am in node trajectory111=[%f] ", decision_trajectory_array[-1,0 ])  # FIXME(nanshan)
+        rospy.loginfo("DNSSSSSSSS: i am in node FreFrenetrefx=[%f] ", Frenetrefx[-1])  # FIXME(nanshan)
+
+        rospy.loginfo("DNSSSSSSSS: i am in node trajectory111=[%f] ", decision_trajectory_array[-1, 1])  # FIXME(nanshan)
+        rospy.loginfo("DNSSSSSSSS: i am in node FreFrenetrefy=[%f] ", Frenetrefy[-1])  # FIXME(nanshan)
+   
+        tx, ty, tyaw, tc, csp=frenet_optimal_trajectory.generate_target_course(Frenetrefx, Frenetrefy)
+
         ego_idx = self.get_ego_idx(decision_trajectory_array)
         nearest_idx = len(decision_trajectory_array)-1
-        nearest_obstacle = None
+
+        ob=[[0,0]]
+        # need a func
+        rospy.loginfo("DNSSSSSSSS: vehilce list num=[%d] ", len(self.vehicle_list))  # FIXME(nanshan)
+        if (len(self.vehicle_list) > 0):
+            rospy.loginfo("DNSSSSSSSS: vehilce list num=[%d] ", len(self.vehicle_list))  # FIXME(nanshan)
+            for veh in self.vehicle_list:
+                loc=np.array([veh.state.pose.pose.position.x,veh.state.pose.pose.position.y])
+                ob.append(loc)
+                
+        ob=np.array(ob)
+        rospy.loginfo("DNSSSSSSSS: vehilce pos=[%f,%f] ", ob[-1,0],ob[-1,1])  # FIXME(nanshan)
+
+
+
+        c_speed = desired_speed # current speed [m/s]
+        c_d = 0  # current lateral position [m]
+        c_d_d = 0.0  # current lateral speed [m/s]
+        c_d_dd = 0.0  # current latral acceleration [m/s]
+        s0 = 0.0  # current course position
+
+        bestpath=frenet_optimal_trajectory.frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
+
+
+        rospy.loginfo("DNSSSSSSSSSSSSSSSS: i am in node len bestpath=[%f] ", bestpath.y[-1])  # FIXME(nanshan)
+
+        #rospy.loginfo("DNSSSSSSSS: i am in node besyyyyyyyyyy=[%f] ", bestpath.y[-1])  # FIXME(nanshan)
+        msg = DecisionTrajectory()
+        msg.desired_speed = desired_speed
+        msg.trajectory=self.convert_XY_to_pathmsg(bestpath.x,bestpath.y)
+
+
+
+
+        # if len(decision_trajectory_array) == 0:
+        #     return False, desired_speed
+        # self.collision_points = []
+        # ego_idx = self.get_ego_idx(decision_trajectory_array)
+        # nearest_idx = len(decision_trajectory_array)-1
+        # nearest_obstacle = None
         
-        # FIXME(zyxin): should be in prediction part
-        if self.dynamic_map.model == MapState.MODEL_JUNCTION_MAP or self.dynamic_map is None: 
-            for vehicle in self.vehicle_list:
-                if vehicle.lane_index > -1:
-                    continue
-                pred_trajectory = self.pred_trajectory(vehicle)
-                collision_idx, collision_time = self.intersection_between_trajectories(decision_trajectory_array,
-                                                                                            pred_trajectory,vehicle)
-                #TODO:ignore a near distance
-                if collision_time < float("inf"):
-                    self.collision_points.append((collision_idx,collision_time))
+        # # FIXME(zyxin): should be in prediction part
+        # if self.dynamic_map.model == MapState.MODEL_JUNCTION_MAP or self.dynamic_map is None: 
+        #     for vehicle in self.vehicle_list:
+        #         if vehicle.lane_index > -1:
+        #             continue
+        #         pred_trajectory = self.pred_trajectory(vehicle)
+        #         collision_idx, collision_time = self.intersection_between_trajectories(decision_trajectory_array,
+        #                                                                                     pred_trajectory,vehicle)
+        #         #TODO:ignore a near distance
+        #         if collision_time < float("inf"):
+        #             self.collision_points.append((collision_idx,collision_time))
 
-        # TODO: adjust for pedestrain
-        # for pedestrian in self.pedestrian_list:
-        #     pred_trajectory = self.pred_trajectory(pedestrian)
-        #     collision_idx, collision_time = self.intersection_between_trajectories(decision_trajectory_array,pred_trajectory,vehicle)
-        #     if collision_idx > ego_idx and collision_idx < nearest_idx:
-        #         nearest_idx = collision_idx
-        #         nearest_obstacle = pedestrian
+        # # TODO: adjust for pedestrain
+        # # for pedestrian in self.pedestrian_list:
+        # #     pred_trajectory = self.pred_trajectory(pedestrian)
+        # #     collision_idx, collision_time = self.intersection_between_trajectories(decision_trajectory_array,pred_trajectory,vehicle)
+        # #     if collision_idx > ego_idx and collision_idx < nearest_idx:
+        # #         nearest_idx = collision_idx
+        # #         nearest_obstacle = pedestrian
 
-        safeguard_speed = self.get_safeguard_speed(ego_idx,decision_trajectory_array,desired_speed)
-
+        # safeguard_speed = self.get_safeguard_speed(ego_idx,decision_trajectory_array,desired_speed)
+        # how to relaize cut in
+        safeguard_speed=desired_speed
         if safeguard_speed < desired_speed:
             return True, safeguard_speed
         else:
-            return False, desired_speed
+            return False, desired_speed,msg
 
     def pred_trajectory(self, obstacle, pred_t=4, resolution=0.1):
         # Assuming constant speed
@@ -112,13 +180,28 @@ class ReachableSet(object):
                 break
             
         return nearest_idx,collision_time
-        
+
+    def convert_XY_to_pathmsg(self,XX,YY,path_id = 'map'):
+        msg = Path()
+        for i in range(1,len(XX)):
+            pose = PoseStamped()
+            pose.pose.position.x = XX[i]
+            pose.pose.position.y = YY[i]
+            msg.poses.append(pose)
+        msg.header.frame_id = path_id
+        return msg
 
     def convert_trajectory_to_ndarray(self, trajectory):
-
         trajectory_array = [(pose.pose.position.x, pose.pose.position.y) for pose in trajectory.poses]
         return np.array(trajectory_array)
 
+    def conver_ndarray_to_XY(self,path):
+        global_x=[]
+        global_y=[]
+        for wp in path:
+            global_x.append(wp[0])
+            global_y.append(wp[1])
+        return np.array(global_x), np.array(global_y)
 
     def get_ego_idx(self, decision_trajectory):
         ego_pose = self.dynamic_map.ego_state.pose.pose
