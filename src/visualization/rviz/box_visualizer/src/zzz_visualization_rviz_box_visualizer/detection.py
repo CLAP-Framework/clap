@@ -1,4 +1,4 @@
-from easydict import EasyDict
+from addict import Dict as edict
 import rospy
 import math
 
@@ -8,7 +8,7 @@ from zzz_visualization_rviz_box_visualizer.utils import parse_color
 class DetectionBoxVisualizer:
     def __init__(self, **params):
         self._marker_id = 0
-        self._params = EasyDict(params)
+        self._params = edict(params)
 
         if isinstance(self._params.label_color, list):
             self._params.label_color = parse_color(self._params.label_color)

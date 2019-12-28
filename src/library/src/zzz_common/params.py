@@ -4,7 +4,7 @@ This module provides consistent params loading from rosparam and command line in
 
 import argparse
 import rospy
-from easydict import EasyDict as edict
+from addict import Dict as edict
 
 use_ros = True
 

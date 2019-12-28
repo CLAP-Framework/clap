@@ -1,5 +1,5 @@
-easydict
-cython >= 0.29
+addict
+cython >= 0.29 # This is for pcl-py to be correctly built
 utm
 intervaltree
 plotly

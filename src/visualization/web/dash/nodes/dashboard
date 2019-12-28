@@ -6,7 +6,7 @@ import datetime
 import threading
 import collections
 import numpy as np
-from easydict import EasyDict
+from addict import Dict as edict
 
 import plotly
 import plotly.graph_objs as go
@@ -28,7 +28,7 @@ params = parse_private_args(
 )
 
 app = dash.Dash()
-data_cache = EasyDict(
+data_cache = edict(
     accel=0,
     steer=0,
     front_dist=collections.deque(maxlen=200),

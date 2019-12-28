@@ -1,9 +1,9 @@
-from easydict import EasyDict
+from addict import Dict as edict
 from zzz_perception_msgs.msg import DetectionBox, DetectionBoxArray
 
 class CriteriaFilter:
     def __init__(self, **params):
-        self._params = EasyDict(params)
+        self._params = edict(params)
 
     def filter(self, array):
         assert type(array) == DetectionBoxArray

@@ -18,8 +18,9 @@ from nav_msgs.msg import Path
 if 'SUMO_HOME' in os.environ:
     tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
     sys.path.append(tools)
-else:   
-    sys.exit("Please declare environment variable 'SUMO_HOME' (e.g. /usr/share/sumo)")
+else:
+    rospy.logerr("Please declare environment variable 'SUMO_HOME' (e.g. /usr/share/sumo)")
+    sys.exit(-1)
 import sumolib
 
 class LocalMap(object):
