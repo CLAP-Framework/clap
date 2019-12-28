@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+import rospy
+from zzz_common.params import parse_private_args
+from zzz_cognition_msgs.msg import MapState
+
+from zzz_planning_decision_continuous_models.path_planner import Path_Planner
+from zzz_planning_decision_continuous_models.speed_decision import Speed_Decision
+from zzz_planning_decision_continuous_models import MainDecision
+from zzz_planning_msgs.msg import DecisionTrajectory
+
+from nav_msgs.msg import Path  #FIXME(Nanshan)
+
+class DecisionNode(object):
+    def __init__(self):
+
+        params = parse_private_args(
+            decision_trajectory_topic="decision_trajectory",
+            dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
+            RVIZ_decision_trajectory_topic="decision_trajectory_path", 
+            hz = 10,
+        )
+        self._rate = rospy.Rate(params.hz)
+
+        #Use Trajectory Planner or Pathplanner+speed Decision?
+        self.decision_type = 1;
+
+        if self.decision_type == 0:
+            # Setting Trajectory planner for both path and speed
+            model_trajectory = Trajectory_Planner()
+            self._decision_instance = MainDecision(path_decision=model_trajectory, speed_decision=model_trajectory, Planing_type = 1)
+
+        else:
+            # Setting Path planner + Speed decision
+            model_path = Path_Planner()
+            model_speed = Speed_Decision()
+            self._decision_instance = MainDecision(path_decision=model_path, speed_decision=model_speed, Planning_type = 1)
+
+        # ROS messages
+        self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
+        self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
+        self._rviz_decision_trajectory_publisher = rospy.Publisher(params.RVIZ_decision_trajectory_topic, Path, queue_size=1)
+
+    def loop(self):
+        while not rospy.is_shutdown():
+            publish_msg = self._decision_instance.update_trajectory()
+            if publish_msg:
+                self._decision_trajectory_publisher.publish(publish_msg)
+                publish_msg2 = publish_msg.trajectory
+                self._rviz_decision_trajectory_publisher.publish(publish_msg2)
+                rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
+                    len(publish_msg.trajectory.poses), publish_msg.desired_speed)
+            self._rate.sleep()
+        
+
+        
+if __name__ == "__main__":
+
+    rospy.init_node("decision_node", log_level=rospy.DEBUG)
+    node = DecisionNode()
+    node.loop()

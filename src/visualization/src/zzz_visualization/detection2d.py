@@ -1,4 +1,4 @@
-from easydict import EasyDict
+from addict import Dict as edict
 import rospy
 import math
 import cv2
@@ -11,7 +11,7 @@ from zzz_visualization.utils import parse_color
 class DetectionBox2DVisualizer:
     def __init__(self, **params):
         self._marker_id = 0
-        self._params = EasyDict(params)
+        self._params = edict(params)
         self._image = np.zeros((800, 600, 3), np.uint8)
         self._bridge = cv_bridge.CvBridge()
 

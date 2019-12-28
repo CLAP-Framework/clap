@@ -96,7 +96,7 @@ class Detection3dOnLidar(object):
             gpu=1,
             num_point=1024, # 1024
             model='frustum_pointnets_v1',
-            model_path='/home/carla/Carla/zzz/src/perception/detection/fused_detectors/src/frustum_pointnets/train/log_v1_pseudo/model.ckpt',
+            model_path=os.environ.get('ZZZ_ROOT') + '/src/perception/detection/fused_detectors/src/frustum_pointnets/train/log_v1_pseudo/model.ckpt',
             batch_size=32,
             output='test_results',
             from_rgb_detection=True,

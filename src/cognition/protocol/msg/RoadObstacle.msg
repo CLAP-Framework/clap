@@ -28,9 +28,12 @@ bool static
 uint8 shape_type
 uint8 SHAPE_UNDEFINED = 0
 uint8 SHAPE_POLYGON = 1
+uint8 SHAPE_BOX = 1
 
 # Representation of the object if it's represented by polygon
-geometry_msgs/Polygon shape
+geometry_msgs/Polygon spoly
+zzz_perception_msgs/DimensionWithCovariance sbox
+
 # Null uncertainty of Inf uncertainty means that the shape is not actually generated
 float32[] shape_uncertainty
 
