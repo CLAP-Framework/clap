@@ -93,7 +93,7 @@ class LocalMap(object):
         # TODO: this loop needs to be optimised later
 
         for wp in reference_path.poses:
-            # TODO: Takes too much time for processing
+            # TODO: takes too much time for processing
             wp_map_x, wp_map_y = self.convert_to_map_XY(wp.pose.position.x, wp.pose.position.y)
 
             # Find the closest lane of the reference path points
@@ -108,13 +108,13 @@ class LocalMap(object):
         return True
 
     def convert_to_map_XY(self, x, y):
-        map_x = x # + self._offset_x
-        map_y = y # + self._offset_y
+        map_x = x + self._offset_x
+        map_y = y + self._offset_y
         return map_x, map_y
 
     def convert_to_origin_XY(self, map_x, map_y):
-        x = map_x # - self._offset_x
-        y = map_y # - self._offset_y
+        x = map_x - self._offset_x
+        y = map_y - self._offset_y
         return x,y
 
     def receive_new_pose(self, x, y):

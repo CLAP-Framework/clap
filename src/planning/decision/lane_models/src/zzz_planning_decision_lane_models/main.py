@@ -4,7 +4,6 @@ import rospy
 import numpy as np
 from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from zzz_planning_msgs.msg import DecisionTrajectory
-from threading import Lock
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 from zzz_cognition_msgs.msg import MapState
@@ -23,12 +22,9 @@ class MainDecision(object):
         self._local_trajectory_instance = PolylineTrajectory() # MPCTrajectory()
         self._local_trajectory_instance_for_ref = PolylineTrajectory() # TODO(Temps): Should seperate into continous models
 
-        self._dynamic_map_lock = Lock()
-
-    # receive_dynamic_map running in Subscriber CallBack Thread.
+    # receive_dynamic_map running in subscriber callBack thread.
     def receive_dynamic_map(self, dynamic_map):
-        with self._dynamic_map_lock:
-            self._dynamic_map_buffer = dynamic_map
+        self._dynamic_map_buffer = dynamic_map
 
     # update running in main node thread loop
     def update(self):
@@ -40,17 +36,17 @@ class MainDecision(object):
             return None
 
         trajectory = None
-        with self._dynamic_map_lock:
-            changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(self._dynamic_map_buffer)
-            if desired_speed < 0: # TODO: clean this
-                desired_speed = 0
-            rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
-            
-            # TODO(Temps): Should seperate into continous models 
-            if changing_lane_index == -1:
-                trajectory = self._local_trajectory_instance_for_ref.get_trajectory(self._dynamic_map_buffer, changing_lane_index, desired_speed)#FIXME(ksj)
-            else:
-                trajectory = self._local_trajectory_instance.get_trajectory(self._dynamic_map_buffer, changing_lane_index, desired_speed)
+        dmap = self._dynamic_map_buffer
+        changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dmap)
+        if desired_speed < 0: # TODO: clean this
+            desired_speed = 0
+        rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
+        
+        # TODO(Temps): Should seperate into continous models 
+        if changing_lane_index == -1:
+            trajectory = self._local_trajectory_instance_for_ref.get_trajectory(dmap, changing_lane_index, desired_speed)#FIXME(ksj)
+        else:
+            trajectory = self._local_trajectory_instance.get_trajectory(dmap, changing_lane_index, desired_speed)
 
 
         msg = DecisionTrajectory()
