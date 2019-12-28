@@ -106,17 +106,24 @@ def save_camera_data(bag, kitti, kitti_type, camera, camera_frame_id, topic):
     image_data = getattr(kitti, "cam%d" % camera)
 
     calib = CameraInfo()
-    if kitti_type == "sync" or kitti_type == "extract": # raw data
-        calib.header.frame_id = camera_frame_id
-        calib.width, calib.height = tuple(kitti.calib['S_rect_0%d' % camera].tolist())
+    calib.header.frame_id = camera_frame_id
+    if kitti_type == "sync" or : # raw data, synced and rectified
+        calib.width, calib.height = kitti.calib['S_rect_0%d' % camera].tolist()
         calib.distortion_model = 'plumb_bob'
         calib.K = kitti.calib['K_0%d' % camera].reshape(-1)
         calib.R = kitti.calib['R_rect_0%d' % camera].reshape(-1)
         calib.D = kitti.calib['D_0%d' % camera].reshape(-1)
         calib.P = kitti.calib['P_rect_0%d' % camera].reshape(-1)
+
+    elif kitti_type == "extract": # raw data, unsynced and unrectified
+        calib.width, calib.height = kitti.calib['S_0%d' % camera].tolist()
+        calib.distortion_model = 'plumb_bob'
+        calib.K = kitti.calib['K_0%d' % camera].reshape(-1)
+        calib.R = kitti.calib['R_0%d' % camera].reshape(-1)
+        calib.D = kitti.calib['D_0%d' % camera].reshape(-1)
+        calib.P = kitti.calib['P_0%d' % camera].reshape(-1)
             
     elif kitti_type == "odometry": # odometry data
-        calib.header.frame_id = camera_frame_id
         calib.P = kitti.calib['P%d' % camera].reshape(-1)
     
     for timestamp, image in tqdm.tqdm(izip(image_datetimes, image_data), unit="Frame",

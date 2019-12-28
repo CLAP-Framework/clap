@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+import rospy
+import numpy as np
+import pcl
+import tf2_ros as tf2
+import tf.transformations as tft
+import cv2
+import cv_bridge
+import threading
+
+from sensor_msgs.msg import PointCloud2, CameraInfo, Image
+from zzz_perception_detection_camera_filters.projection import LidarExtrinsicProjection
+from zzz_perception_msgs.msg import DetectionBox2DArray, DetectionBoxArray, DetectionBox, DetectionBox2D
+from zzz_common.params import parse_private_args
+
+class Node():
+    def __init__(self):
+
+        params = parse_private_args(
+            cloud_topic="/velodyne_points",
+            detection_topic="objects2d_detected",
+            camera_info_topic="camera_info",
+            output_topic="objects_projected",
+            criterion="closest", # Method to get the depth from a group of points
+        )
+
+        self._projector = LidarExtrinsicProjection()
+        self._cloud_sub = rospy.Subscriber(params.cloud_topic, PointCloud2, self._projector.receive_point_cloud)
+        self._detect_sub = rospy.Subscriber(params.detection_topic, DetectionBox2DArray, self.detection_callback)
+        self._obj_pub = rospy.Publisher(params.output_topic, DetectionBoxArray, queue_size=1)
+
+    def detection_callback(self, msg):
+        new_detects = self._projector.receive_detections(msg)
+        self._obj_pub.publish(new_detects)
+
+if __name__ == "__main__":
+    rospy.init_node("lidar_projector")
+    node = Node()
+    rospy.spin()
