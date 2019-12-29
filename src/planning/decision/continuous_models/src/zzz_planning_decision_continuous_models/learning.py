@@ -2,11 +2,16 @@
 import socket
 import msgpack
 import rospy
+import math
+import numpy as np
 
 from zzz_cognition_msgs.msg import MapState
 from zzz_planning_decision_continuous_models.Werling_trajectory import Werling
 from zzz_driver_msgs.utils import get_speed
 from carla import Location, Rotation, Transform
+from zzz_common.geometry import dense_polyline2d
+
+
 
 class RLSPlanner(object):
     """
@@ -21,16 +26,16 @@ class RLSPlanner(object):
         self._collision_signal = False
         self._collision_times = 0
     
-        if mode == "client":
-            rospy.loginfo("Connecting to RL server...")
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((openai_server, port))
-            self._socket_connected = True
-            rospy.loginfo("Connected...")
-        else:
-            # TODO: Implement server mode to make multiple connection to this node.
-            #     In this mode, only rule based action is returned to system
-            raise NotImplementedError("Server mode is still wating to be implemented.") 
+        # if mode == "client":
+        #     rospy.loginfo("Connecting to RL server...")
+        #     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #     self.sock.connect((openai_server, port))
+        #     self._socket_connected = True
+        #     rospy.loginfo("Connected...")
+        # else:
+        #     # TODO: Implement server mode to make multiple connection to this node.
+        #     #     In this mode, only rule based action is returned to system
+        #     raise NotImplementedError("Server mode is still wating to be implemented.") 
         
     def speed_update(self, trajectory, dynamic_map):
         return 10   
@@ -41,66 +46,58 @@ class RLSPlanner(object):
         self._rule_based_trajectory_model_instance.update_dynamic_map(dynamic_map)
 
         # Using Werling for rule-based trajectory planning in lanes
-        if dynamic_map.model == 1:
+        if dynamic_map.model == 1: # in lane
             trajectory,desired_speed = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
             # send done to OPENAI
-            collision = int(self._collision_signal)
-            self._collision_signal = False
-            leave_current_mmap = 1
-            sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-            sent_RL_msg.append(collision)
-            sent_RL_msg.append(leave_current_mmap)
-            sent_RL_msg.append(0.0) # RL.point
-            sent_RL_msg.append(0.0)
-            print("-----------------------------",sent_RL_msg)
-            self.sock.sendall(msgpack.packb(sent_RL_msg))
-            RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
+            # collision = int(self._collision_signal)
+            # self._collision_signal = False
+            # leave_current_mmap = 1
+            # sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+            # sent_RL_msg.append(collision)
+            # sent_RL_msg.append(leave_current_mmap)
+            # sent_RL_msg.append(0.0) # RL.point
+            # sent_RL_msg.append(0.0)
+            # print("-----------------------------",sent_RL_msg)
+            # self.sock.sendall(msgpack.packb(sent_RL_msg))
+            # RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
 
             return trajectory,desired_speed
 
         
         elif dynamic_map.model == 0: # in junction
             trajectory,desired_speed = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
-            delta_T = 0.75
-            RLpoint = self.get_RL_point_from_trajectory(trajectory , delta_T)
+            # delta_T = 0.75
+            # RLpoint = self.get_RL_point_from_trajectory(trajectory , delta_T)
 
-            RL_state = self.wrap_state()
-            rospy.logdebug("sending state: ego_x:%.1f, ego_y:%.1f", RL_state[0],RL_state[1])
-            sent_RL_msg = RL_state
+            # RL_state = self.wrap_state()
+            # rospy.logdebug("sending state: ego_x:%.1f, ego_y:%.1f", RL_state[0],RL_state[1])
+            # sent_RL_msg = RL_state
 
-            # Why always false here?
-            collision = int(self._collision_signal)
-            self._collision_signal = False
+            # # Why always false here?
+            # collision = int(self._collision_signal)
+            # self._collision_signal = False
 
-            leave_current_mmap = 0
-            sent_RL_msg.append(collision)
-            sent_RL_msg.append(leave_current_mmap)
-            sent_RL_msg.append(RLpoint.location.x)
-            sent_RL_msg.append(RLpoint.location.y)
-            print("-----------------------------",sent_RL_msg)
-            self.sock.sendall(msgpack.packb(sent_RL_msg))
-            RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
-            rospy.logdebug("received action:%f, %f", RLS_action[0],RLS_action[1])
+            # leave_current_mmap = 0
+            # sent_RL_msg.append(collision)
+            # sent_RL_msg.append(leave_current_mmap)
+            # RLpoint.location.x ,RLpoint.location.y = self.transfer_to_intersection(RLpoint.location.x,RLpoint.location.y,dynamic_map)
+            # sent_RL_msg.append(RLpoint.location.x)
+            # sent_RL_msg.append(RLpoint.location.y)
+            # print("-----------------------------",sent_RL_msg)
+            # self.sock.sendall(msgpack.packb(sent_RL_msg))
 
-            return trajectory, desired_speed #self.get_decision_from_continuous_action(RLS_action, delta_T)
+            # try:
+            #     RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
+            #     rospy.logdebug("received action:%f, %f", RLS_action[0],RLS_action[1])
+            #     # trajectory,desired_speed = self.get_decision_from_continuous_action(RLS_action, delta_T)
+            #     return trajectory, desired_speed 
 
-
-        # # Following reference path in junction # TODO(Zhong):should be in cognition part
-        # if dynamic_map.model == 1:
-        #     # send done to OPENAI
-        #     collision = int(self._collision_signal)
-        #     self._collision_signal = False
-        #     leave_current_mmap = 1
-        #     sent_RL_msg = [0,0,100,0,12,-100,0,0,100,1,12,-100,1,0]
-        #     sent_RL_msg.append(collision)
-        #     sent_RL_msg.append(leave_current_mmap)
-        #     self.sock.sendall(msgpack.packb(sent_RL_msg))
-
-        #     return -1, self._rule_based_longitudinal_model_instance.longitudinal_speed(-1)
-
-        
-
-
+            # except:
+            #     rospy.logerr("Continous RLS Model cannot receive an action")
+            #     return trajectory, desired_speed
+            return trajectory, desired_speed
+            
+            
     def wrap_state(self):
 
         # Set State space = 4+4*obs_num
@@ -110,137 +107,150 @@ class RLSPlanner(object):
             # obstacle 1 : x0(8), y0(9), vx0(10), vy0(11)
             # obstacle 2 : x0(12), y0(13), vx0(14), vy0(15)
 
-        state = []
+        state = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
         ego_x = self._dynamic_map.ego_state.pose.pose.position.x
-        ego_y = self._dynamic_map.ego_state.pose.pose.position.y
+        ego_y = -self._dynamic_map.ego_state.pose.pose.position.y  #inverse of real y
         ego_vx = self._dynamic_map.ego_state.twist.twist.linear.x
         ego_vy = self._dynamic_map.ego_state.twist.twist.linear.y
-        
-        state.append(ego_x)
-        state.append(ego_y)
-        state.append(ego_vx)
-        state.append(ego_vy)
+        print("__________________________________________egox",ego_x)
+        print("__________________________________________egoy",ego_y)
 
+        ego_x,ego_y = self.transfer_to_intersection(ego_x,ego_y, self._dynamic_map)
+        print("__________________________________________transferegox",ego_x)
+        print("__________________________________________transferegoy",ego_y)
+        
+        state[0]=ego_x
+        state[1]=ego_y
+        state[2]=ego_vx
+        state[3]=ego_vy
+
+        closest_obs = self.found_closest_obstacles(3,self._dynamic_map)
         i = 0
-        for obs in self._dynamic_map.jmap.obstacles: # according to distance??
-            if i < 3:
-                state.append(obs.state.pose.pose.position.x)
-                state.append(obs.state.pose.pose.position.y)
-                state.append(obs.state.twist.twist.linear.x)
-                state.append(obs.state.twist.twist.linear.y)
+        for obs in closest_obs: # according to distance??
+            if i < 3:               
+                print("__________________________________________obs[0]",obs[0])
+                print("__________________________________________obs[1]",obs[1])
+                obsx,obsy = self.transfer_to_intersection(obs[0],-obs[1], self._dynamic_map)  #inverse of real y
+                print("__________________________________________obsx",obsx)
+                print("__________________________________________obsy",obsy)
+                state[(i+1)*4+0]=obsx
+                state[(i+1)*4+1]=obsy
+                state[(i+1)*4+2]=obs[2]
+                state[(i+1)*4+3]=obs[3]
+
                 i = i+1
             else:
                 break
 
         return state
 
+    def found_closest_obstacles(self, num, dynamic_map):
+        closest_obs = []
+        obs_tuples = []
+        for obs in self._dynamic_map.jmap.obstacles: 
+            p1 = np.array([self._dynamic_map.ego_state.pose.pose.position.x,self._dynamic_map.ego_state.pose.pose.position.y])
+            p2 = np.array([obs.state.pose.pose.position.x,obs.state.pose.pose.position.y])
+
+            p3 = p2 - p1
+            p4 = math.hypot(p3[0],p3[1])
+            one_obs = (obs.state.pose.pose.position.x,obs.state.pose.pose.position.y,obs.state.twist.twist.linear.x,obs.state.twist.twist.linear.y,p4)
+            obs_tuples.append(one_obs)
+        
+        sorted(obs_tuples, key=lambda obs: obs[2])   # sort by distance
+        i = 0
+        for obs in obs_tuples:
+            if i < num:
+                closest_obs.append(obs)
+                i = i + 1
+            else:
+                break
+        
+        return closest_obs
+
+
     def RL_model_matching(self):
         pass
 
     def get_RL_point_from_trajectory(self, trajectory, delta_T):
         RLpoint = Transform()
-        RLpoint.location.x = 0
-        RLpoint.location.y = 0
+   
+        if len(trajectory) > 5:
+            RLpoint.location.x = trajectory[5][0] #only works when DT param of werling is 0.15
+            RLpoint.location.y = trajectory[5][1]
+        else:
+            RLpoint.location.x = 0
+            RLpoint.location.y = 0           
         return RLpoint
 
     def get_decision_from_continuous_action(self, action, delta_T, acc = 2,  hard_brake = 4):
-        pass
+        print("__________________________________________action[0]",action[0])
+        print("__________________________________________action[1]",action[1])
 
-    def get_decision_from_discrete_action(self, action, acc = 2, decision_dt = 0.75, hard_brake = 4):
+        action[0], action[1] = self.transfer_to_world(action[0],action[1], self._dynamic_map)
+        print("__________________________________________afteraction[0]",action[0])
+        print("__________________________________________afteraction[1]",action[1])
+        trajectoryx = [action[0], (action[0]+self._dynamic_map.ego_state.pose.pose.position.x)/2, self._dynamic_map.ego_state.pose.pose.position.x]
+        trajectoryy = [-action[1], (-action[1]+self._dynamic_map.ego_state.pose.pose.position.y)/2, self._dynamic_map.ego_state.pose.pose.position.y]
 
-        # TODO(Zhong): check if action is reasonable
+        trajectory = np.c_[trajectoryx , trajectoryy]
+        trajectory_array = dense_polyline2d(trajectory,1)
 
-        # Rule-based action
-        if action == 0:
-            return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
+        p1 = np.array([self._dynamic_map.ego_state.pose.pose.position.x,self._dynamic_map.ego_state.pose.pose.position.y])
+        p2 = np.array([action[0],action[1]])
+        p3 = p2 - p1
+        p4 = math.hypot(p3[0],p3[1])
 
-        current_speed = get_speed(self._dynamic_map.ego_state)
-        ego_y = self._dynamic_map.mmap.ego_lane_index
+        desired_speed = p4 / delta_T
 
-        # Hard-brake action
-        if action == 1:
-            return ego_y, current_speed-hard_brake*decision_dt
+        return trajectory_array, desired_speed
 
-        # ego lane action
-        if action == 2:
-            return ego_y, current_speed+acc*decision_dt
+    def transfer_to_intersection(self, pointx, pointy, dynamic_map):
+        print("____________________transfer_to_intersection",dynamic_map.ego_state.pose.pose.position.x,dynamic_map.ego_state.pose.pose.position.y)
 
-        if action == 3:
-            return ego_y, current_speed
+        if 5.0 < dynamic_map.ego_state.pose.pose.position.x < 55.0 and -25.0 < -dynamic_map.ego_state.pose.pose.position.y < 25.0:
+            pointx = pointx - 5.0 - 25.0
+            pointy = pointy + 25.0 - 25.0
+            print("____________________intersection1")
+        elif 5.0 < dynamic_map.ego_state.pose.pose.position.x < 55.0 and -115.0 < -dynamic_map.ego_state.pose.pose.position.y < -65.0:
+            pointx = pointx - 5.0 - 25.0
+            pointy = pointy + 115.0 - 25.0
+            print("____________________intersection2")
 
-        if action == 4:
-            return ego_y, current_speed-acc*decision_dt
+        elif -75.0 < dynamic_map.ego_state.pose.pose.position.x < -25.0 and -25.0 < -dynamic_map.ego_state.pose.pose.position.y < 25.0:
+            pointx = pointx + 75.0 - 25.0
+            pointy = pointy + 25.0 - 25.0
+            print("____________________intersection3")
 
-        # left lane action
-        left_lane_index = ego_y+1
-        if left_lane_index >= len(self._dynamic_map.mmap.lanes):
-            if action == 5 or action == 6 or action == 7:
-                return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
-        if action == 5:
-            return left_lane_index, current_speed+acc*decision_dt
-
-        if action == 6:
-            return left_lane_index, current_speed
-
-        if action == 7:
-            return left_lane_index, current_speed-acc*decision_dt
-
-        #right_lane_action
-        right_lane_index = ego_y-1
-        if right_lane_index < 0:
-            if action == 8 or action == 9 or action == 10:
-                return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
-        if action == 8:
-            return right_lane_index, current_speed+acc*decision_dt
-
-        if action == 9:
-            return right_lane_index, current_speed
-
-        if action == 10:
-            return right_lane_index, current_speed-acc*decision_dt
+        elif -75.0 < dynamic_map.ego_state.pose.pose.position.x < -25.0 and -115.0 < -dynamic_map.ego_state.pose.pose.position.y < -65.0:
+            pointx = pointx + 75.0 - 25.0
+            pointy = pointy + 115.0 - 25.0
+            print("____________________intersection4")
 
 
-    def get_state_from_lane(self,lane,lane_index,state,
-                                range_x = 100,
-                                range_vx = 50/3.6
-                                ):
-        if len(lane.front_vehicles) > 0:
-            fv = lane.front_vehicles[0]
-            fv_id = fv.uid
-            fv_x = fv.ffstate.x
-            fv_y = fv.ffstate.y
-            fv_vx = fv.ffstate.vx
-            # fv_vy = fv.mmap_vy # FIXME(zhong): should consider lane change speed
-        else:
-            # default fv # TODO(zhong): More reasonable default value
-            fv_id = 0
-            fv_x = range_x
-            fv_y = lane_index
-            fv_vx = range_vx
-            # fv_vy = 0
+        return pointx, pointy
 
-        state.append(fv_x)
-        state.append(fv_y)
-        state.append(fv_vx)
-        # state.append(fv_vy)
+    def transfer_to_world(self, pointx, pointy, dynamic_map):
+        print("____________________transfer_to_world",dynamic_map.ego_state.pose.pose.position.x,dynamic_map.ego_state.pose.pose.position.y)
 
-        if len(lane.rear_vehicles) > 0:
-            rv = lane.rear_vehicles[0]
-            rv_id = rv.uid
-            rv_x = fv.ffstate.x # negative value
-            rv_y = fv.ffstate.y
-            rv_vx = fv.ffstate.vx
-            # rv_vy = rv.mmap_vy # FIXME(zhong): should consider lane change speed
-        else:
-            rv_id = 0
-            rv_x = -range_x
-            rv_y = lane_index
-            rv_vx = 0
-            # rv_vy = 0
-        state.append(rv_x)
-        state.append(rv_y)
-        state.append(rv_vx)
-        # state.append(rv_vy)
+        if 5.0 < dynamic_map.ego_state.pose.pose.position.x < 55.0 and -25.0 < -dynamic_map.ego_state.pose.pose.position.y < 25.0:
+            pointx = pointx + 5.0 + 25.0
+            pointy = pointy - 25.0 + 25.0
+            print("____________________intersection1")
 
-        rospy.logdebug("lane %d: (%d)fv_x:%.1f, fv_y:%.1f, fv_vx:%.1f,||(%d)rv_x:%.1f, rv_y:%.1f, rv_vx:%.1f", lane_index,
-                                        fv_id,fv_x,fv_y,fv_vx,rv_id,rv_x,rv_y,rv_vx)
+        elif 5.0 < dynamic_map.ego_state.pose.pose.position.x < 55.0 and -115.0 < -dynamic_map.ego_state.pose.pose.position.y < -65.0:
+            pointx = pointx + 5.0 + 25.0
+            pointy = pointy - 115.0 + 25.0
+            print("____________________intersection2")
+
+        elif -75.0 < dynamic_map.ego_state.pose.pose.position.x < -25.0 and -25.0 < -dynamic_map.ego_state.pose.pose.position.y < 25.0:
+            pointx = pointx - 75.0 + 25.0
+            pointy = pointy - 25.0 + 25.0
+            print("____________________intersection3")
+
+        elif -75.0 < dynamic_map.ego_state.pose.pose.position.x < -25.0 and -115.0 < -dynamic_map.ego_state.pose.pose.position.y < -65.0:
+            pointx = pointx - 75.0 + 25.0
+            pointy = pointy - 115.0 + 25.0
+            print("____________________intersection4")
+
+
+        return pointx, pointy

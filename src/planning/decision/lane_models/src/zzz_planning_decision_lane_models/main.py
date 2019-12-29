@@ -38,19 +38,24 @@ class MainDecision(object):
         # update_dynamic_local_map
         if self._dynamic_map_buffer is None:
             return None
+        else:
+            dynamic_map = self._dynamic_map_buffer
 
+        if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
+            return None
+        
         trajectory = None
         with self._dynamic_map_lock:
-            changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(self._dynamic_map_buffer)
+            changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
             if desired_speed < 0: # TODO: clean this
                 desired_speed = 0
             rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
             
             # TODO(Temps): Should seperate into continous models 
             if changing_lane_index == -1:
-                trajectory = self._local_trajectory_instance_for_ref.get_trajectory(self._dynamic_map_buffer, changing_lane_index, desired_speed)#FIXME(ksj)
+                trajectory = self._local_trajectory_instance_for_ref.get_trajectory(dynamic_map, changing_lane_index, desired_speed)#FIXME(ksj)
             else:
-                trajectory = self._local_trajectory_instance.get_trajectory(self._dynamic_map_buffer, changing_lane_index, desired_speed)
+                trajectory = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
 
 
         msg = DecisionTrajectory()

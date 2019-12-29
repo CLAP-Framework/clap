@@ -25,7 +25,7 @@ MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 2.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 1.0  # maximum curvature [1/m]
 MAX_ROAD_WIDTH = 7.0  # maximum road width [m]
-D_ROAD_W = 1.0  # road width sampling length [m]
+D_ROAD_W = 0.5  # road width sampling length [m]
 DT = 0.2  # time tick [s]
 MAXT = 5.0  # max prediction time [m]
 MINT = 4.0  # min prediction time [m]
@@ -226,7 +226,7 @@ def calc_global_paths(fplist, csp):
 
         # calc yaw and ds
         for i in range(len(fp.x) - 1):
-            dx = fp.x[i + 1] - fp.x[i]
+            dx = fp.x[i + 1] - fp.x[i] 
             dy = fp.y[i + 1] - fp.y[i]
             fp.yaw.append(math.atan2(dy, dx))
             fp.ds.append(math.sqrt(dx**2 + dy**2))
@@ -253,6 +253,7 @@ def check_collision(fp, ob):
             return False
 
     return True
+
 
 
 def check_paths(fplist, ob):

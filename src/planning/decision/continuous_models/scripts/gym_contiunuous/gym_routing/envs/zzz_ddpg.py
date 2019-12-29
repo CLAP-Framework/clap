@@ -28,27 +28,29 @@ from gym.utils import seeding
 
 class ZZZCarlaEnv(gym.Env):
     metadata = {'render.modes': []}
-    def __init__(self, zzz_client="127.0.0.1", port=2333, recv_buffer=4096):
-
-       
+    def __init__(self, zzz_client="127.0.0.1", port=2333, recv_buffer=4096, socket_time_out = 120):
+    
         self._restart_motivation = 0
         self.state = []
         self.steps = 1
         self.collision_times = 0
 
         # Socket
+        socket.setdefaulttimeout(socket_time_out) # Set time out
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(socket_time_out) # Set time out
         self.sock.bind((zzz_client, port))
         self.sock.listen()
         self.sock_conn = None
         self.sock_buffer = recv_buffer
         self.sock_conn, addr = self.sock.accept()
+        self.sock_conn.settimeout(socket_time_out) # Set time out
         print("ZZZ connected at {}".format(addr))
 
 
         # Set action space
-        low_action = np.array([-50,-50])
-        high_action = np.array([50,50])  #Should be symmetry for DDPG
+        low_action = np.array([-25,-25])
+        high_action = np.array([25,25])  #Should be symmetry for DDPG
         self.action_space = spaces.Box(low=low_action, high=high_action, dtype=np.float32)
 
         # Set State space = 4+4*obs_num
@@ -60,8 +62,8 @@ class ZZZCarlaEnv(gym.Env):
 
         self.state_dimention = 16
 
-        low  = np.array([-50,  -50,   0, 0,  -50, -50, 0,  0,   -50, -50,  0, 0, -50,  -50,0,0])
-        high = np.array([50, 50, 60, 60, 50, 50, 60, 60, 50, 50, 60, 60,50, 50, 60, 60])    
+        low  = np.array([-25,  -25,   0, 0,  -25, -25, 0,  0,   -25, -25,  0, 0, -25,  -25,0,0])
+        high = np.array([25, 25, 60, 60, 25, 25, 60, 60, 25, 25, 60, 60,25, 25, 60, 60])    
 
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
         self.seed()
@@ -74,22 +76,29 @@ class ZZZCarlaEnv(gym.Env):
         action = action.astype(int)
         action = action.tolist()
         print("-------------",type(action),action)
-        self.sock_conn.sendall(msgpack.packb(action))
-        
-        # wait next state
-        received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
-        # self.state = np.array([0,  0,   0, 0,  0, -100, 0,  0,   0, 0,  0, -100, 0,  0,0,0])
-        self.state = received_msg[0:16]
-        collision = received_msg[16]
-        leave_current_mmap = received_msg[17]
-        RLpointx = received_msg[18]
-        RLpointy = received_msg[19]
+        try:
+            self.sock_conn.sendall(msgpack.packb(action))
+            # wait next state
+            received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
+            self.state = received_msg[0:16]
+            collision = received_msg[16]
+            leave_current_mmap = received_msg[17]
+            RLpointx = received_msg[18]
+            RLpointy = received_msg[19]
+
+        except:
+            print("RL cannot receive an state")
+            collision = 0
+            leave_current_mmap = 0
+            RLpointx = 0
+            RLpointy = 0
+
     
         # calculate reward
-        reward = abs(action[0]-RLpointx) + abs(action[1]-RLpointy)
+        reward = 10 - (abs(action[0]-RLpointx) + abs(action[1]-RLpointy))
 
         if collision:
-            reward = 0
+            reward = -10
 
         # judge if finish
         done = False
@@ -118,7 +127,7 @@ class ZZZCarlaEnv(gym.Env):
         #     except ValueError:
         #         continue
             
-        return np.array([0,  0,   0, 0,  0, -100, 0,  0,   0, 0,  0, -100, 0,  0,0,0])#np.array(self.state)
+        return np.array([0,  0,   0, 0,  0, 0, 0,  0,   0, 0,  0, 0, 0,  0,0,0])#np.array(self.state)
 
     def render(self, mode='human'):
         if mode == 'human':

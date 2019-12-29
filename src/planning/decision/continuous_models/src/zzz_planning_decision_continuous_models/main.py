@@ -30,6 +30,11 @@ class MainDecision(object):
         if self._dynamic_map_buffer is None:
             return None
         dynamic_map = self._dynamic_map_buffer
+
+        # Should use lane model
+        if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
+            return None
+
         reference_path_from_map = dynamic_map.jmap.reference_path
 
         trajectory = reference_path_from_map

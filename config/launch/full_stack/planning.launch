@@ -46,9 +46,9 @@
     </node> -->
 
 
-    <!-- <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
+    <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
           name="idm_lane_utility" output="screen" ns="/zzz/planning">
-    </node> -->
+    </node>
 
     <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
           name="safeguard" output="screen" ns="/zzz/planning">

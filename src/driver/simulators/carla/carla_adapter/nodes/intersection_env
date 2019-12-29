@@ -83,7 +83,7 @@ def remove_non_traffic_circle_agents(world, verbose=False):
         Used to determine whether some information should be displayed.
     '''
     circle_center = carla.Location(-10, -43, 0) # map/circle center
-    dist_range = 150.0 # 100 meters from traffic circle center
+    dist_range = 100.0 # 100 meters from traffic circle center
     actor_list = world.get_actors()
     vehicle_list = actor_list.filter("*vehicle*")
 
@@ -121,7 +121,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
     if if_random == 1:
 
         #set_ramdom_vehicle_number
-        max_agents = 30
+        max_agents = 10
 
         actor_list = carla_world.get_actors()
         vehicle_list = actor_list.filter("*vehicle*")
@@ -130,7 +130,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
         if num_agents < max_agents:         
             for spawn_point in spawn_points:
                 blueprint = random.choice(blueprints)
-                if -75 < spawn_point.location.x < 55 and -17 < spawn_point.location.y < 109:
+                if -75 < spawn_point.location.x < 55 and -109 < spawn_point.location.y < 17:
                     min_d = 100
                     for vehicle in vehicle_list:
                         d = vehicle.get_location().distance(spawn_point.location)
@@ -289,20 +289,20 @@ def change_the_world(carla_world):
 def change_traffic_lights(carla_world):
     traffic_lights = carla_world.get_actors().filter('*traffic_light*')
     for tl in traffic_lights:
+        # tl.set_state(carla.TrafficLightState.Green)
+        # tl.freeze(1)
         tl.set_green_time(9.0)
-        tl.set_yellow_time(0.05)
-        tl.set_red_time(0.08)
+        tl.set_yellow_time(0.01)
+        tl.set_red_time(0.01)
 
 def collision_callback(msg):
-    # collision_id = msg.other_actor_id
     global collision_signal
     collision_signal = True
-    # decision_instance.lateral_model_instance.collision_times += 1
 
 def restart_ego_vehicle(carla_world):
     start_transform = Transform()
     start_transform.location.x = -10
-    start_transform.location.y = -90
+    start_transform.location.y = -94
     start_transform.location.z = 0
     start_transform.rotation.pitch = 0
     start_transform.rotation.yaw = 180
@@ -325,6 +325,40 @@ def restart_ego_vehicle(carla_world):
 
     global collision_signal
     collision_signal = False
+
+def record_collsion_to_txt(carla_world, collision_signal):
+    # if in intersection
+    
+    
+    fw = open("record_collision.txt", 'w')    #将要输出保存的文件地址
+    for line in open("/exercise1/data/query.txt"):    #读取的文件
+        fw.write("collision")    # 将字符串写入文件中
+        fw.write("\n")    # 换行
+
+
+
+global stay
+stay = 0
+
+
+def stay_too_long(carla_world):
+    global stay
+    actor_list = carla_world.get_actors()
+    vehicle_list = actor_list.filter("vehicle.*")
+    for vehicle in vehicle_list:
+        if vehicle.attributes['role_name'] == "ego_vehicle":
+            v = vehicle.get_velocity()
+            if abs(v.x) < 0.1 and abs(v.y) < 0.1:
+                stay = stay + 1
+            else:
+                stay = 0
+
+    if stay > 200:
+        return True
+
+    return False
+
+
 
 if __name__ == "__main__":
     rospy.init_node("intersection_env")
@@ -379,7 +413,9 @@ if __name__ == "__main__":
         # Restart ego vehicle
         if collision_signal:
             restart_ego_vehicle(carla_world)
-            
+        if stay_too_long(carla_world):
+            restart_ego_vehicle(carla_world)
+
         # Change traffic lights
         change_traffic_lights(carla_world)
 
@@ -417,6 +453,10 @@ if __name__ == "__main__":
             else:
                 has_set = 0
                 set_goal_flag = 0
+        
+        # Record collision
+        record_collsion_to_txt(carla_world , collision_signal)
+
 
         rate.sleep()
 
