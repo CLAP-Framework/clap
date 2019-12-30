@@ -14,6 +14,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from zzz_perception_msgs.msg import DetectionBox2DArray, DetectionBox2D, ObjectClass
 from zzz_common.params import parse_private_args
+from zzz_common.supervision import publish_module_status, status_enum
 
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
@@ -112,7 +113,10 @@ class CameraProcessNode:
         self.pub = rospy.Publisher(params.output_topic, DetectionBox2DArray, queue_size=1)
         self.bridge = CvBridge()
         self.header = None
+
+        # Send out standby information
         rospy.loginfo("Yolo detector Standby!")
+        publish_module_status(status_enum.CATEGORY_PERCEPTION_CAMERA, "yolov3", status_enum.STATUS_ENABLED)
 
     def callbackImg(self, data):
         try:
@@ -145,8 +149,8 @@ class CameraProcessNode:
                 msg_class = ObjectClass()
                 msg_class.comments = self.yolo.classes[int(cls_id)]
                 msg_class.classid = conversion_class_id(self.yolo.classes, cls_id)
-                if (msg_class.classid & 0xf) != ObjectClass.HUMAN:
-                    continue
+                # if (msg_class.classid & 0xf) != ObjectClass.HUMAN: # FIXME: This is used for red_mkz_demo
+                #     continue
 
                 msg_class.score = cls_conf
                 msg_single.classes.append(msg_class)

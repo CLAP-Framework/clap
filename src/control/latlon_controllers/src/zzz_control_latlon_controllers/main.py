@@ -19,7 +19,7 @@ class MainController():
         self._lat_controller = lat_controller if lat_controller is not None else PurePersuitLateralController()
         self.ego_state = None
         self.desired_trajectory = None
-        self.desired_speed = 30.0
+        self.desired_speed = 30.0 # default value
 
     def update_decision(self, decision):
         self.desired_trajectory = decision.trajectory

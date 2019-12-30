@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(zzz_monitor_msgs)
+project(zzz_supervision_msgs)
 
 find_package(catkin REQUIRED genmsg std_msgs # essential dependency
 )

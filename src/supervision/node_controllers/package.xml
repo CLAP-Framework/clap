@@ -1,8 +1,8 @@
 <package format="2">
-  <name>zzz_monitor_msgs</name>
+  <name>zzz_supervision_node_controllers</name>
   <version>0.1.0</version>
   <description>
-    Display module information for ZZZ drivers
+    This module is used to control ros nodes
   </description>
   <license>BSD</license>
   <maintainer email="zyxin@umich.edu">Yuanxin Zhong</maintainer>
@@ -13,11 +13,8 @@
   <url type="bugtracker">https://github.com/cmpute/zzz/issues</url>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>message_generation</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <build_depend>geometry_msgs</build_depend>
-  <exec_depend>message_runtime</exec_depend>
+  <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
-  <exec_depend>geometry_msgs</exec_depend>
-  <export><architecture_independent/></export>
+  <exec_depend>zzz_supervision_msgs</exec_depend>
+  <export></export>
 </package>

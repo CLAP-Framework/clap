@@ -2,15 +2,16 @@
 
 Header header
 
-uint8 module_category
+uint8 category
 
-uint8 MODULE_PERCEPTION_LIDAR = 1
-uint8 MODULE_PERCEPTION_CAMERA = 2
+uint8 CATEGORY_PERCEPTION_LIDAR = 1
+uint8 CATEGORY_PERCEPTION_CAMERA = 2
 
-string module_method
+string method # This field is used to indicate which method is used under thie category
 
-int8 module_status
+int8 status
 int8 STATUS_DISABLED = 0
 int8 STATUS_ENABLED = 1
 int8 STATUS_FINISHED = 2
+int8 STATUS_BOOTING = 3
 int8 STATUS_CRASHED = -1

@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+'''
+This module is a very simple gate to delay control command
+'''
+
+import rospy
+import time
+
+from zzz_common.params import parse_private_args
+from zzz_control_msgs.msg import ControlCommand
+from zzz_supervision_msgs.msg import ModuleStatus
+
+class ControlGate():
+    def __init__(self):
+        params = parse_private_args(
+            control_input_topic = "/zzz/control/command",
+            control_output_topic = "/zzz/control/command_gated",
+            delay = 1, # seconds to delay
+        )
+
+        self._input_subs = rospy.Subscriber(params.control_input_topic, ControlCommand, self.control_callback)
+        self._output_pub = rospy.Publisher(params.control_output_topic, ControlCommand, queue_size=1)
+        self._status_subs = rospy.Subscriber("/module_status", ModuleStatus, self.status_callback)
+        
+        self._gate_status = True # False: don't block message, True: block message
+        self._delay_end_time = None
+        self._delay = params.delay
+
+    def status_callback(self, msg):
+        if msg.status != ModuleStatus.STATUS_ENABLED:
+            self._gate_status = True
+        else:
+            if self._gate_status:
+                self._gate_status = False
+                self._delay_end_time = time.time() + self._delay
+
+    def control_callback(self, msg):
+        if self._gate_status:
+            self._output_pub.publish(ControlCommand())
+        elif time.time() > self._delay_end_time:
+            self._output_pub.publish(msg)
+
+if __name__ == "__main__":
+    rospy.init_node("gate")
+    gate = ControlGate()
+    rospy.spin()
