@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+'''
+This node aggregate multiple camera info topic info /intri topic
+'''
+
+import rospy
+
+from zzz_common.params import StaticCameraInfoBroadcaster, parse_private_args
+from sensor_msgs.msg import CameraInfo
+
+def republish(msg, pub):
+    pub.sendCameraInfo(msg)
+
+if __name__ == '__main__':
+    rospy.init_node('calib_broadcaster', anonymous=True)
+    params = parse_private_args(
+        cam_info_topics=[], # camera info topics
+    )
+
+    camreporter = StaticCameraInfoBroadcaster()
+    for topic in params.cam_info_topics:
+        sub = rospy.Subscriber(topic, CameraInfo, republish, camreporter)
+
+    rospy.logdebug("Start to redirect intrinsic information")
+    rospy.spin()

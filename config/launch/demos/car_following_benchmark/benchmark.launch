@@ -99,7 +99,17 @@
             <param name="output_topic" value="objects_transformed"/>
             <param name="pose_topic" value="/egov/zzz/navigation/ego_pose"/>
         </node>
+        <node pkg="zzz_tools_calibration" type="redirect_intrinsics"
+            name="intri_redirect" ns="zzz/perception">
+            <rosparam param="cam_info_topics">["/carla/egov/camera/rgb/front/camera_info"]</rosparam>
+        </node>
+        <node pkg="zzz_perception_tracking_object_trackers" type="box_tracker"
+            name="box_tracker" output="screen" ns="zzz/perception">
+            <param name="detection_topic" value="objects_transformed"/>
+            <param name="tracking_topic" value="objects_tracked"/>
+        </node>
 
+        <!-- to ensure perception is fully enabled -->
         <node pkg="zzz_supervision_node_controllers" type="gate"
             name="control_gate" ns="zzz/supervision">
             <param name="control_input_topic" value="/egov/zzz/control/command"/>

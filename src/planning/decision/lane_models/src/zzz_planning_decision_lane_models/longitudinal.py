@@ -13,9 +13,10 @@ class IDM(object):
 
     def __init__(self):
         self.T = 1.6 # time to collison ahead
-        self.g0 = 7 # minimum spacing
-        self.a = 2.73 # accelaration limit
-        self.b = 1.65 # deaccelaration limit
+        # FIXME: These parameters are changed for experiment
+        self.g0 = 5 # minimum spacing
+        self.a = 5 # accelaration limit
+        self.b = 2 # deaccelaration limit
         self.delta = 4
         self.decision_dt = 0.75
         self.dynamic_map = None

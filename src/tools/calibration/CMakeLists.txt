@@ -8,4 +8,5 @@ catkin_package()
 
 catkin_install_python(PROGRAMS
   nodes/broadcaster
+  nodes/redirect_intrinsics
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
