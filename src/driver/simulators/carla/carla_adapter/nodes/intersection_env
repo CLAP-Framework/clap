@@ -11,7 +11,7 @@ import rospy
 from nav_msgs.msg import Path
 
 import carla
-from carla import Location, Rotation, Transform
+from carla import Location, Rotation, Transform, Vector3D
 #from carla_waypoint_publisher import CarlaReferecePathGenerator
 from carla_waypoint_publisher import CarlaToRosWaypointConverter
 from zzz_driver_msgs.msg import RigidBodyStateStamped
@@ -121,7 +121,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
     if if_random == 1:
 
         #set_ramdom_vehicle_number
-        max_agents = 10
+        max_agents = 15
 
         actor_list = carla_world.get_actors()
         vehicle_list = actor_list.filter("*vehicle*")
@@ -130,7 +130,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
         if num_agents < max_agents:         
             for spawn_point in spawn_points:
                 blueprint = random.choice(blueprints)
-                if -75 < spawn_point.location.x < 55 and -109 < spawn_point.location.y < 17:
+                if -75 < spawn_point.location.x < 55 and -72 < spawn_point.location.y < 17:
                     min_d = 100
                     for vehicle in vehicle_list:
                         d = vehicle.get_location().distance(spawn_point.location)
@@ -141,6 +141,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
                         if new_vehicle:
                             if "vehicle" in new_vehicle.type_id:
                                 new_vehicle.set_autopilot(True)
+                                # new_vehicle.apply_control(carla.VehicleControl(throttle=0.5, steer=0.0))
 
 
     #fix spawn points
@@ -203,8 +204,8 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
             vehicle = carla_world.try_spawn_actor(blueprint, spawn_point)
             if vehicle is not None:
                 actor_list.append(vehicle)
-                vehicle.set_autopilot()                                                 #autopilot
-                # vehicle.apply_control(carla.VehicleControl(throttle=0.5, steer=0.0))      #given control command
+                # vehicle.set_autopilot()                                                 #autopilot
+                vehicle.apply_control(carla.VehicleControl(throttle=0.5, steer=0.0))      #given control command
                 print('fixed spawned %r at %s' % (vehicle.type_id, spawn_point.location))
 
 def generate_pedestrians(carla_world,carla_client,if_random,delay = 0.05):
@@ -289,11 +290,11 @@ def change_the_world(carla_world):
 def change_traffic_lights(carla_world):
     traffic_lights = carla_world.get_actors().filter('*traffic_light*')
     for tl in traffic_lights:
-        # tl.set_state(carla.TrafficLightState.Green)
-        # tl.freeze(1)
-        tl.set_green_time(9.0)
-        tl.set_yellow_time(0.01)
-        tl.set_red_time(0.01)
+        tl.set_state(carla.TrafficLightState.Green)
+        tl.freeze(1)
+        # tl.set_green_time(9.0)
+        # tl.set_yellow_time(0.01)
+        # tl.set_red_time(0.01)
 
 def collision_callback(msg):
     global collision_signal
@@ -311,6 +312,9 @@ def restart_ego_vehicle(carla_world):
 
     vehicle_list = actor_list.filter("vehicle.*")
     for vehicle in vehicle_list:
+        Location = vehicle.get_location()
+        if -20.0 < Location.x < 0.0 and 75.0 < Location.y < 105.0:
+            vehicle.destroy()
         if vehicle.attributes['role_name'] == "ego_vehicle":
             vehicle.set_transform(start_transform)
     
@@ -325,16 +329,84 @@ def restart_ego_vehicle(carla_world):
 
     global collision_signal
     collision_signal = False
+    global if_write
+    if_write = False
+    global if_removed
+    if_removed = False
 
-def record_collsion_to_txt(carla_world, collision_signal):
+def record_collsion_to_txt(carla_world, collision_signal, pose_buffer):
     # if in intersection
-    
-    
-    fw = open("record_collision.txt", 'w')    #将要输出保存的文件地址
-    for line in open("/exercise1/data/query.txt"):    #读取的文件
-        fw.write("collision")    # 将字符串写入文件中
-        fw.write("\n")    # 换行
+    global if_write
+    global if_removed
 
+    if_intersection = False
+    if pose_buffer is not None:
+        ego_x = pose_buffer.state.pose.pose.position.x
+        ego_y = pose_buffer.state.pose.pose.position.y
+        if -75.0 < ego_x < -25.0 or 5.0 < ego_x < 55:
+            if -25.0 < ego_y < 25.0 or 65.0 < ego_y < 115.0:
+                if_intersection = True
+                # print("++++++++++++++++++++++++++ in intersection")
+                if if_removed == False:
+                    remove_stop_traffic(carla_world)
+                    if_removed = True
+                # # Random make vehicle acclerate for test!!!!!!!!!!!!!!!
+                # random_acclerate(carla_world)
+        else:
+            if_intersection = False
+            if_removed = False
+            if_write = False
+
+    if if_intersection == True and if_write == False:
+        fw = open("/home/carla/ZZZ/zzz/src/driver/simulators/carla/carla_adapter/nodes/record_collision.txt", 'a')   
+        fw.write("into_intersection")   
+        fw.write("\n")
+        fw.close()
+        if_write = True
+
+
+    if if_intersection == True:    
+        if collision_signal:
+            fw = open("/home/carla/ZZZ/zzz/src/driver/simulators/carla/carla_adapter/nodes/record_collision.txt", 'a')   
+            fw.write("collision")
+            fw.write("\n")
+            fw.close()   
+            print("++++++++++++++++++++++++++ write something")
+
+def remove_stop_traffic(carla_world):
+    actor_list = carla_world.get_actors()
+    vehicle_list = actor_list.filter("*vehicle*")
+
+    for vehicle in vehicle_list:
+        if vehicle.attributes['role_name'] == "ego_vehicle":
+            pass
+        else:
+            velocity = vehicle.get_velocity()
+            if velocity.x < 0.02 and velocity.y < 0.02:
+                vehicle.destroy()
+
+def random_acclerate(carla_world):
+    actor_list = carla_world.get_actors()
+    vehicle_list = actor_list.filter("*vehicle*")
+
+    for vehicle in vehicle_list:
+        if vehicle.attributes['role_name'] == "ego_vehicle":
+            pass
+        else:
+            # Random_speed = vehicle.get_velocity()
+            # Random_speed.x = Random_speed.x * 2
+            # Random_speed.y = Random_speed.y * 2
+            # if Random_speed.x > 2:
+            #     Random_speed.x = 2
+            # if Random_speed.y > 2:
+            #     Random_speed.y = 2
+            
+            # vehicle.set_velocity(Random_speed)
+            Random_speed = Vector3D()
+            Random_speed.x = 10
+            Random_speed.y = 10
+            vehicle.add_impulse(Random_speed)
+            
 
 
 global stay
@@ -380,7 +452,7 @@ if __name__ == "__main__":
     _pose_subscriber = rospy.Subscriber("/zzz/navigation/ego_pose", RigidBodyStateStamped, pose_callback)
     _collision_subscriber = rospy.Subscriber("/carla/ego_vehicle/collision", CarlaCollisionEvent, collision_callback)
 
-    # Change enviornment, traffic lights
+    # Change enviornment
     change_the_world(carla_world)
 
     # Generate Reference Path
@@ -410,6 +482,9 @@ if __name__ == "__main__":
         # Remove traffic too far
         remove_non_traffic_circle_agents(carla_world)
 
+        # Record collision
+        record_collsion_to_txt(carla_world , collision_signal , pose_buffer)
+
         # Restart ego vehicle
         if collision_signal:
             restart_ego_vehicle(carla_world)
@@ -423,6 +498,7 @@ if __name__ == "__main__":
         if pose_buffer is not None:
             ego_x = pose_buffer.state.pose.pose.position.x
             ego_y = pose_buffer.state.pose.pose.position.y
+            ego_z = pose_buffer.state.pose.pose.position.z
 
             if math.pow((ego_x+7),2) + math.pow((ego_y+3),2) < 64:
                 setgoal_flag = 1
@@ -454,8 +530,6 @@ if __name__ == "__main__":
                 has_set = 0
                 set_goal_flag = 0
         
-        # Record collision
-        record_collsion_to_txt(carla_world , collision_signal)
 
 
         rate.sleep()

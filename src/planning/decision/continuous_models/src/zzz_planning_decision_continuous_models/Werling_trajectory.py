@@ -113,35 +113,35 @@ class Werling(object):
 
         generated_trajectory = frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
 
-        # if generated_trajectory is not None:
-        #     if len(self.last_trajectory) < 5 or abs(dynamic_map.ego_state.pose.pose.position.x - self.last_trajectory[0][0])>1.5 or abs(dynamic_map.ego_state.pose.pose.position.y - self.last_trajectory[0][1])>1.5:
-        #         desired_speed = generated_trajectory.s_d[-1] # TODO: Better speed design
-        #         trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
-        #         trajectory_array = dense_polyline2d(trajectory_array_ori,1)
-        #         self.last_trajectory = trajectory_array
-        #         print("111111111111111111111111111")
-
-        #         # for pathstate in generated_trajectory:
-        #         for t in generated_trajectory.t:
-        #             print("+++++++++++++++++++++++++++++++++++++pathstate.t",t)
-        #     else :
-        #         trajectory_array = self.last_trajectory
-        #         desired_speed = 10 #TODO read from the trajectory
-        #         print("222222222222222222222222222")
-        # elif len(self.last_trajectory) > 5 and c_speed > 1:
-        #     trajectory_array = self.last_trajectory
-        #     desired_speed = 10 #TODO read from the trajectory
-        #     print("252525252525252525252525")
         if generated_trajectory is not None:
-            desired_speed = generated_trajectory.s_d[5] # TODO: Better speed design
-            trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
-            trajectory_array = dense_polyline2d(trajectory_array_ori,1)
-            # self.last_trajectory = trajectory_array
-            print("111111111111111111111111111")
+            if len(self.last_trajectory) < 5 or abs(dynamic_map.ego_state.pose.pose.position.x - self.last_trajectory[0][0])>1.5 or abs(dynamic_map.ego_state.pose.pose.position.y - self.last_trajectory[0][1])>1.5:
+                desired_speed = generated_trajectory.s_d[5] # TODO: Better speed design
+                trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
+                trajectory_array = dense_polyline2d(trajectory_array_ori,1)
+                self.last_trajectory = trajectory_array
+                print("111111111111111111111111111")
+
+                # for pathstate in generated_trajectory:
+                for t in generated_trajectory.t:
+                    print("+++++++++++++++++++++++++++++++++++++pathstate.t",t)
+            else :
+                trajectory_array = self.last_trajectory
+                desired_speed = 10 #TODO read from the trajectory
+                print("222222222222222222222222222")
+        elif len(self.last_trajectory) > 5 and c_speed > 1:
+            trajectory_array = self.last_trajectory
+            desired_speed = 10 #TODO read from the trajectory
+            print("252525252525252525252525")
+        # if generated_trajectory is not None:
+        #     desired_speed = generated_trajectory.s_d[5] # TODO: Better speed design
+        #     trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
+        #     trajectory_array = dense_polyline2d(trajectory_array_ori,1)
+        #     # self.last_trajectory = trajectory_array
+        #     print("111111111111111111111111111")
 
         else:
             trajectory_array =  ref_path
-            desired_speed = 5
+            desired_speed = 3
             print("3333333333333333333333333333")
 
         return trajectory_array, desired_speed
