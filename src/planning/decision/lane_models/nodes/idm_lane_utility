@@ -23,7 +23,8 @@ class DecisionNode(object):
         )
         model_lon = IDM()
         model_lat = LaneUtility(model_lon)
-        model_local = PolylineTrajectory()
+        # model_local = PolylineTrajectory()
+        model_local = MPCTrajectory()
 
         self._decision_instance = MainDecision(lon_decision=model_lon, lat_decision=model_lat, local_trajectory=model_local)
         self._rate = rospy.Rate(params.hz)

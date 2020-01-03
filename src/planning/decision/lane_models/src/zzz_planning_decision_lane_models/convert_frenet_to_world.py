@@ -191,18 +191,4 @@ def calc_global_paths(fplist, wx, wy):
             fp.x.append(fx)
             fp.y.append(fy)
 
-        # # calc yaw and ds
-        # for i in range(len(fp.x) - 1):
-        #     dx = fp.x[i + 1] - fp.x[i]
-        #     dy = fp.y[i + 1] - fp.y[i]
-        #     fp.yaw.append(math.atan2(dy, dx))
-        #     fp.ds.append(math.sqrt(dx**2 + dy**2))
-
-        # fp.yaw.append(fp.yaw[-1])
-        # fp.ds.append(fp.ds[-1])
-
-        # # calc curvature
-        # for i in range(len(fp.yaw) - 1):
-        #     fp.c.append((fp.yaw[i + 1] - fp.yaw[i]) / fp.ds[i])
-
     return fplist
