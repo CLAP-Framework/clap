@@ -49,6 +49,11 @@ class MainDecision(object):
             if changing_lane_index == -1 :
                 trajectory = self._local_trajectory_instance_for_ref.get_trajectory(self._dynamic_map_buffer, changing_lane_index, desired_speed)#FIXME(ksj)
             else:
+                ego_lane_index = self._dynamic_map_buffer.mmap.ego_lane_index
+                if ego_lane_index < 2.0:
+                    changing_lane_index=3
+                elif ego_lane_index > 3.0:
+                    changing_lane_index=2
                 trajectory = self._local_trajectory_instance.get_trajectory(self._dynamic_map_buffer, changing_lane_index, desired_speed)
 
 

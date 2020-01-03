@@ -46,9 +46,9 @@ class MPCTrajectory(object):
         # N2 is lane change finish horizon
         # DT is discrete time step; TL is one-order delay of vehicle speed control
         # L is the wheelbase
-        self.Np=30
-        self.N1=5
-        self.N2=15
+        self.Np=20
+        self.N1=4
+        self.N2=16
         self.DT=0.2
         self.TL=0.45
         self.L=2.5
