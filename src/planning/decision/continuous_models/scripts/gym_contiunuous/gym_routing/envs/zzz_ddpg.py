@@ -28,7 +28,7 @@ from gym.utils import seeding
 
 class ZZZCarlaEnv(gym.Env):
     metadata = {'render.modes': []}
-    def __init__(self, zzz_client="127.0.0.1", port=2333, recv_buffer=4096, socket_time_out = 120):
+    def __init__(self, zzz_client="127.0.0.1", port=2333, recv_buffer=4096, socket_time_out = 1000):
     
         self._restart_motivation = 0
         self.state = []
@@ -49,8 +49,8 @@ class ZZZCarlaEnv(gym.Env):
 
 
         # Set action space
-        low_action = np.array([-25,-25])
-        high_action = np.array([25,25])  #Should be symmetry for DDPG
+        low_action = np.array([-15,-5]) # 0 for frenet.s, 1 for frenet.d related to MAX_ROAD_WIDTH in werling
+        high_action = np.array([15,5])  #Should be symmetry for DDPG
         self.action_space = spaces.Box(low=low_action, high=high_action, dtype=np.float32)
 
         # Set State space = 4+4*obs_num
@@ -62,8 +62,8 @@ class ZZZCarlaEnv(gym.Env):
 
         self.state_dimention = 16
 
-        low  = np.array([-25,  -25,   0, 0,  -25, -25, 0,  0,   -25, -25,  0, 0, -25,  -25,0,0])
-        high = np.array([25, 25, 60, 60, 25, 25, 60, 60, 25, 25, 60, 60,25, 25, 60, 60])    
+        low  = np.array([-100,  -100,   -20,  -20,  -100, -100,  -20,   -20,   -100, -100,   -20,  -20, -100,  -100, -20, -20])
+        high = np.array([100, 100, 20, 20, 100, 100, 20, 20, 100, 100, 20, 20,100, 100, 20, 20])    
 
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
         self.seed()
@@ -89,17 +89,17 @@ class ZZZCarlaEnv(gym.Env):
         except:
             print("RL cannot receive an state")
             collision = 0
-            leave_current_mmap = 0
-            RLpointx = 0
+            leave_current_mmap = 1
+            RLpointx = 5
             RLpointy = 0
 
     
         # calculate reward
-        reward = 10 - (abs(action[0]-RLpointx) + abs(action[1]-RLpointy))
+        reward = 0#10 - (abs(action[0] + 15 - RLpointx) + abs(action[1] - RLpointy))
 
         if collision:
             reward = -10
-
+        
         # judge if finish
         done = False
 
@@ -116,18 +116,20 @@ class ZZZCarlaEnv(gym.Env):
        
         # receive state
         # if the received information meets requirements
-        # while True:
-        #     try:
-        #         # received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
-        #         self.state = np.array([0,  0,   0, 0,  0, -100, 0,  0,   0, 0,  0, -100, 0,  0])
-        #         # collision = received_msg[14]
-        #         # leave_current_mmap = received_msg[15]
-        #         if not collision and not leave_current_mmap:
-        #             break
-        #     except ValueError:
-        #         continue
-            
-        return np.array([0,  0,   0, 0,  0, 0, 0,  0,   0, 0,  0, 0, 0,  0,0,0])#np.array(self.state)
+        while True:
+            try:
+                received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
+                self.state = received_msg[0:16]
+                collision = received_msg[16]
+                leave_current_mmap = received_msg[17]
+                RLpointx = received_msg[18]
+                RLpointy = received_msg[19]
+                if not collision and not leave_current_mmap:
+                    break
+            except ValueError:
+                continue
+        return np.array(self.state)
+
 
     def render(self, mode='human'):
         if mode == 'human':

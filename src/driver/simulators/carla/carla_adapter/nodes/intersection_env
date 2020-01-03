@@ -121,14 +121,17 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
     if if_random == 1:
 
         #set_ramdom_vehicle_number
-        max_agents = 15
+        max_agents = 30
 
         actor_list = carla_world.get_actors()
         vehicle_list = actor_list.filter("*vehicle*")
         num_agents = len(vehicle_list)
-
+        i = 0
         if num_agents < max_agents:         
             for spawn_point in spawn_points:
+                i = i + 1
+                if i > max_agents - num_agents:
+                    break
                 blueprint = random.choice(blueprints)
                 if -75 < spawn_point.location.x < 55 and -72 < spawn_point.location.y < 17:
                     min_d = 100
@@ -331,13 +334,11 @@ def restart_ego_vehicle(carla_world):
     collision_signal = False
     global if_write
     if_write = False
-    global if_removed
-    if_removed = False
+
 
 def record_collsion_to_txt(carla_world, collision_signal, pose_buffer):
     # if in intersection
     global if_write
-    global if_removed
 
     if_intersection = False
     if pose_buffer is not None:
@@ -347,14 +348,9 @@ def record_collsion_to_txt(carla_world, collision_signal, pose_buffer):
             if -25.0 < ego_y < 25.0 or 65.0 < ego_y < 115.0:
                 if_intersection = True
                 # print("++++++++++++++++++++++++++ in intersection")
-                if if_removed == False:
-                    remove_stop_traffic(carla_world)
-                    if_removed = True
-                # # Random make vehicle acclerate for test!!!!!!!!!!!!!!!
-                # random_acclerate(carla_world)
+                
         else:
             if_intersection = False
-            if_removed = False
             if_write = False
 
     if if_intersection == True and if_write == False:
@@ -407,7 +403,6 @@ def random_acclerate(carla_world):
             Random_speed.y = 10
             vehicle.add_impulse(Random_speed)
             
-
 
 global stay
 stay = 0
@@ -489,6 +484,7 @@ if __name__ == "__main__":
         if collision_signal:
             restart_ego_vehicle(carla_world)
         if stay_too_long(carla_world):
+            remove_stop_traffic(carla_world)
             restart_ego_vehicle(carla_world)
 
         # Change traffic lights
@@ -502,6 +498,7 @@ if __name__ == "__main__":
 
             if math.pow((ego_x+7),2) + math.pow((ego_y+3),2) < 64:
                 setgoal_flag = 1
+
                 if setgoal_flag == 1 and has_set == 0:
                     setgoal = carla_world.get_map().get_spawn_points()[0]
                     setgoal.location.x = -50.8
@@ -511,10 +508,12 @@ if __name__ == "__main__":
                     setgoal.rotation.yaw = 0 
                     setgoal.rotation.roll = 0
                     ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
+                    remove_stop_traffic(carla_world)
                     has_set = 1
 
             elif math.pow((ego_x+10),2) + math.pow((ego_y-90),2) < 64:
                 setgoal_flag = 1
+                
                 if setgoal_flag == 1 and has_set == 0:
                     setgoal = carla_world.get_map().get_spawn_points()[0]
                     setgoal.location.x = 33
@@ -524,13 +523,12 @@ if __name__ == "__main__":
                     setgoal.rotation.yaw = 0 
                     setgoal.rotation.roll = 0
                     ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
+                    remove_stop_traffic(carla_world)
                     has_set = 1
 
             else:
                 has_set = 0
                 set_goal_flag = 0
-        
-
 
         rate.sleep()
 
