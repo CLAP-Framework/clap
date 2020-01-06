@@ -1,48 +1,51 @@
 <launch>
-    <!-- HOW TO CHANGE:
-        1. change this `vehicle` argument
-        2. change the challenge.yaml
-        3. change the path of challenge.yaml
-    -->
-    <arg name="vehicle" value="zzz_veh3"/>
-
     <!-- Run Carla Bridge -->
     <rosparam file="$(find zzz_driver_simulators_carla_challenge)/launch/challenge.yaml" command="load" />
-    <node pkg="carla_ros_bridge" name="carla_client" type="client.py" output="screen"/>
-    <node pkg="zzz_driver_simulators_carla_challenge" name="path_generate" type="generate" output="screen"/>
+    <node pkg="carla_ros_bridge" name="carla_client" type="client.py"/>
 
-    <node pkg="zzz_navigation_pose_reporter" type="manual"
-        name="pose_reporter" output="screen" ns="/zzz/navigation">
-        <param name="map_origin" value="[49,8,0]"/>
-        <param name="odom_input_topic" value="/carla/$(arg vehicle)/odometry"/>
-    </node>
+    <!-- Control vehicle 0 -->
+    <group ns="veh0">
+        <node pkg="zzz_driver_simulators_carla_challenge" name="path_generate" type="generate"/>
+        <node pkg="zzz_navigation_pose_reporter" type="manual"
+            name="pose_reporter" ns="zzz/navigation">
+            <param name="map_origin" value="[49,8,0]"/>
+            <param name="odom_input_topic" value="/carla/zzz_veh0/odometry"/>
+        </node>
 
-    <node pkg="zzz_cognition_object_locator" type="nearest_locator"
-        name="nearest_locator" output="screen" ns="/zzz/cognition">
-        <param name="objects_topic" value="/zzz/perception/objects_truth"/>
-    </node>
-    <node pkg="zzz_cognition_object_locator" type="put_buffer"
-        name="put_buffer" output="screen" ns="/zzz/cognition">
-        <param name="reference_path_topic" value="/zzz/navigation/reference_path"/> 
-    </node>
-    <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
-        name="idm_lane_utility" output="screen" ns="/zzz/planning">
-    </node>
-    <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
-        name="safeguard" output="screen" ns="/zzz/planning">
-    </node>
-    <node pkg="zzz_control_latlon_controllers" type="pure_persuit"
-        name="latlon_controller" output="screen" ns="/zzz/control">
-    </node>
+        <node pkg="zzz_cognition_object_locator" type="nearest_locator"
+            name="nearest_locator" ns="zzz/cognition">
+            <param name="map_input_topic" value="/veh0/zzz/navigation/local_static_map"/>
+            <param name="objects_topic" value="/veh0/zzz/perception/objects_truth"/>
+            <param name="pose_topic" value="/veh0/zzz/navigation/ego_pose"/>
+        </node>
+        <node pkg="zzz_cognition_object_locator" type="put_buffer"
+            name="put_buffer" ns="zzz/cognition">
+            <param name="pose_topic" value="/veh0/zzz/navigation/ego_pose"/>
+            <param name="reference_path_topic" value="/veh0/zzz/navigation/reference_path"/>
+        </node>
+        <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
+            name="idm_lane_utility" ns="zzz/planning">
+            <param name="dynamic_map_topic" value="/veh0/zzz/cognition/local_dynamic_map/map_with_ref"/>
+        </node>
+        <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
+            name="safeguard" ns="zzz/planning">
+            <param name="dynamic_map_topic" value="/veh0/zzz/cognition/local_dynamic_map/map_with_ref"/>
+        </node>
+        <node pkg="zzz_control_latlon_controllers" type="pure_persuit"
+            name="latlon_controller" ns="zzz/control">
+            <param name="pose_topic" value="/veh0/zzz/navigation/ego_pose"/>
+            <param name="trajectory_topic" value="/veh0/zzz/planning/safeguard_trajectory"/>
+        </node>
 
-    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_command" output="screen">
-        <param name="input_topic" value="/zzz/control/command" />
-        <param name="output_topic" value="/carla/$(arg vehicle)/vehicle_control_cmd" />
-        <param name="msg_type" value="ControlCommand" />
-    </node>
-    <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_objects" output="screen">
-        <param name="input_topic" value="/carla/$(arg vehicle)/objects" />
-        <param name="output_topic" value="/zzz/perception/objects_truth" />
-        <param name="msg_type" value="ObjectArray" />
-    </node>
+        <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_command">
+            <param name="input_topic" value="/veh0/zzz/control/command" />
+            <param name="output_topic" value="/carla/zzz_veh0/vehicle_control_cmd" />
+            <param name="msg_type" value="ControlCommand" />
+        </node>
+        <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_objects">
+            <param name="input_topic" value="/carla/zzz_veh0/objects" />
+            <param name="output_topic" value="/veh0/zzz/perception/objects_truth" />
+            <param name="msg_type" value="ObjectArray" />
+        </node>
+    </group>
 </launch>
