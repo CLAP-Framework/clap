@@ -1,6 +1,6 @@
 import numpy as np
 import rospy
-from easydict import EasyDict as edict
+from addict import Dict as edict
 
 from zzz_cognition_msgs.msg import LaneState, MapState, RoadObstacle
 from zzz_cognition_msgs.utils import convert_tracking_box

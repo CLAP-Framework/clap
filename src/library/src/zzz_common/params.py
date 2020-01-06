@@ -3,7 +3,7 @@ This module provides consistent params loading from rosparam and command line in
 '''
 
 import argparse
-from easydict import EasyDict as edict
+from addict import Dict as edict
 
 try:
     # ROS related items

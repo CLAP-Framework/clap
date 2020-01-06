@@ -2,7 +2,7 @@
 import rospy
 import numpy as np
 from collections import deque
-from easydict import EasyDict as edict
+from addict import Dict as edict
 
 from zzz_cognition_msgs.msg import MapState
 from zzz_cognition_msgs.utils import default_msg
@@ -55,8 +55,9 @@ class PathBuffer:
         """
 
         # Load states
-        if not self._reference_path_buffer or not self._ego_vehicle_state_buffer:
+        if (self._reference_path_buffer is None) or not self._ego_vehicle_state_buffer:
             return None
+
         tstates = edict()
         tstates.dynamic_map = self._static_map_buffer or default_msg(MapState)
         tstates.ego_state = self._ego_vehicle_state_buffer.state
