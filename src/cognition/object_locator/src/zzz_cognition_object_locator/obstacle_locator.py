@@ -15,13 +15,14 @@ from zzz_perception_msgs.msg import (DetectionBoxArray, ObjectSignals,
                                      TrackingBoxArray)
 
 class NearestLocator:
-    def __init__(self, lane_dist_thres=5):
+    def __init__(self, lane_dist_thres=5, default_speed_limit=40):
         self._static_map_buffer = None
         self._ego_vehicle_state_buffer = None
         self._surrounding_object_list_buffer = None
         self._traffic_light_detection_buffer = None
         
         self._lane_dist_thres = lane_dist_thres
+        self._default_speed_limit = default_speed_limit # km/h
 
         # These two are buffers for computation
         self._ego_vehicle_distance_to_lane_head = [] # distance from vehicle to lane start
@@ -312,7 +313,7 @@ class NearestLocator:
         # Now we set the multilane speed limit as 40 km/h.
         total_lane_num = len(tstates.static_map.lanes)
         for i in range(total_lane_num):
-            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 40 # TODO(carla challenge): can adjust
+            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = self._default_speed_limit # TODO(carla challenge): can adjust
 
     # TODO(zyxin): Move this function into separate prediction module
     def predict_vehicle_behavior(self, vehicle, tstates, lane_change_thres = 0.2):

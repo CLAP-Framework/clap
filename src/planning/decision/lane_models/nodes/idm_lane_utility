@@ -16,11 +16,12 @@ class DecisionNode(object):
             decision_trajectory_topic="decision_trajectory",
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
             rviz_decition_trajectory_topic="rviz_decition_trajectory",
-            hz = 10,
+            utility_thres = 5,
+            hz = 10
         )
 
         model_lon = IDM()
-        model_lat = LaneUtility(model_lon)
+        model_lat = LaneUtility(model_lon, utility_thres=params.utility_thres)
         self._decision_instance = MainDecision(lon_decision=model_lon, lat_decision=model_lat)
         self._rate = rospy.Rate(params.hz)
 

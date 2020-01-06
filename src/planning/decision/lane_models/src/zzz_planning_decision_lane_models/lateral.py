@@ -7,9 +7,10 @@ from zzz_cognition_msgs.msg import MapState, RoadObstacle
 
 class LaneUtility(object):
 
-    def __init__(self, longitudinal_model):
+    def __init__(self, longitudinal_model, utility_thres=5):
         self.longitudinal_model_instance = longitudinal_model
         self.dynamic_map = None
+        self._utility_thres = utility_thres # m/s
 
     def lateral_decision(self, dynamic_map, close_to_junction = 20):
 
@@ -58,11 +59,10 @@ class LaneUtility(object):
         rospy.logdebug("left_utility = %f, ego_utility = %f, right_utility = %f",
             left_lane_utility, current_lane_utility, right_lane_utility)
 
-        thres = 5 # m/s, TODO(carla challenge): can adjust
-        if right_lane_utility > current_lane_utility + thres and right_lane_utility >= left_lane_utility:
+        if right_lane_utility > current_lane_utility + self._utility_thres and right_lane_utility >= left_lane_utility:
             return ego_lane_index -1
 
-        if left_lane_utility > current_lane_utility + thres and left_lane_utility > right_lane_utility:
+        if left_lane_utility > current_lane_utility + self._utility_thres and left_lane_utility > right_lane_utility:
             return ego_lane_index + 1
 
         return ego_lane_index

@@ -49,7 +49,7 @@ default_sensor_configuration = {
 '''
 default_sensor_configuration = {
     'zzz_veh0': {
-        'spawn_at': [4.926103, 40.578606, 1.843102, -88.891235],
+        'spawn_at': [1.4267581, 40.5108757, 1.843102, -88.891235],
         'Sky': {
             "type": "sensor.camera.rgb",
             "x": 0, "y": 0, "z": 50,
@@ -58,7 +58,7 @@ default_sensor_configuration = {
         },
     },
     'zzz_veh1': {
-       'spawn_at': [1.4267581, 40.5108757, 1.843102, -88.891235]
+        'spawn_at': [4.926103, 40.578606, 1.843102, -88.891235],
     }
 }
 

@@ -134,7 +134,7 @@ class ReachableSet(object):
         
         danger_speed_range = IntervalTree()
         for collision_idx, collision_time in self.collision_points:
-            if collision_idx>len(decision_trajectory)-1:
+            if collision_idx>len(decision_trajectory)-1 or ego_idx>=len(decision_trajectory):
                 continue
             dis_sum = np.cumsum(np.linalg.norm(np.diff(decision_trajectory, axis=0), axis=1))
             dis = dis_sum[collision_idx-1] - dis_sum[ego_idx]

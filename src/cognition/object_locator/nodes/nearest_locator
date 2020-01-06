@@ -21,10 +21,11 @@ class LocatorNode(object):
             map_output_topic="local_dynamic_map/map_with_objects",
             pose_topic = "/zzz/navigation/ego_pose",
             traffic_light_topic = "/zzz/perception/traffic_lights",
+            default_speed_limit = 40,
             hz=20,
         )
 
-        self._map_instance = NearestLocator()
+        self._map_instance = NearestLocator(default_speed_limit=params.default_speed_limit)
         self._rate = rospy.Rate(params.hz)
 
         self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self._map_instance.receive_ego_state)

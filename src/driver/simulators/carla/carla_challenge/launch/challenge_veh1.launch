@@ -13,6 +13,7 @@
             <param name="map_input_topic" value="/veh1/zzz/navigation/local_static_map"/>
             <param name="objects_topic" value="/veh1/zzz/perception/objects_truth"/>
             <param name="pose_topic" value="/veh1/zzz/navigation/ego_pose"/>
+            <param name="default_speed_limit" value="10"/>
         </node>
         <node pkg="zzz_cognition_object_locator" type="put_buffer"
             name="put_buffer" ns="zzz/cognition">
