@@ -217,6 +217,58 @@ class LocalMap(object):
             last_y = point.position.y
             lane_wrapped.central_path_points.append(point)
 
+<<<<<<< Updated upstream
+=======
+            # jxy: add lane boundary information
+            left_bound = LaneBoundary()
+            right_bound = LaneBoundary()
+
+            count = count + 1
+
+            if (flag_straight == 0 and count % 3 == 1) or count % 10 == 1:
+                # too slow... cost about 7s, so divide by 10, but distance becomes 10 times (5m). If direction changes, reduce the gap.
+                location = carla.Location()
+                location.x = x
+                location.y = y
+                waypoint = self._world.get_map().get_waypoint(location)
+
+                angle = 3.1415927/2 - point.tangent
+                left_bound.boundary_point.s = waypoint.s
+                left_bound.boundary_point.tangent = point.tangent # simplified, theoretically it should be the lane boundary direction
+                left_bound.boundary_point.position.x = x + waypoint.lane_width/2.0 * math.cos(angle + 3.1415927/2) # notice that the lane width is not constant, it can vary with s
+                left_bound.boundary_point.position.y = y + waypoint.lane_width/2.0 * math.sin(angle + 3.1415927/2)
+                
+                if str(waypoint.left_lane_marking.type) == 'Broken' or str(waypoint.left_lane_marking.type) == 'BrokenBroken':
+                    left_bound.boundary_type = 1
+                elif str(waypoint.left_lane_marking.type) == 'Solid' or str(waypoint.left_lane_marking.type) == 'SolidSolid' or str(waypoint.left_lane_marking.type) == 'BrokenSolid':
+                    left_bound.boundary_type = 3
+                elif str(waypoint.left_lane_marking.type) == 'Curb':
+                    left_bound.boundary_type = 6
+                else:
+                    left_bound.boundary_type = 0
+
+                right_bound.boundary_point.s = waypoint.s
+                right_bound.boundary_point.tangent = point.tangent # simplified, theoretically it should be the lane boundary direction
+                right_bound.boundary_point.position.x = x - waypoint.lane_width/2.0 * math.cos(angle + 3.1415927/2) # notice that the lane width is not constant, it can vary with s
+                right_bound.boundary_point.position.y = y - waypoint.lane_width/2.0 * math.sin(angle + 3.1415927/2)
+            
+                if str(waypoint.right_lane_marking.type) == 'Broken' or str(waypoint.right_lane_marking.type) == 'BrokenBroken':
+                    right_bound.boundary_type = 1
+                elif str(waypoint.right_lane_marking.type) == 'Solid' or str(waypoint.right_lane_marking.type) == 'SolidSolid' or str(waypoint.right_lane_marking.type) == 'BrokenSolid':
+                    right_bound.boundary_type = 3
+                elif str(waypoint.right_lane_marking.type) == 'Curb':
+                    right_bound.boundary_type = 6
+                else:
+                    right_bound.boundary_type = 0
+                
+                lane_wrapped.left_boundaries.append(left_bound)
+                lane_wrapped.right_boundaries.append(right_bound)
+
+        end = time.time()
+        print("\n\n\n\n\n\n\n\n\n\n\n\n")
+        print end-start
+
+>>>>>>> Stashed changes
         return lane_wrapped
 
     def update_target_lane(self):

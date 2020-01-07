@@ -97,6 +97,37 @@ class DrivingSpaceConstructor:
         #visualization
         self._lanes_markerarray = MarkerArray()
 
+        biggest_id = 0 #TODO: better way to find the smallest id
+        count = 0
+        for lane in self._static_map.lanes:
+            if lane.index > biggest_id:
+                biggest_id = lane.index
+            tempmarker = Marker() #jxy: must be put inside since it is python
+            tempmarker.header.frame_id = "map"
+            tempmarker.header.stamp = rospy.Time.now()
+            tempmarker.ns = "zzz/cognition"
+            tempmarker.id = count
+            tempmarker.type = Marker.LINE_STRIP
+            tempmarker.action = Marker.ADD
+            tempmarker.scale.x = 0.12
+            tempmarker.color.r = 1.0
+            tempmarker.color.g = 0.0
+            tempmarker.color.b = 0.0
+            tempmarker.color.a = 0.5
+            tempmarker.lifetime = rospy.Duration(0.5)
+
+            for lanepoint in lane.central_path_points:
+                p = Point()
+                p.x = lanepoint.position.x
+                p.y = lanepoint.position.y
+                p.z = lanepoint.position.z
+                tempmarker.points.append(p)
+            self._lanes_markerarray.markers.append(tempmarker)
+            count = count + 1
+
+        #2. lane boundary line
+        self._lanes_markerarray = MarkerArray()
+
         count = 0
         for lane in self._static_map.lanes:
             tempmarker = Marker() #jxy: must be put inside since it is python
@@ -122,7 +153,7 @@ class DrivingSpaceConstructor:
             self._lanes_markerarray.markers.append(tempmarker)
             count = count + 1
 
-
+        #3. obstacle
         self._obstacles_markerarray = MarkerArray()
         
         count = 0
