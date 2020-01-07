@@ -126,60 +126,27 @@ class DrivingSpaceConstructor:
             count = count + 1
 
         #2. lane boundary line
-        self._lanes_boundary_markerarray = MarkerArray()
+        if not self._static_map.in_junction:
+            #does not draw lane when ego vehicle is in the junction
+            self._lanes_boundary_markerarray = MarkerArray()
 
-        count = 0
-        for lane in self._static_map.lanes:
-            tempmarker = Marker() #jxy: must be put inside since it is python
-            tempmarker.header.frame_id = "map"
-            tempmarker.header.stamp = rospy.Time.now()
-            tempmarker.ns = "zzz/cognition"
-            tempmarker.id = count
-
-            #each lane has the right boundary, only the lane with the smallest id has the left boundary
-            tempmarker.type = Marker.LINE_STRIP
-            tempmarker.action = Marker.ADD
-            tempmarker.scale.x = 0.12
-            
-            if lane.right_boundaries[0].boundary_type == 1: #broken lane is set gray
-                tempmarker.color.r = 0.6
-                tempmarker.color.g = 0.6
-                tempmarker.color.b = 0.5
-                tempmarker.color.a = 0.5
-            else:
-                tempmarker.color.r = 1.0
-                tempmarker.color.g = 1.0
-                tempmarker.color.b = 1.0
-                tempmarker.color.a = 0.5
-            tempmarker.lifetime = rospy.Duration(0.5)
-
-            for lb in lane.right_boundaries:
-                p = Point()
-                p.x = lb.boundary_point.position.x
-                p.y = lb.boundary_point.position.y
-                p.z = lb.boundary_point.position.z
-                tempmarker.points.append(p)
-            self._lanes_boundary_markerarray.markers.append(tempmarker)
-            count = count + 1
-
-            #biggest id: draw left lane
-            if lane.index == biggest_id:
-            
-                print "draw left lane boundary for the biggest id"
+            count = 0
+            for lane in self._static_map.lanes:
                 tempmarker = Marker() #jxy: must be put inside since it is python
                 tempmarker.header.frame_id = "map"
                 tempmarker.header.stamp = rospy.Time.now()
                 tempmarker.ns = "zzz/cognition"
                 tempmarker.id = count
 
-                #each lane has the right boundary, only the lane with the biggest id has the left boundary
+                #each lane has the right boundary, only the lane with the smallest id has the left boundary
                 tempmarker.type = Marker.LINE_STRIP
                 tempmarker.action = Marker.ADD
                 tempmarker.scale.x = 0.12
-                if lane.left_boundaries[0].boundary_type == 1: #broken lane is set gray
+                
+                if lane.right_boundaries[0].boundary_type == 1: #broken lane is set gray
                     tempmarker.color.r = 0.6
                     tempmarker.color.g = 0.6
-                    tempmarker.color.b = 0.6
+                    tempmarker.color.b = 0.5
                     tempmarker.color.a = 0.5
                 else:
                     tempmarker.color.r = 1.0
@@ -188,7 +155,7 @@ class DrivingSpaceConstructor:
                     tempmarker.color.a = 0.5
                 tempmarker.lifetime = rospy.Duration(0.5)
 
-                for lb in lane.left_boundaries:
+                for lb in lane.right_boundaries:
                     p = Point()
                     p.x = lb.boundary_point.position.x
                     p.y = lb.boundary_point.position.y
@@ -196,6 +163,41 @@ class DrivingSpaceConstructor:
                     tempmarker.points.append(p)
                 self._lanes_boundary_markerarray.markers.append(tempmarker)
                 count = count + 1
+
+                #biggest id: draw left lane
+                if lane.index == biggest_id:
+                
+                    print "draw left lane boundary for the biggest id"
+                    tempmarker = Marker() #jxy: must be put inside since it is python
+                    tempmarker.header.frame_id = "map"
+                    tempmarker.header.stamp = rospy.Time.now()
+                    tempmarker.ns = "zzz/cognition"
+                    tempmarker.id = count
+
+                    #each lane has the right boundary, only the lane with the biggest id has the left boundary
+                    tempmarker.type = Marker.LINE_STRIP
+                    tempmarker.action = Marker.ADD
+                    tempmarker.scale.x = 0.12
+                    if lane.left_boundaries[0].boundary_type == 1: #broken lane is set gray
+                        tempmarker.color.r = 0.6
+                        tempmarker.color.g = 0.6
+                        tempmarker.color.b = 0.6
+                        tempmarker.color.a = 0.5
+                    else:
+                        tempmarker.color.r = 1.0
+                        tempmarker.color.g = 1.0
+                        tempmarker.color.b = 1.0
+                        tempmarker.color.a = 0.5
+                    tempmarker.lifetime = rospy.Duration(0.5)
+
+                    for lb in lane.left_boundaries:
+                        p = Point()
+                        p.x = lb.boundary_point.position.x
+                        p.y = lb.boundary_point.position.y
+                        p.z = lb.boundary_point.position.z
+                        tempmarker.points.append(p)
+                    self._lanes_boundary_markerarray.markers.append(tempmarker)
+                    count = count + 1
 
         #3. obstacle
         self._obstacles_markerarray = MarkerArray()
@@ -342,7 +344,7 @@ class DrivingSpaceConstructor:
                 object_state.pose.pose.position.y,
                 lane) for lane in self._static_map_lane_path_array])
         
-        # Check if there's only two lanes
+        # Check if there's only one lane
         if len(self._static_map.lanes) < 2:
             closest_lane = second_closest_lane = 0
         else:
@@ -351,12 +353,22 @@ class DrivingSpaceConstructor:
         # Signed distance from target to two closest lane
         closest_lane_dist, second_closest_lane_dist = dist_list[closest_lane, 0], dist_list[second_closest_lane, 0]
 
+        left_boundary_array = [(lbp.boundary_point.position.x, lbp.boundary_point.position.y) for lbp in lane.left_boundaries]
+        right_boundary_array = [(lbp.boundary_point.position.x, lbp.boundary_point.position.y) for lbp in lane.right_boundaries]
+
+        object.lane_dist_left_t = dist_from_point_to_polyline2d(object.state.pose.pose.position.x,
+            object.state.pose.pose.position.y, left_boundary_array)
+        object.lane_dist_right_t = dist_from_point_to_polyline2d(object.state.pose.pose.position.x,
+            object.state.pose.pose.position.y, right_boundary_array)
+        
+        ffstate = get_frenet_state(object.state, self._static_map_lane_path_array[])
+
         if abs(closest_lane_dist) > self._lane_dist_thres:
             return -1 # TODO: return reasonable value
 
         # Judge whether the point is outside of lanes
         if closest_lane == second_closest_lane or closest_lane_dist * second_closest_lane_dist > 0:
-            #jxy: why can the closest and the second closest be the same?
+            #jxy: only one lane, or the obj is not between the lanes.
             # The object is at left or right most
             return closest_lane
         else:
@@ -364,7 +376,9 @@ class DrivingSpaceConstructor:
             a, b = closest_lane, second_closest_lane
             la, lb = abs(closest_lane_dist), abs(second_closest_lane_dist)
             return (b*la + a*lb)/(lb + la)
-            #jxy: what is it? If I drive zigzag along the lane boundary, it will regard my behavior as frequent jumping between two lane centerlines
+            #jxy: what is it? e.g. lane index is 2.4 means it is between 2 and 3, and it is nearer to center line 2.
+        
+        
 
     def locate_obstacle_in_lanes(self):
         if self._surrounding_object_list == None:
