@@ -126,7 +126,7 @@ class DrivingSpaceConstructor:
             count = count + 1
 
         #2. lane boundary line
-        self._lanes_markerarray = MarkerArray()
+        self._lanes_boundary_markerarray = MarkerArray()
 
         count = 0
         for lane in self._static_map.lanes:
@@ -135,23 +135,79 @@ class DrivingSpaceConstructor:
             tempmarker.header.stamp = rospy.Time.now()
             tempmarker.ns = "zzz/cognition"
             tempmarker.id = count
+
+            #each lane has the right boundary, only the lane with the smallest id has the left boundary
             tempmarker.type = Marker.LINE_STRIP
             tempmarker.action = Marker.ADD
             tempmarker.scale.x = 0.12
-            tempmarker.color.r = 1.0
-            tempmarker.color.g = 1.0
-            tempmarker.color.b = 1.0
-            tempmarker.color.a = 0.5
+            
+            print "\n\n\n"
+            print "lane id:"
+            print lane.index
+            if lane.right_boundaries[0].boundary_type == 1: #broken lane is set gray
+                print "right boundary is broken"
+                tempmarker.color.r = 0.6
+                tempmarker.color.g = 0.6
+                tempmarker.color.b = 0.5
+                tempmarker.color.a = 0.5
+            else:
+                print "right boundary is solid"
+                tempmarker.color.r = 1.0
+                tempmarker.color.g = 1.0
+                tempmarker.color.b = 1.0
+                tempmarker.color.a = 0.5
             tempmarker.lifetime = rospy.Duration(0.5)
 
-            for lanepoint in lane.central_path_points:
+            for lb in lane.right_boundaries:
                 p = Point()
-                p.x = lanepoint.position.x
-                p.y = lanepoint.position.y
-                p.z = lanepoint.position.z
+                p.x = lb.boundary_point.position.x
+                p.y = lb.boundary_point.position.y
+                p.z = lb.boundary_point.position.z
                 tempmarker.points.append(p)
-            self._lanes_markerarray.markers.append(tempmarker)
+            self._lanes_boundary_markerarray.markers.append(tempmarker)
             count = count + 1
+
+            #biggest id: draw left lane
+
+            #print "lane.index:"
+            #print lane.index
+            #print "biggest_id:"
+            #print biggest_id
+            if lane.index == biggest_id:
+            
+                print "draw left lane boundary for the biggest id"
+                tempmarker = Marker() #jxy: must be put inside since it is python
+                tempmarker.header.frame_id = "map"
+                tempmarker.header.stamp = rospy.Time.now()
+                tempmarker.ns = "zzz/cognition"
+                tempmarker.id = count
+
+                #each lane has the right boundary, only the lane with the biggest id has the left boundary
+                tempmarker.type = Marker.LINE_STRIP
+                tempmarker.action = Marker.ADD
+                tempmarker.scale.x = 0.12
+                if lane.left_boundaries[0].boundary_type == 1: #broken lane is set gray
+                    print "left boundary is broken"
+                    tempmarker.color.r = 0.6
+                    tempmarker.color.g = 0.6
+                    tempmarker.color.b = 0.6
+                    tempmarker.color.a = 0.5
+                else:
+                    print "left boundary is solid"
+                    tempmarker.color.r = 1.0
+                    tempmarker.color.g = 1.0
+                    tempmarker.color.b = 1.0
+                    tempmarker.color.a = 0.5
+                tempmarker.lifetime = rospy.Duration(0.5)
+
+                for lb in lane.left_boundaries:
+                    p = Point()
+                    p.x = lb.boundary_point.position.x
+                    p.y = lb.boundary_point.position.y
+                    p.z = lb.boundary_point.position.z
+                    tempmarker.points.append(p)
+                self._lanes_boundary_markerarray.markers.append(tempmarker)
+                count = count + 1
 
         #3. obstacle
         self._obstacles_markerarray = MarkerArray()
