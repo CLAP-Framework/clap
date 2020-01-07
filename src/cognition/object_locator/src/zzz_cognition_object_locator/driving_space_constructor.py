@@ -141,17 +141,12 @@ class DrivingSpaceConstructor:
             tempmarker.action = Marker.ADD
             tempmarker.scale.x = 0.12
             
-            print "\n\n\n"
-            print "lane id:"
-            print lane.index
             if lane.right_boundaries[0].boundary_type == 1: #broken lane is set gray
-                print "right boundary is broken"
                 tempmarker.color.r = 0.6
                 tempmarker.color.g = 0.6
                 tempmarker.color.b = 0.5
                 tempmarker.color.a = 0.5
             else:
-                print "right boundary is solid"
                 tempmarker.color.r = 1.0
                 tempmarker.color.g = 1.0
                 tempmarker.color.b = 1.0
@@ -168,11 +163,6 @@ class DrivingSpaceConstructor:
             count = count + 1
 
             #biggest id: draw left lane
-
-            #print "lane.index:"
-            #print lane.index
-            #print "biggest_id:"
-            #print biggest_id
             if lane.index == biggest_id:
             
                 print "draw left lane boundary for the biggest id"
@@ -187,13 +177,11 @@ class DrivingSpaceConstructor:
                 tempmarker.action = Marker.ADD
                 tempmarker.scale.x = 0.12
                 if lane.left_boundaries[0].boundary_type == 1: #broken lane is set gray
-                    print "left boundary is broken"
                     tempmarker.color.r = 0.6
                     tempmarker.color.g = 0.6
                     tempmarker.color.b = 0.6
                     tempmarker.color.a = 0.5
                 else:
-                    print "left boundary is solid"
                     tempmarker.color.r = 1.0
                     tempmarker.color.g = 1.0
                     tempmarker.color.b = 1.0

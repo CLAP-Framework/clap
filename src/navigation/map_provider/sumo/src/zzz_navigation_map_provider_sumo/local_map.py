@@ -218,6 +218,8 @@ class LocalMap(object):
             # Calculate mileage
             if last_s is None:
                 point.s = 0
+                point.tangent = 3.1415927/2 - math.atan2((lane.getShape()[1][1]-y), (lane.getShape()[1][0]-x))
+                # the tangent of the first point can be calculated with the second point
             else:
                 point.s = last_s + math.sqrt((x-last_x)*(x-last_x) + (y-last_y)*(y-last_y))
                 point.tangent = 3.1415927/2 - math.atan2((y-last_y), (x-last_x))
@@ -243,19 +245,23 @@ class LocalMap(object):
 
             count = count + 1
 
-            if (flag_straight == 0 and count % 3 == 1) or count % 10 == 1:
+            if (flag_straight == 0 and count % 3 == 1) or count % 10 == 1 or count == len(lane.getShape()):
                 # too slow... cost about 7s, so divide by 10, but distance becomes 10 times (5m). If direction changes, reduce the gap.
+                # we start to know the direction at point 2. TODO: actually the direction at point 1 can be gained by considering the next point.
                 rospy.loginfo("location x:%f y:%f", x, y)
+
                 location = carla.Location()
                 location.x = x
                 location.y = y
                 waypoint = self._world.get_map().get_waypoint(location)
 
-                angle = 3.1415927/2 - point.tangent
+                angle = 3.1415927/2 - last_tangent
                 left_bound.boundary_point.s = waypoint.s
                 left_bound.boundary_point.tangent = point.tangent # simplified, theoretically it should be the lane boundary direction
                 left_bound.boundary_point.position.x = x + waypoint.lane_width/2.0 * math.cos(angle + 3.1415927/2) # notice that the lane width is not constant, it can vary with s
                 left_bound.boundary_point.position.y = y + waypoint.lane_width/2.0 * math.sin(angle + 3.1415927/2)
+
+                rospy.loginfo("lane width %f at count %d: \n\n", waypoint.lane_width, count)
                 
                 if str(waypoint.left_lane_marking.type) == 'Broken' or str(waypoint.left_lane_marking.type) == 'BrokenBroken':
                     left_bound.boundary_type = 1
@@ -279,12 +285,6 @@ class LocalMap(object):
                     right_bound.boundary_type = 6
                 else:
                     right_bound.boundary_type = 0
-                
-                #left_bound.boundary_type = 
-                print "left marker type:"
-                print left_bound.boundary_type
-                print waypoint.left_lane_marking.type
-                print "\n\n"
                 
                 lane_wrapped.left_boundaries.append(left_bound)
                 lane_wrapped.right_boundaries.append(right_bound)
