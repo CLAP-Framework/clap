@@ -127,8 +127,10 @@ class MPCTrajectory(object):
         q=matrix(f)
         G=matrix(A)
         h=matrix(b)
-
+        solve_s=time.time()
         sv=solvers.qp(P,q,G,h)
+        solve_end=time.time()
+        print("solve time is ", (solve_end-solve_s))
         print(sv['status'])
 
         if (sv['status']=="optimal"):

@@ -423,7 +423,7 @@ if __name__ == "__main__":
     ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
 
     # Generate surrounding vehicles
-    generate_traffic(carla_world ,1)  #0 for fix point, 1 for random
+    # generate_traffic(carla_world ,1)  #0 for fix point, 1 for random
 
     # Generate pedestrians
     # generate_pedestrians(carla_world,carla_client,0)
