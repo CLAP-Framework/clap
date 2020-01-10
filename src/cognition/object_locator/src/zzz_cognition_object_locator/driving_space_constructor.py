@@ -37,6 +37,8 @@ class DrivingSpaceConstructor:
         self._ego_vehicle_distance_to_lane_head = [] # distance from vehicle to lane start
         self._ego_vehicle_distance_to_lane_tail = [] # distance from vehicle to lane end
 
+        self._help_flag = 0
+
     @property
     def driving_space(self):
         return self._driving_space
@@ -96,6 +98,10 @@ class DrivingSpaceConstructor:
             self.locate_obstacle_in_lanes()
             self.locate_stop_sign_in_lanes()
             self.locate_speed_limit_in_lanes()
+
+        rospy.loginfo("after locating: \n\n")
+        for i in range(len(self._surrounding_object_list)):
+            rospy.loginfo("after locating: obs[%d].lane_index=%f", i, self._surrounding_object_list[i].lane_index)
 
         #visualization
         #1. lanes
@@ -268,7 +274,8 @@ class DrivingSpaceConstructor:
                     tempmarker.color.g = 0.0
                     tempmarker.color.b = 1.0
                     tempmarker.color.a = 0.5
-                    tempmarker.text = "lane_num: " + str(len(self._static_map.lanes)) + "lane_index: " + str(obs.lane_index) + "\n lane_dist_right_t: " + str(obs.lane_dist_right_t) + "\n lane_dist_left_t: " + str(obs.lane_dist_left_t)
+                    tempmarker.text = "help flag: " + str(self._help_flag) + "\n in junction: " + str(self._static_map.in_junction) + "\n lane_num: " + \
+                        str(len(self._static_map.lanes)) + " lane_index: " + str(obs.lane_index) + "\n lane_dist_right_t: " + str(obs.lane_dist_right_t) + "\n lane_dist_left_t: " + str(obs.lane_dist_left_t)
                     tempmarker.lifetime = rospy.Duration(0.5)
 
                     self._obstacles_markerarray.markers.append(tempmarker)
@@ -489,7 +496,7 @@ class DrivingSpaceConstructor:
             rospy.loginfo("dist to left: %f, dist to right: %f", lane_dist_left_t, lane_dist_right_t)
             if np.min(dist_left_list) * np.max(dist_right_list) < 0:
                 rospy.loginfo("the object is between the boundaries of lane %d\n", closest_lane)
-                rospy.loginfo("length x: %f, length_y: %f\n\n\n\n\n\n\n", dimension.length_x, dimension.length_y)
+                rospy.loginfo("length x: %f, length_y: %f", dimension.length_x, dimension.length_y)
 
             else:
                 rospy.loginfo("the object is out of the road")
@@ -539,12 +546,14 @@ class DrivingSpaceConstructor:
     def locate_obstacle_in_lanes(self):
         if self._surrounding_object_list == None:
             return
-        for obj in self._surrounding_object_list:
+        for i in range(len(self._surrounding_object_list)):
             if len(self._static_map.lanes) != 0:
-                obj.lane_index, obj.lane_dist_left_t, obj.lane_dist_right_t, obj.lane_anglediff, obj.lane_dist_s = self.locate_object_in_lane(obj.state, obj.dimension)
+                self._surrounding_object_list[i].lane_index, self._surrounding_object_list[i].lane_dist_left_t, self._surrounding_object_list[i].lane_dist_right_t, \
+                    self._surrounding_object_list[i].lane_anglediff, self._surrounding_object_list[i].lane_dist_s = self.locate_object_in_lane(self._surrounding_object_list[i].state, self._surrounding_object_list[i].dimension)
             else:
-                obj.lane_index = -1
-        obj.lane_index = -1
+                self._surrounding_object_list[i].lane_index = -1
+            self._surrounding_object_list[i].lane_index = -2
+            rospy.loginfo("before locating: obj[%d].lane_index=%f", i, self._surrounding_object_list[i].lane_index)
 
     def locate_ego_vehicle_in_lanes(self, lane_end_dist_thres=2, lane_dist_thres=5):
         if self._static_map_lane_path_array == None: # TODO: This should not happen 
