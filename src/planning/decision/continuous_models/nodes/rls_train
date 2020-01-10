@@ -24,13 +24,12 @@ class RLSNode(object):
             hz = 1.33,
         )
         self._rate = rospy.Rate(params.hz)
-
         model_trajectory = RLSPlanner()
         self._decision_instance = MainDecision(path_decision=model_trajectory, speed_decision=model_trajectory, Planning_type = 2)
 
         # ROS messages
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
-        # self._collision_subscriber = rospy.Subscriber(params.collision_topic, CarlaCollisionEvent, self.collision_callback)
+        self._collision_subscriber = rospy.Subscriber("/carla/ego_vehicle/collision", CarlaCollisionEvent, self.collision_callback)
         self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
         self._rviz_decision_trajectory_publisher = rospy.Publisher(params.RVIZ_decision_trajectory_topic, Path, queue_size=1)
 
@@ -51,25 +50,8 @@ class RLSNode(object):
             self._rate.sleep()
 
 
-    def dynamic_map_callback(self, msg, decision_dt = 0.75):
-        # TODO: decision frequency
-        # current_time = rospy.Time.now().to_sec()
-        # if current_time - self._last_decision_time < decision_dt:
-        #     return
-        # self._last_decision_time = current_time
-        
-        # rospy.logdebug("Current_time: %f",self._last_decision_time)
-        # publish_msg = self._decision_instance.update_trajectory()
-        # rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
-        #     len(publish_msg.trajectory.poses), publish_msg.desired_speed)
-
-        # self._decision_trajectory_publisher.publish(publish_msg)
-        pass
-    
     def collision_callback(self, msg):
-        # collision_id = msg.other_actor_id
-        self._decision_instance.lateral_model_instance.collision_signal = True
-        self._decision_instance.lateral_model_instance.collision_times += 1
+        self._decision_instance._path_model_instance._collision_signal = True
 
 if __name__ == "__main__":
 

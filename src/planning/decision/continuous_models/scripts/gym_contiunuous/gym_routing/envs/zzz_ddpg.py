@@ -81,6 +81,7 @@ class ZZZCarlaEnv(gym.Env):
             self.sock_conn.sendall(msgpack.packb(action))
             # wait next state
             received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
+            print("-------------received msg in step")
             self.state = received_msg[0:16]
             collision = received_msg[16]
             leave_current_mmap = received_msg[17]
@@ -101,6 +102,7 @@ class ZZZCarlaEnv(gym.Env):
         reward = 0#10 - (abs(action[0] + 15 - RLpointx) + abs(action[1] - RLpointy))
 
         if collision:
+            print("+++++++++++++++++++++ received collision")
             reward = -10
         
         # judge if finish
@@ -120,22 +122,37 @@ class ZZZCarlaEnv(gym.Env):
         # receive state
         # if the received information meets requirements
         while True:
+
             try:
+                action = [(2333,2333)]
+                print("-------------",type(action),action)
+
+                self.sock_conn.sendall(msgpack.packb(action))
+                print("-------------try received msg in reset")
+
                 received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
+                print("-------------received msg in reset")
+
                 self.state = received_msg[0:16]
                 collision = received_msg[16]
                 leave_current_mmap = received_msg[17]
                 RLpointx = received_msg[18]
                 RLpointy = received_msg[19]
+                self.rule_based_action = [(RLpointx,RLpointy)]
+
+                return np.array(self.state) 
+
                 # if not collision and not leave_current_mmap:
-                #     break
-            except ValueError:
+            except:
+                print("------------- not received msg in reset")
                 collision = 0
                 leave_current_mmap = 0
                 RLpointx = 5
                 RLpointy = 0
+                self.rule_based_action = [(RLpointx,RLpointy)]
 
-        self.rule_based_action = [(RLpointx,RLpointy)]
+                return np.array(self.state) 
+
     
         return np.array(self.state) 
 

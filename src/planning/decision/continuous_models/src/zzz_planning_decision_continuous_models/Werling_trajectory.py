@@ -22,13 +22,13 @@ MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 2.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 2.0  # maximum curvature [1/m]
 MAX_ROAD_WIDTH = 5.0  # maximum road width [m] # related to RL action space
-D_ROAD_W = 1.0  # road width sampling length [m]
+D_ROAD_W = 5.0  # road width sampling length [m]
 DT = 0.15  # time tick [s]
 MAXT = 5.0  # max prediction time [m]
 MINT = 4.0  # min prediction time [m]
-TARGET_SPEED = 30.0 / 3.6  # target speed [m/s]
+TARGET_SPEED = 20.0 / 3.6  # target speed [m/s]
 D_T_S = 10.0 / 3.6  # target speed sampling length [m/s]
-N_S_SAMPLE = 2  # sampling number of target speed
+N_S_SAMPLE = 1  # sampling number of target speed
 ROBOT_RADIUS = 3.5  # robot radius [m]
 
 # Cost weights
@@ -71,16 +71,14 @@ class Werling(object):
 
         self.last_trajectory_array = []
         self.last_trajectory = []
+        self.last_trajectory_array_rule = []
+        self.last_trajectory_rule = []
     
     def update_dynamic_map(self, dynamic_map):
         self.dynamic_map = dynamic_map
 
-    def trajectory_update(self, dynamic_map):
-        print(__file__ + " start!!")
-        if dynamic_map.model == 1:
-            self.last_trajectory_array = []
-            self.last_trajectory = []
- 
+    def trajectory_update(self, dynamic_map, closest_obs):
+        
         reference_path_from_map = dynamic_map.jmap.reference_path.map_lane.central_path_points
         
         ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
@@ -89,93 +87,85 @@ class Werling(object):
 
         Frenetrefx = ref_path[:,0]
         Frenetrefy = ref_path[:,1]
-        
+        now00 = rospy.get_rostime()
         # obstacle lists
         ob = []
-        if dynamic_map.jmap.obstacles is not None:
-            for obs in dynamic_map.jmap.obstacles:
-                if abs(obs.state.pose.pose.position.x - dynamic_map.ego_state.pose.pose.position.x) < 50 and abs(obs.state.pose.pose.position.y - dynamic_map.ego_state.pose.pose.position.y) < 50:
-                    obstacle = [obs.state.pose.pose.position.x , obs.state.pose.pose.position.y , obs.state.twist.twist.linear.x , obs.state.twist.twist.linear.y]
-                    ob.append(obstacle)
+        # if dynamic_map.jmap.obstacles is not None:
+        #     for obs in dynamic_map.jmap.obstacles:
+        #         if abs(obs.state.pose.pose.position.x - dynamic_map.ego_state.pose.pose.position.x) < 50 and abs(obs.state.pose.pose.position.y - dynamic_map.ego_state.pose.pose.position.y) < 50:
+        #             obstacle = [obs.state.pose.pose.position.x , obs.state.pose.pose.position.y , obs.state.twist.twist.linear.x , obs.state.twist.twist.linear.y]
+        #             ob.append(obstacle)
+        for obs in closest_obs:
+            ob.append(obs)
         ob = np.array(ob)
 
         tx, ty, tyaw, tc, csp = generate_target_course(Frenetrefx,Frenetrefy)
 
+        now0 = rospy.get_rostime()
+        print("-----------------------------rule-based time consume inside111",now0.to_sec() - now00.to_sec())
         # initial state
-        if len(self.last_trajectory_array) > 5 and abs(dynamic_map.ego_state.pose.pose.position.x - self.last_trajectory_array[0][0]) < 20 and abs(dynamic_map.ego_state.pose.pose.position.y - self.last_trajectory_array[0][1]) < 20:
+        if len(self.last_trajectory_array_rule) > 5:
             # find closest point on the last trajectory
             mindist = float("inf")
-            for t in range(len(self.last_trajectory.t)):
-                pointdist = (self.last_trajectory.x[t] - dynamic_map.ego_state.pose.pose.position.x) ** 2 + (self.last_trajectory.y[t] - dynamic_map.ego_state.pose.pose.position.y) ** 2
-                # print("++++++++++++++++++++++++++++++++pointdist=",pointdist)
+            for t in range(len(self.last_trajectory_rule.t)):
+                pointdist = (self.last_trajectory_rule.x[t] - dynamic_map.ego_state.pose.pose.position.x) ** 2 + (self.last_trajectory_rule.y[t] - dynamic_map.ego_state.pose.pose.position.y) ** 2
                 if mindist >= pointdist:
                     mindist = pointdist
                     bestpoint = t
-            s0 = self.last_trajectory.s[bestpoint]
-            c_d = self.last_trajectory.d[bestpoint]
-            c_d_d = self.last_trajectory.d_d[bestpoint]
-            c_d_dd = self.last_trajectory.d_dd[bestpoint]
-            c_speed = self.last_trajectory.s_d[bestpoint]
+            s0 = self.last_trajectory_rule.s[bestpoint]
+            c_d = self.last_trajectory_rule.d[bestpoint]
+            c_d_d = self.last_trajectory_rule.d_d[bestpoint]
+            c_d_dd = self.last_trajectory_rule.d_dd[bestpoint]
+            c_speed = self.last_trajectory_rule.s_d[bestpoint]
         else:
             ego_state = dynamic_map.ego_state
             c_speed = get_speed(ego_state)       # current speed [m/s]
             ffstate = get_frenet_state(dynamic_map.ego_state, ref_path, ref_path_tangets)
-            c_d = - ffstate.d #-ffstate.d  # current lateral position [m]
-
-            # if -ffstate.d * ffstate.vd > 0:
-            #     c_d_d = 0
-            # else:
-            #     c_d_d = ffstate.vd  # current lateral speed [m/s]
-            c_d_d = ffstate.vd
-            c_d_dd = 0 # ffstate.ad  # current latral acceleration [m/s]
+            c_d = - ffstate.d  # current lateral position [m]
+            c_d_d = ffstate.vd  # current lateral speed [m/s]
+            c_d_dd = 0   # current latral acceleration [m/s]
             s0 = ffstate.s #+ c_speed * 0.5      # current course position
 
+        now1 = rospy.get_rostime()
+        print("-----------------------------rule-based time consume inside111",now1.to_sec() - now0.to_sec())
+
         generated_trajectory = frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
+        now2 = rospy.get_rostime()
+        print("-----------------------------rule-based time consume inside222",now2.to_sec() - now1.to_sec())
 
 
         if generated_trajectory is not None:
-            if len(self.last_trajectory_array) < 5 or abs(dynamic_map.ego_state.pose.pose.position.x - self.last_trajectory_array[0][0])>1.5 or abs(dynamic_map.ego_state.pose.pose.position.y - self.last_trajectory_array[0][1])>1.5:
-                desired_speed = generated_trajectory.s_d[-1] 
-                trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
-                trajectory_array = dense_polyline2d(trajectory_array_ori,1)
-                self.last_trajectory_array = trajectory_array
-                self.last_trajectory = generated_trajectory
+            desired_speed = generated_trajectory.s_d[-1] 
+            trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
+            trajectory_array = dense_polyline2d(trajectory_array_ori,1)
+            self.last_trajectory_array_rule = trajectory_array
+            self.last_trajectory_rule = generated_trajectory
 
-                print("111111111111111111111111111")
-
-                # for pathstate in generated_trajectory:
-                for s in generated_trajectory.s:
-                    print("+++++++++++++++++++++++++++++++++++++pathstate.s",s)
-            else :
-                trajectory_array = self.last_trajectory_array
-                generated_trajectory = self.last_trajectory
-                desired_speed = generated_trajectory.s_d[-1] 
-                print("222222222222222222222222222")
-        elif len(self.last_trajectory_array) > 5 and c_speed > 1:
-            trajectory_array = self.last_trajectory_array
-            generated_trajectory = self.last_trajectory
-            desired_speed =  generated_trajectory.s_d[-1] 
-            print("252525252525252525252525")
-        # if generated_trajectory is not None:
-        #     desired_speed = generated_trajectory.s_d[5] # TODO: Better speed design
-        #     trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
-        #     trajectory_array = dense_polyline2d(trajectory_array_ori,1)
-        #     # self.last_trajectory_array = trajectory_array
-        #     print("111111111111111111111111111")
+            print("111111111111111111111111111")
+            print("111111111111111111111111111")
+            print("111111111111111111111111111")
+            print("111111111111111111111111111")
+            print("111111111111111111111111111")
+            print("111111111111111111111111111")
+            
+            # for s in generated_trajectory.s:
+                # print("+++++++++++++++++++++++++++++++++++++pathstate.s",s)
 
         else:
             trajectory_array =  ref_path
             desired_speed = 3
             print("3333333333333333333333333333")
-
+            print("3333333333333333333333333333")
+            print("3333333333333333333333333333")
+            print("3333333333333333333333333333")
+            print("3333333333333333333333333333")
+            print("3333333333333333333333333333")
+        now3 = rospy.get_rostime()
+        print("-----------------------------rule-based time consume inside333",now3.to_sec() - now2.to_sec())
         return trajectory_array, desired_speed, generated_trajectory
 
 
     def trajectory_update_withRL(self, dynamic_map, RLS_action):
-        print(__file__ + " start!!")
-        if dynamic_map.model == 1:
-            self.last_trajectory_array = []
-            self.last_trajectory = []
  
         reference_path_from_map = dynamic_map.jmap.reference_path.map_lane.central_path_points
 
@@ -183,17 +173,11 @@ class Werling(object):
         ref_path = dense_polyline2d(ref_path_ori, 1)
         ref_path_tangets = np.zeros(len(ref_path))
 
-
         Frenetrefx = ref_path[:,0]
         Frenetrefy = ref_path[:,1]
         
         # obstacle lists
         ob = []
-        if dynamic_map.jmap.obstacles is not None:
-            for obs in dynamic_map.jmap.obstacles:
-                if abs(obs.state.pose.pose.position.x - dynamic_map.ego_state.pose.pose.position.x) < 50 and abs(obs.state.pose.pose.position.y - dynamic_map.ego_state.pose.pose.position.y) < 50:
-                    obstacle = [obs.state.pose.pose.position.x , obs.state.pose.pose.position.y , obs.state.twist.twist.linear.x , obs.state.twist.twist.linear.y]
-                    ob.append(obstacle)
         ob = np.array(ob)
 
         tx, ty, tyaw, tc, csp = generate_target_course(Frenetrefx,Frenetrefy)
@@ -216,45 +200,74 @@ class Werling(object):
             ego_state = dynamic_map.ego_state
             c_speed = get_speed(ego_state)       # current speed [m/s]
             ffstate = get_frenet_state(dynamic_map.ego_state, ref_path, ref_path_tangets)
-            c_d = - ffstate.d #-ffstate.d  # current lateral position [m]
+            c_d = - ffstate.d  # current lateral position [m]
+            print("-------------------------- ffstate.d", -ffstate.d)
+            print("-------------------------- ffstate.d", -ffstate.d)
+            print("-------------------------- ffstate.vd ", ffstate.vd)
+            print("-------------------------- ffstate.vd ", ffstate.vd)
+            print("-------------------------- ffstate.s", ffstate.s)
+            print("-------------------------- ffstate.s", ffstate.s)
 
-            # if -ffstate.d * ffstate.vd > 0:
-            #     c_d_d = 0
-            # else:
-            #     c_d_d = ffstate.vd  # current lateral speed [m/s]
-            c_d_d = ffstate.vd
-            c_d_dd = 0 # ffstate.ad  # current latral acceleration [m/s]
+            c_d_d = ffstate.vd  # current lateral speed [m/s]
+            c_d_dd = 0   # current latral acceleration [m/s]
             s0 = ffstate.s #+ c_speed * 0.5      # current course position
 
         generated_trajectory = frenet_optimal_planning_withRL(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob, RLS_action)
 
+        # if generated_trajectory is not None:
+        #     if len(self.last_trajectory_array) < 5 or abs(dynamic_map.ego_state.pose.pose.position.x - self.last_trajectory_array[0][0])>1.5 or abs(dynamic_map.ego_state.pose.pose.position.y - self.last_trajectory_array[0][1])>1.5:
+        #         desired_speed = generated_trajectory.s_d[-1] 
+        #         trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
+        #         trajectory_array = dense_polyline2d(trajectory_array_ori,1)
+        #         self.last_trajectory_array = trajectory_array
+        #         self.last_trajectory = generated_trajectory
+
+        #         print("111111111111111111111111111")
+
+        #         # for pathstate in generated_trajectory:
+        #         for s in generated_trajectory.s:
+        #             print("+++++++++++++++++++++++++++++++++++++pathstate.s",s)
+        #     else :
+        #         trajectory_array = self.last_trajectory_array
+        #         generated_trajectory = self.last_trajectory
+        #         desired_speed = generated_trajectory.s_d[-1] 
+        #         print("222222222222222222222222222")
+        # elif len(self.last_trajectory_array) > 5 and c_speed > 1:
+        #     trajectory_array = self.last_trajectory_array
+        #     generated_trajectory = self.last_trajectory
+        #     desired_speed =  generated_trajectory.s_d[-1] 
+        #     print("252525252525252525252525")
+
+        # else:
+        #     trajectory_array =  ref_path
+        #     desired_speed = 3
+        #     print("3333333333333333333333333333")
         if generated_trajectory is not None:
-            if len(self.last_trajectory_array) < 5 or abs(dynamic_map.ego_state.pose.pose.position.x - self.last_trajectory_array[0][0])>1.5 or abs(dynamic_map.ego_state.pose.pose.position.y - self.last_trajectory_array[0][1])>1.5:
-                desired_speed = generated_trajectory.s_d[-1] 
-                trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
-                trajectory_array = dense_polyline2d(trajectory_array_ori,1)
-                self.last_trajectory_array = trajectory_array
-                self.last_trajectory = generated_trajectory
+            desired_speed = generated_trajectory.s_d[-1] 
+            trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
+            trajectory_array = dense_polyline2d(trajectory_array_ori,1)
+            self.last_trajectory_array = trajectory_array
+            self.last_trajectory = generated_trajectory
 
-                print("111111111111111111111111111")
-
-                # for pathstate in generated_trajectory:
-                for s in generated_trajectory.s:
-                    print("+++++++++++++++++++++++++++++++++++++pathstate.s",s)
-            else :
-                trajectory_array = self.last_trajectory_array
-                generated_trajectory = self.last_trajectory
-                desired_speed = generated_trajectory.s_d[-1] 
-                print("222222222222222222222222222")
-        elif len(self.last_trajectory_array) > 5 and c_speed > 1:
-            trajectory_array = self.last_trajectory_array
-            generated_trajectory = self.last_trajectory
-            desired_speed =  generated_trajectory.s_d[-1] 
-            print("252525252525252525252525")
+            print("111111111111111111111111111")
+            print("111111111111111111111111111")
+            print("111111111111111111111111111")
+            print("111111111111111111111111111")
+            print("111111111111111111111111111")
+            print("111111111111111111111111111")
+            
+            # for s in generated_trajectory.s:
+                # print("+++++++++++++++++++++++++++++++++++++pathstate.s",s)
 
         else:
             trajectory_array =  ref_path
             desired_speed = 3
+            generated_trajectory = []
+            print("3333333333333333333333333333")
+            print("3333333333333333333333333333")
+            print("3333333333333333333333333333")
+            print("3333333333333333333333333333")
+            print("3333333333333333333333333333")
             print("3333333333333333333333333333")
 
         return trajectory_array, desired_speed, generated_trajectory
@@ -267,10 +280,17 @@ class Werling(object):
         return np.array(point_list)
 
 def frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob):
+    now00 = rospy.get_rostime()
 
     fplist = calc_frenet_paths(c_speed, c_d, c_d_d, c_d_dd, s0)
+    now0 = rospy.get_rostime()
+    print("-----------------------------frenet time consume inside111",now0.to_sec() - now00.to_sec())
     fplist = calc_global_paths(fplist, csp)
+    now1 = rospy.get_rostime()
+    print("-----------------------------frenet time consume inside111",now1.to_sec() - now0.to_sec())
     fplist = check_paths(fplist, ob)
+    now2 = rospy.get_rostime()
+    print("-----------------------------frenet time consume inside111",now2.to_sec() - now1.to_sec())
     # find minimum cost path
     mincost = float("inf")
     bestpath = None
@@ -282,9 +302,8 @@ def frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob):
 
 
 def frenet_optimal_planning_withRL(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob, RLS_action):
-
+    
     fplist = calc_frenet_paths(c_speed, c_d, c_d_d, c_d_dd, s0)
-
     
     # find nearest path
     mindist = float("inf")

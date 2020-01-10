@@ -18,6 +18,8 @@ class MainDecision(object):
         self._path_model_instance = path_decision
         self._speed_model_instance = speed_decision
         self.Planning_type = Planning_type
+        self.solve = False
+
         
     def receive_dynamic_map(self, dynamic_map):
         self._dynamic_map_buffer = dynamic_map
@@ -31,14 +33,8 @@ class MainDecision(object):
             return None
         dynamic_map = self._dynamic_map_buffer
 
-        # Should use lane model
-        if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
-            return None
 
         reference_path_from_map = dynamic_map.jmap.reference_path
-
-        trajectory = reference_path_from_map
-        desired_speed = 0
 
         if self.Planning_type == 1:
             # Only follow path
@@ -60,12 +56,24 @@ class MainDecision(object):
 
         elif self.Planning_type == 2:
             # Keep replanning
-            trajectory, desired_speed = self._path_model_instance.trajectory_update(dynamic_map)
-            msg = DecisionTrajectory()
-            msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory)
-            msg.desired_speed = desired_speed
+            
+            # Should use lane model
+            if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
+                if self.solve == False:
+                    self._path_model_instance.something_in_lane()
+                    self.solve = True
+                return None
+            elif dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
+                self.solve = False
 
-            return msg
+            trajectory, desired_speed = self._path_model_instance.trajectory_update(dynamic_map)
+            if trajectory is not None:
+                msg = DecisionTrajectory()
+                msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory)
+                msg.desired_speed = desired_speed
+                return msg
+            else:
+                return None
 
         elif self.Planning_type == 3:
             # Replanning only when dynamic obstacles predict to collide with me

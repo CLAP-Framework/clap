@@ -41,70 +41,79 @@ class RLSPlanner(object):
     def speed_update(self, trajectory, dynamic_map):
         return 10   
 
-    def trajectory_update(self, dynamic_map):
+    def something_in_lane(self):
+        self._rule_based_trajectory_model_instance.last_trajectory_array = []
+        self._rule_based_trajectory_model_instance.last_trajectory = []
+        self._rule_based_trajectory_model_instance.last_trajectory_array_rule = []
+        self._rule_based_trajectory_model_instance.last_trajectory_rule = []
+        self._collision_signal = False
 
-        self._dynamic_map = dynamic_map
-        self._rule_based_trajectory_model_instance.update_dynamic_map(dynamic_map)
+        # send done to OPENAI
+        collision = False
+        leave_current_mmap = 1
+        sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        sent_RL_msg.append(collision)
+        sent_RL_msg.append(leave_current_mmap)
+        sent_RL_msg.append(5.0) # RL.point
+        sent_RL_msg.append(0.0)
+        # print("-----------------------------",sent_RL_msg)
+        self.sock.sendall(msgpack.packb(sent_RL_msg))
 
-        # Using Werling for rule-based trajectory planning in lanes
-        if dynamic_map.model == 1: # in lane
-            trajectory,desired_speed,generated_trajectory = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
-            # send done to OPENAI
-            collision = int(self._collision_signal)
-            self._collision_signal = False
-            leave_current_mmap = 1
-            sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-            sent_RL_msg.append(collision)
-            sent_RL_msg.append(leave_current_mmap)
-            sent_RL_msg.append(5.0) # RL.point
-            sent_RL_msg.append(0.0)
-            print("-----------------------------",sent_RL_msg)
-            self.sock.sendall(msgpack.packb(sent_RL_msg))
+        try:
             RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
+        except:
+            pass
 
-            return trajectory,desired_speed
+        return None
 
-        
-        elif dynamic_map.model == 0: # in junction
-            trajectory, desired_speed, generated_trajectory = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
-            delta_T = 0.75
-            RLpoint = self.get_RL_point_from_trajectory(generated_trajectory , delta_T)
+    def trajectory_update(self, dynamic_map):
+        now1 = rospy.get_rostime()
+        self._dynamic_map = dynamic_map
+        self._rule_based_trajectory_model_instance.update_dynamic_map(dynamic_map)        
+        #found closest obs
+        closest_obs = self.found_closest_obstacles(3, self._dynamic_map)
+        RL_state = self.wrap_state(closest_obs)
+        sent_RL_msg = RL_state
 
-            RL_state = self.wrap_state()
-            rospy.logdebug("sending state: ego_x:%.1f, ego_y:%.1f", RL_state[0],RL_state[1])
-            sent_RL_msg = RL_state
+        collision = int(self._collision_signal)
+        self._collision_signal = False
+        leave_current_mmap = 0
+        sent_RL_msg.append(collision)
+        sent_RL_msg.append(leave_current_mmap)
 
-            # Why always false here?
-            collision = int(self._collision_signal)
-            self._collision_signal = False
+        # for teaching
+        trajectory_rule, desired_speed_rule, generated_trajectory_rule = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map, closest_obs)
+        delta_T = 0.75
+        RLpoint = self.get_RL_point_from_trajectory(generated_trajectory_rule , delta_T)
+        sent_RL_msg.append(RLpoint.location.x)
+        sent_RL_msg.append(RLpoint.location.y)
+        # sent_RL_msg.append(5.0) # RL.point
+        # sent_RL_msg.append(0.0)
+        now2 = rospy.get_rostime()
+        print("-----------------------------rule-based time consume",now2.to_sec() - now1.to_sec())
+        print("-----------------------------",sent_RL_msg)
+        self.sock.sendall(msgpack.packb(sent_RL_msg))
 
-            leave_current_mmap = 0
-            sent_RL_msg.append(collision)
-            sent_RL_msg.append(leave_current_mmap)
-            sent_RL_msg.append(RLpoint.location.x)
-            sent_RL_msg.append(RLpoint.location.y)
-            print("-----------------------------",sent_RL_msg)
-            self.sock.sendall(msgpack.packb(sent_RL_msg))
+        try:
+            # received RL action and plan a RL trajectory
+            RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
+            rospy.logdebug("received action:%f, %f", RLS_action[0], RLS_action[1])
+            now3 = rospy.get_rostime()
+            print("-----------------------------socket time consume",now3.to_sec() - now2.to_sec())
+            RLS_action[0] = RLS_action[0] + 15.0
+            print("-+++++++++++++++++++++++++++++++++++++++++++befor-generated RL trajectory")
+            trajectory, desired_speed, generated_trajectory = self._rule_based_trajectory_model_instance.trajectory_update_withRL(dynamic_map, RLS_action)
+            print("-+++++++++++++++++++++++++++++++++++++++++++-generated RL trajectory")
+            now4 = rospy.get_rostime()
+            print("-----------------------------rl planning time consume",now4.to_sec() - now3.to_sec())
+            return trajectory, desired_speed 
 
-            try:
-                RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
-                rospy.logdebug("received action:%f, %f", RLS_action[0],RLS_action[1])
-                RLS_action[0] = RLS_action[0] + 15.0
-                print("-+++++++++++++++++++++++++++++++++++++++++++befor-generated RL trajectory")
-
-                trajectory, desired_speed, generated_trajectory= self._rule_based_trajectory_model_instance.trajectory_update_withRL(dynamic_map,RLS_action)
-                print("-+++++++++++++++++++++++++++++++++++++++++++-generated RL trajectory")
-
-                return trajectory, desired_speed 
-
-            except:
-                rospy.logerr("Continous RLS Model cannot receive an action")
-                return trajectory, desired_speed
-
-            # return trajectory, desired_speed
+        except:
+            rospy.logerr("Continous RLS Model cannot receive an action")
+            return [], 0
             
             
-    def wrap_state(self):
+    def wrap_state(self, closest_obs):
 
         # Set State space = 4+4*obs_num
 
@@ -122,36 +131,20 @@ class RLSPlanner(object):
         ffstate = get_frenet_state(self._dynamic_map.ego_state, ref_path, ref_path_tangets)
 
         state = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+      
+        state[0] = ffstate.s
+        state[1] = -ffstate.d
+        state[2] = ffstate.vs
+        state[3] = ffstate.vd
 
-        # ego_x = self._dynamic_map.ego_state.pose.pose.position.x
-        # ego_y = -self._dynamic_map.ego_state.pose.pose.position.y  #inverse of real y
-        # ego_vx = self._dynamic_map.ego_state.twist.twist.linear.x
-        # ego_vy = self._dynamic_map.ego_state.twist.twist.linear.y
-        # # print("__________________________________________egox",ego_x)
-        # # print("__________________________________________egoy",ego_y)
-
-        # ego_x,ego_y = self.transfer_to_intersection(ego_x,ego_y, self._dynamic_map)
-        # # print("__________________________________________transferegox",ego_x)
-        # # print("__________________________________________transferegoy",ego_y)
         
-        state[0] = ffstate.s#ego_x
-        state[1] = -ffstate.d#ego_y
-        state[2] = ffstate.vs#ego_vx
-        state[3] = ffstate.vd#ego_vy
-
-        closest_obs = self.found_closest_obstacles(3,self._dynamic_map)
         i = 0
-        for obs in closest_obs: # according to distance??
+        for obs in closest_obs: 
             if i < 3:               
-                # print("__________________________________________obs[0]",obs[0])
-                # print("__________________________________________obs[1]",obs[1])
-                # obsx,obsy = self.transfer_to_intersection(obs[0],-obs[1], self._dynamic_map)  #inverse of real y
-                # print("__________________________________________obsx",obsx)
-                # print("__________________________________________obsy",obsy)
-                state[(i+1)*4+0] = obs[5]#obsx
-                state[(i+1)*4+1] = obs[6]#obsy
-                state[(i+1)*4+2] = obs[7]#obs[2]
-                state[(i+1)*4+3] = obs[8]#obs[3]
+                state[(i+1)*4+0] = obs[5]
+                state[(i+1)*4+1] = obs[6]
+                state[(i+1)*4+2] = obs[7]
+                state[(i+1)*4+3] = obs[8]
 
                 i = i+1
             else:
@@ -184,13 +177,14 @@ class RLSPlanner(object):
             one_obs = (obs.state.pose.pose.position.x , obs.state.pose.pose.position.y , obs.state.twist.twist.linear.x , obs.state.twist.twist.linear.y , p4 , obs_ffstate.s , -obs_ffstate.d , obs_ffstate.vs , obs_ffstate.vd)
             # if obs.ffstate.s > 0.01:
             obs_tuples.append(one_obs)
+            print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++closestone_obs",one_obs[4])
+
         
-        sorted(obs_tuples, key=lambda obs: obs[4])   # sort by distance
+        sorted_obs = sorted(obs_tuples, key=lambda obs: obs[4])   # sort by distance
         i = 0
-        for obs in obs_tuples:
+        for obs in sorted_obs:
             if i < num:
                 closest_obs.append(obs)
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++closestobs",obs[4])
                 i = i + 1
             else:
                 break

@@ -123,7 +123,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
     if if_random == 1:
 
         #set_ramdom_vehicle_number
-        max_agents = 30
+        max_agents = 50
 
         actor_list = carla_world.get_actors()
         vehicle_list = actor_list.filter("*vehicle*")
@@ -468,6 +468,8 @@ if __name__ == "__main__":
     global collision_signal
     collision_signal = False
 
+
+
     rate = rospy.Rate(20)
     while not rospy.is_shutdown():
         # Generate surrounding vehicles
@@ -484,6 +486,7 @@ if __name__ == "__main__":
 
         # Restart ego vehicle
         if collision_signal:
+            rospy.sleep(2.)
             restart_ego_vehicle(carla_world)
         if stay_too_long(carla_world):
             remove_stop_traffic(carla_world)
