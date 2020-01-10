@@ -30,7 +30,6 @@ class DrivingSpaceConstructor:
         self._ego_vehicle_state = None
         self._traffic_light_detection = None
         self._obstacles_markerarray = None
-        self._lanes_boundary_markerarray = None
         
         self._lane_dist_thres = lane_dist_thres
 
@@ -59,12 +58,10 @@ class DrivingSpaceConstructor:
         assert type(object_list) == TrackingBoxArray
         if self._ego_vehicle_state != None:
             self._surrounding_object_list = convert_tracking_box(object_list, self._ego_vehicle_state)
-            #jxy: the converted objects are in the RoadObstacle() format
 
     def receive_ego_state(self, state):
         assert type(state) == RigidBodyStateStamped
         self._ego_vehicle_state = state
-        #TODO: ego state should also be converted. 
 
     def receive_traffic_light_detection(self, detection):
         assert type(detection) == DetectionBoxArray
@@ -98,7 +95,6 @@ class DrivingSpaceConstructor:
             self.locate_speed_limit_in_lanes()
 
         #visualization
-        #1. lanes
         self._lanes_markerarray = MarkerArray()
 
         biggest_id = 0 #TODO: better way to find the smallest id
@@ -209,10 +205,7 @@ class DrivingSpaceConstructor:
         count = 0
         if self._surrounding_object_list is not None:
             for obs in self._surrounding_object_list:
-                dist_to_ego = math.sqrt(math.pow((obs.state.pose.pose.position.x - self._ego_vehicle_state.state.pose.pose.position.x),2) 
-                    + math.pow((obs.state.pose.pose.position.y - self._ego_vehicle_state.state.pose.pose.position.y),2))
-                
-                if dist_to_ego < 50:
+                if math.sqrt(math.pow((obs.state.pose.pose.position.x - self._ego_vehicle_state.state.pose.pose.position.x),2) + math.pow((obs.state.pose.pose.position.y - self._ego_vehicle_state.state.pose.pose.position.y),2)) < 50:
                     tempmarker = Marker() #jxy: must be put inside since it is python
                     tempmarker.header.frame_id = "map"
                     tempmarker.header.stamp = rospy.Time.now()
@@ -224,61 +217,17 @@ class DrivingSpaceConstructor:
                     tempmarker.scale.x = obs.dimension.length_x
                     tempmarker.scale.y = obs.dimension.length_y
                     tempmarker.scale.z = obs.dimension.length_z
-                    if obs.lane_index == -1:
-                        tempmarker.color.r = 1.0
-                        tempmarker.color.g = 1.0
-                        tempmarker.color.b = 1.0
-                    elif obs.lane_dist_left_t == 0 or obs.lane_dist_right_t == 0:
-                        # those who is on the lane boundary, warn by yellow
-                        tempmarker.color.r = 1.0
-                        tempmarker.color.g = 1.0
-                        tempmarker.color.b = 0.0
-                    else:
-                        tempmarker.color.r = 1.0
-                        tempmarker.color.g = 0.0
-                        tempmarker.color.b = 1.0
-                    if self._static_map.in_junction:
-                        tempmarker.color.r = 1.0
-                        tempmarker.color.g = 0.0
-                        tempmarker.color.b = 1.0
-                    tempmarker.color.a = 0.5
-                    tempmarker.lifetime = rospy.Duration(0.5)
-
-                    self._obstacles_markerarray.markers.append(tempmarker)
-                    count = count + 1
-                    
-            for obs in self._surrounding_object_list:
-                dist_to_ego = math.sqrt(math.pow((obs.state.pose.pose.position.x - self._ego_vehicle_state.state.pose.pose.position.x),2) 
-                    + math.pow((obs.state.pose.pose.position.y - self._ego_vehicle_state.state.pose.pose.position.y),2))
-                
-                if dist_to_ego < 50:
-                    tempmarker = Marker() #jxy: must be put inside since it is python
-                    tempmarker.header.frame_id = "map"
-                    tempmarker.header.stamp = rospy.Time.now()
-                    tempmarker.ns = "zzz/cognition"
-                    tempmarker.id = count
-                    tempmarker.type = Marker.TEXT_VIEW_FACING
-                    tempmarker.action = Marker.ADD
-                    hahaha = obs.state.pose.pose.position.z + 1.0
-                    tempmarker.pose.position.x = obs.state.pose.pose.position.x
-                    tempmarker.pose.position.y = obs.state.pose.pose.position.y
-                    tempmarker.pose.position.z = hahaha
-                    tempmarker.scale.z = 0.6
                     tempmarker.color.r = 1.0
                     tempmarker.color.g = 0.0
                     tempmarker.color.b = 1.0
                     tempmarker.color.a = 0.5
-                    tempmarker.text = "lane_num: " + str(len(self._static_map.lanes)) + "lane_index: " + str(obs.lane_index) + "\n lane_dist_right_t: " + str(obs.lane_dist_right_t) + "\n lane_dist_left_t: " + str(obs.lane_dist_left_t)
                     tempmarker.lifetime = rospy.Duration(0.5)
 
                     self._obstacles_markerarray.markers.append(tempmarker)
                     count = count + 1
             
             for obs in self._surrounding_object_list:
-                dist_to_ego = math.sqrt(math.pow((obs.state.pose.pose.position.x - self._ego_vehicle_state.state.pose.pose.position.x),2) 
-                    + math.pow((obs.state.pose.pose.position.y - self._ego_vehicle_state.state.pose.pose.position.y),2))
-                
-                if dist_to_ego < 50:
+                if math.sqrt(math.pow((obs.state.pose.pose.position.x - self._ego_vehicle_state.state.pose.pose.position.x),2) + math.pow((obs.state.pose.pose.position.y - self._ego_vehicle_state.state.pose.pose.position.y),2)) < 50:
                     tempmarker = Marker() #jxy: must be put inside since it is python
                     tempmarker.header.frame_id = "map"
                     tempmarker.header.stamp = rospy.Time.now()
@@ -309,7 +258,7 @@ class DrivingSpaceConstructor:
                     self._obstacles_markerarray.markers.append(tempmarker)
                     count = count + 1
 
-        #4. ego vehicle visualization
+        #ego vehicle visualization
         self._ego_markerarray = MarkerArray()
 
         tempmarker = Marker()
@@ -322,7 +271,7 @@ class DrivingSpaceConstructor:
         tempmarker.pose = self._ego_vehicle_state.state.pose.pose
         tempmarker.scale.x = 4.0 #jxy: I don't know...
         tempmarker.scale.y = 2.0
-        tempmarker.scale.z = 1.8
+        tempmarker.scale.z = 1.0
         tempmarker.color.r = 1.0
         tempmarker.color.g = 0.0
         tempmarker.color.b = 0.0
@@ -376,33 +325,26 @@ class DrivingSpaceConstructor:
         tempmarker.points.append(endpoint)
 
         self._ego_markerarray.markers.append(tempmarker)
-
-        #5. traffic lights
-        self._traffic_lights_markerarray = MarkerArray()
-
-        #TODO: now no lights are in. I'll check it when I run the codes.
-        
-        #lights = self._traffic_light_detection.detections
-        #rospy.loginfo("lights num: %d\n\n", len(lights))
         
         rospy.logdebug("Updated driving space")
 
     # ========= For in lane =========
 
-    def locate_object_in_lane(self, object, dimension, dist_list=None):
+    def locate_object_in_lane(self, object_state, dist_list=None):
         '''
         Calculate (continuous) lane index for a object.
         Parameters: dist_list is the distance buffer. If not provided, it will be calculated
         '''
-        simplify_flag = 0
+
+        #jxy: See how important lane boundary is. If there are lane boundaries, the location process will be much easier.
 
         if not dist_list:
             dist_list = np.array([dist_from_point_to_polyline2d(
-                object.pose.pose.position.x,
-                object.pose.pose.position.y,
-                lane) for lane in self._static_map_lane_path_array]) # here lane is a python list of (x, y)
+                object_state.pose.pose.position.x,
+                object_state.pose.pose.position.y,
+                lane) for lane in self._static_map_lane_path_array])
         
-        # Check if there's only two lanes
+        # Check if there's only one lane
         if len(self._static_map.lanes) < 2:
             closest_lane = second_closest_lane = 0
         else:
@@ -411,129 +353,31 @@ class DrivingSpaceConstructor:
         # Signed distance from target to two closest lane
         closest_lane_dist, second_closest_lane_dist = dist_list[closest_lane, 0], dist_list[second_closest_lane, 0]
 
+        left_boundary_array = [(lbp.boundary_point.position.x, lbp.boundary_point.position.y) for lbp in lane.left_boundaries]
+        right_boundary_array = [(lbp.boundary_point.position.x, lbp.boundary_point.position.y) for lbp in lane.right_boundaries]
+
+        object.lane_dist_left_t = dist_from_point_to_polyline2d(object.state.pose.pose.position.x,
+            object.state.pose.pose.position.y, left_boundary_array)
+        object.lane_dist_right_t = dist_from_point_to_polyline2d(object.state.pose.pose.position.x,
+            object.state.pose.pose.position.y, right_boundary_array)
+        
+        ffstate = get_frenet_state(object.state, self._static_map_lane_path_array[])
+
         if abs(closest_lane_dist) > self._lane_dist_thres:
-            return -1, -99, -99, -99, -99 # TODO: return reasonable value
-
-        lane = self._static_map.lanes[closest_lane]
-        left_boundary_array = np.array([(lbp.boundary_point.position.x, lbp.boundary_point.position.y) for lbp in lane.left_boundaries])
-        right_boundary_array = np.array([(lbp.boundary_point.position.x, lbp.boundary_point.position.y) for lbp in lane.right_boundaries])
-
-        # Distance to lane considering the size of the object
-        x = object.pose.pose.orientation.x
-        y = object.pose.pose.orientation.y
-        z = object.pose.pose.orientation.z
-        w = object.pose.pose.orientation.w
-
-        rotation_mat = np.array([[1-2*y*y-2*z*z, 2*x*y+2*w*z, 2*x*z-2*w*y], [2*x*y-2*w*z, 1-2*x*x-2*z*z, 2*y*z+2*w*x], [2*x*z+2*w*y, 2*y*z-2*w*x, 1-2*x*x-2*y*y]])
-        rotation_mat_inverse = np.linalg.inv(rotation_mat) #those are the correct way to deal with quaternion
-
-        vector_x = np.array([dimension.length_x, 0, 0])
-        vector_y = np.array([0, dimension.length_y, 0])
-        dx = np.matmul(rotation_mat_inverse, vector_x)
-        dy = np.matmul(rotation_mat_inverse, vector_y)
-
-        #the four corners of the object, in bird view: left front is 0, counterclockwise.
-        #TODO: may consider 8 corners in the future
-        corner_list_x = np.zeros(4)
-        corner_list_y = np.zeros(4)
-        corner_list_x[0] = object.pose.pose.position.x + dx[0]/2.0 + dy[0]/2.0
-        corner_list_y[0] = object.pose.pose.position.y + dx[1]/2.0 + dy[1]/2.0
-        corner_list_x[1] = object.pose.pose.position.x - dx[0]/2.0 + dy[0]/2.0
-        corner_list_y[1] = object.pose.pose.position.y - dx[1]/2.0 + dy[1]/2.0
-        corner_list_x[2] = object.pose.pose.position.x - dx[0]/2.0 - dy[0]/2.0
-        corner_list_y[2] = object.pose.pose.position.y - dx[1]/2.0 - dy[1]/2.0
-        corner_list_x[3] = object.pose.pose.position.x + dx[0]/2.0 - dy[0]/2.0
-        corner_list_y[3] = object.pose.pose.position.y + dx[1]/2.0 - dy[1]/2.0
-
-        dist_left_list_all = np.array([dist_from_point_to_polyline2d(
-                corner_list_x[i],
-                corner_list_y[i],
-                left_boundary_array) for i in range(4)])
-        dist_right_list_all = np.array([dist_from_point_to_polyline2d(
-                corner_list_x[i],
-                corner_list_y[i],
-                right_boundary_array) for i in range(4)])
-
-        dist_left_list = dist_left_list_all[:, 0]
-        dist_right_list = dist_right_list_all[:, 0]
-
-        lane_dist_left_t = -99
-        lane_dist_right_t = -99
-
-        rospy.loginfo("dist to lane center line: %f", abs(closest_lane_dist))
-        rospy.loginfo("position x: %f, y: %f", object.pose.pose.position.x, object.pose.pose.position.y)
-        rospy.loginfo("dimension x: %f, y: %f", dimension.length_x, dimension.length_y)
-        '''
-        print dx
-        print dy
-        
-        print corner_list_x
-        print corner_list_y
-        print dist_left_list_all
-        print dist_right_list_all
-        '''
-        if np.min(dist_left_list) * np.max(dist_left_list) <= 0:
-            rospy.loginfo("the object is on the left boundary of lane %d\n", closest_lane)
-            lane_dist_left_t = 0
-        else:
-            lane_dist_left_t = np.sign(np.min(dist_left_list)) * np.min(np.abs(dist_left_list))
-            print lane_dist_left_t
-
-        if np.min(dist_right_list) * np.max(dist_right_list) <= 0:
-            rospy.loginfo("the object is on the right boundary of lane %d\n", closest_lane)
-            lane_dist_right_t = 0
-        else:
-            lane_dist_right_t = np.sign(np.min(dist_right_list)) * np.min(np.abs(dist_right_list))
-
-        if np.min(dist_left_list) * np.max(dist_left_list) > 0 and np.min(dist_right_list) * np.max(dist_right_list) > 0:
-            rospy.loginfo("dist to left: %f, dist to right: %f", lane_dist_left_t, lane_dist_right_t)
-            if np.min(dist_left_list) * np.max(dist_right_list) < 0:
-                rospy.loginfo("the object is between the boundaries of lane %d\n", closest_lane)
-                rospy.loginfo("length x: %f, length_y: %f\n\n\n\n\n\n\n", dimension.length_x, dimension.length_y)
-
-            else:
-                rospy.loginfo("the object is out of the road")
-                closest_lane = -1
-
-        #simplify: not considering the box size
-        if simplify_flag == 1:
-            lane_dist_left_t = dist_from_point_to_polyline2d(object.pose.pose.position.x, object.pose.pose.position.y,
-                    left_boundary_array)
-            lane_dist_right_t = dist_from_point_to_polyline2d(object.pose.pose.position.x, object.pose.pose.position.y,
-                    right_boundary_array)
-
-            print "center position:"
-            print object.pose.pose.position.x
-            print object.pose.pose.position.y
-            print "center dist:"
-            print lane_dist_left_t
-            print lane_dist_right_t
-            
-            print left_boundary_array
-
-            lane_dist_left_t = dist_from_point_to_polyline2d(object.pose.pose.position.x + dx[0]/2.0 + dy[0]/2.0, object.pose.pose.position.y + dx[1]/2.0 + dy[1]/2.0,
-                    left_boundary_array)
-            lane_dist_right_t = dist_from_point_to_polyline2d(object.pose.pose.position.x + dx[0]/2.0 + dy[0]/2.0, object.pose.pose.position.y + dx[1]/2.0 + dy[1]/2.0,
-                    right_boundary_array)
-            
-        ffstate = get_frenet_state(object,
-                        self._static_map_lane_path_array[closest_lane],
-                        self._static_map_lane_tangets[closest_lane]
-                    )
-        lane_anglediff = ffstate.psi
-        lane_dist_s = ffstate.s # this is also helpful in getting ego s coordinate in the road
-
-        
+            return -1 # TODO: return reasonable value
 
         # Judge whether the point is outside of lanes
-        if closest_lane == -1:
+        if closest_lane == second_closest_lane or closest_lane_dist * second_closest_lane_dist > 0:
+            #jxy: only one lane, or the obj is not between the lanes.
             # The object is at left or right most
-            return closest_lane, lane_dist_left_t, lane_dist_right_t, lane_anglediff, lane_dist_s
+            return closest_lane
         else:
             # The object is between center line of lanes
             a, b = closest_lane, second_closest_lane
             la, lb = abs(closest_lane_dist), abs(second_closest_lane_dist)
-            return (b*la + a*lb)/(lb + la), lane_dist_left_t, lane_dist_right_t, lane_anglediff, lane_dist_s
+            return (b*la + a*lb)/(lb + la)
+            #jxy: what is it? e.g. lane index is 2.4 means it is between 2 and 3, and it is nearer to center line 2.
+        
         
 
     def locate_obstacle_in_lanes(self):
@@ -541,10 +385,9 @@ class DrivingSpaceConstructor:
             return
         for obj in self._surrounding_object_list:
             if len(self._static_map.lanes) != 0:
-                obj.lane_index, obj.lane_dist_left_t, obj.lane_dist_right_t, obj.lane_anglediff, obj.lane_dist_s = self.locate_object_in_lane(obj.state, obj.dimension)
+                obj.lane_index = self.locate_object_in_lane(obj.state)
             else:
                 obj.lane_index = -1
-        obj.lane_index = -1
 
     def locate_ego_vehicle_in_lanes(self, lane_end_dist_thres=2, lane_dist_thres=5):
         if self._static_map_lane_path_array == None: # TODO: This should not happen 
@@ -553,13 +396,8 @@ class DrivingSpaceConstructor:
         dist_list = np.array([dist_from_point_to_polyline2d(
             self._ego_vehicle_state.state.pose.pose.position.x, self._ego_vehicle_state.state.pose.pose.position.y,
             lane, return_end_distance=True)
-            for lane in self._static_map_lane_path_array])
-        ego_dimension = DimensionWithCovariance()
-        ego_dimension.length_x = 4.0
-        ego_dimension.length_y = 2.0 #jxy: I don't know
-        ego_dimension.length_z = 1.8
-        ego_lane_index, _, _, _, _ = self.locate_object_in_lane(self._ego_vehicle_state.state, ego_dimension)
-        #TODO: should be added to converted ego msg
+            for lane in self._static_map_lane_path_array])  
+        ego_lane_index = self.locate_object_in_lane(self._ego_vehicle_state.state)
 
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
         self._ego_vehicle_distance_to_lane_tail = dist_list[:, 4]
@@ -575,7 +413,6 @@ class DrivingSpaceConstructor:
         if self._traffic_light_detection is None:
             return
         lights = self._traffic_light_detection.detections
-        #jxy: demanding that the lights are in the same order as the lanes.
 
         total_lane_num = len(self._static_map.lanes)
         if len(lights) == 1:
