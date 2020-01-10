@@ -99,9 +99,10 @@ class DrivingSpaceConstructor:
             self.locate_stop_sign_in_lanes()
             self.locate_speed_limit_in_lanes()
 
-        rospy.loginfo("after locating: \n\n")
         for i in range(len(self._surrounding_object_list)):
             rospy.loginfo("after locating: obs[%d].lane_index=%f", i, self._surrounding_object_list[i].lane_index)
+            rospy.loginfo("obstacle position x:%f", self._surrounding_object_list[i].state.pose.pose.position.x)
+        #jxy: why i cannot modify this property?
 
         #visualization
         #1. lanes
@@ -552,8 +553,9 @@ class DrivingSpaceConstructor:
                     self._surrounding_object_list[i].lane_anglediff, self._surrounding_object_list[i].lane_dist_s = self.locate_object_in_lane(self._surrounding_object_list[i].state, self._surrounding_object_list[i].dimension)
             else:
                 self._surrounding_object_list[i].lane_index = -1
-            self._surrounding_object_list[i].lane_index = -2
             rospy.loginfo("before locating: obj[%d].lane_index=%f", i, self._surrounding_object_list[i].lane_index)
+            self._surrounding_object_list[i].state.pose.pose.position.x = 0
+            rospy.loginfo("obstacle position x:%f", self._surrounding_object_list[i].state.pose.pose.position.x)
 
     def locate_ego_vehicle_in_lanes(self, lane_end_dist_thres=2, lane_dist_thres=5):
         if self._static_map_lane_path_array == None: # TODO: This should not happen 
