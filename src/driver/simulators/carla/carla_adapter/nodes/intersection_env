@@ -88,6 +88,8 @@ def remove_non_traffic_circle_agents(world, verbose=False):
     vehicle_list = actor_list.filter("*vehicle*")
 
     for vehicle in vehicle_list:
+        if vehicle.attributes['role_name'] == "ego_vehicle":
+            continue
         dist_from_origin = vehicle.get_location().distance(circle_center)
         
         if dist_from_origin > dist_range:

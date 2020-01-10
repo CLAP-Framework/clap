@@ -45,6 +45,7 @@ class ZZZCarlaEnv(gym.Env):
         self.sock_buffer = recv_buffer
         self.sock_conn, addr = self.sock.accept()
         self.sock_conn.settimeout(socket_time_out) # Set time out
+        self.rule_based_action = [(0, 0)]
         print("ZZZ connected at {}".format(addr))
 
 
@@ -92,6 +93,8 @@ class ZZZCarlaEnv(gym.Env):
             leave_current_mmap = 1
             RLpointx = 5
             RLpointy = 0
+        
+        self.rule_based_action = [(RLpointx,RLpointy)]
 
     
         # calculate reward
@@ -109,7 +112,7 @@ class ZZZCarlaEnv(gym.Env):
         if leave_current_mmap:
             done = True
 
-        return np.array(self.state), reward, done, {}
+        return np.array(self.state), reward, done,  {}
 
 
     def reset(self, **kargs):
@@ -124,16 +127,26 @@ class ZZZCarlaEnv(gym.Env):
                 leave_current_mmap = received_msg[17]
                 RLpointx = received_msg[18]
                 RLpointy = received_msg[19]
-                if not collision and not leave_current_mmap:
-                    break
+                # if not collision and not leave_current_mmap:
+                #     break
             except ValueError:
-                continue
-        return np.array(self.state)
+                collision = 0
+                leave_current_mmap = 0
+                RLpointx = 5
+                RLpointy = 0
+
+        self.rule_based_action = [(RLpointx,RLpointy)]
+    
+        return np.array(self.state) 
+
+    def call_rulebased_action(self):
+        return self.rule_based_action
 
 
     def render(self, mode='human'):
-        if mode == 'human':
-            screen_width = 600
-            screen_height = 400
-            #world_width = self.problem.xrange
-            super(MyEnv, self).render(mode=mode)
+        # if mode == 'human':
+        #     screen_width = 600
+        #     screen_height = 400
+        #     #world_width = self.problem.xrange
+        #     super(MyEnv, self).render(mode=mode)
+        pass
