@@ -123,7 +123,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
     if if_random == 1:
 
         #set_ramdom_vehicle_number
-        max_agents = 50
+        max_agents = 100
 
         actor_list = carla_world.get_actors()
         vehicle_list = actor_list.filter("*vehicle*")
@@ -132,7 +132,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
         if num_agents < max_agents:         
             for spawn_point in spawn_points:
                 i = i + 1
-                if i > max_agents - num_agents:
+                if i > (max_agents - num_agents):
                     break
                 blueprint = random.choice(blueprints)
                 if -75 < spawn_point.location.x < 55 and -72 < spawn_point.location.y < 17:
@@ -141,7 +141,7 @@ def generate_traffic(carla_world,if_random,delay = 0.05):
                         d = vehicle.get_location().distance(spawn_point.location)
                         if d < min_d:
                             min_d = d
-                    if min_d > 20:
+                    if min_d > 10:
                         new_vehicle = carla_world.try_spawn_actor(blueprint, spawn_point)
                         if new_vehicle:
                             if "vehicle" in new_vehicle.type_id:
@@ -318,8 +318,6 @@ def restart_ego_vehicle(carla_world):
     vehicle_list = actor_list.filter("vehicle.*")
     for vehicle in vehicle_list:
         Location = vehicle.get_location()
-        if -20.0 < Location.x < 0.0 and 75.0 < Location.y < 105.0:
-            vehicle.destroy()
         if vehicle.attributes['role_name'] == "ego_vehicle":
             vehicle.set_transform(start_transform)
     

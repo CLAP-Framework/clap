@@ -99,11 +99,11 @@ class ZZZCarlaEnv(gym.Env):
 
     
         # calculate reward
-        reward = 0#10 - (abs(action[0] + 15 - RLpointx) + abs(action[1] - RLpointy))
+        reward = 10 - (abs(action[0] + 15 - RLpointx) + abs(action[1] - RLpointy))
 
         if collision:
             print("+++++++++++++++++++++ received collision")
-            reward = -10
+            reward = -50
         
         # judge if finish
         done = False
