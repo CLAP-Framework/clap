@@ -38,6 +38,7 @@ class DrivingSpaceNode(object):
         self._lanes_markerarray_publisher = rospy.Publisher("lanes_markerarray", MarkerArray, queue_size=1)
         self._lanes_boundary_markerarray_publisher = rospy.Publisher("lanes_boundary_markerarray", MarkerArray, queue_size=1)
         self._ego_markerarray_publisher = rospy.Publisher("ego_markerarray", MarkerArray, queue_size=1)
+        self._drivable_area_markerarray_publisher = rospy.Publisher("drivable_area_markerarray", MarkerArray, queue_size=1)
 
     def pose_callback(self, msg):
         self._driving_space.receive_ego_state(msg)
@@ -49,6 +50,7 @@ class DrivingSpaceNode(object):
         self._lanes_markerarray_publisher.publish(self._driving_space._lanes_markerarray)
         self._lanes_boundary_markerarray_publisher.publish(self._driving_space._lanes_boundary_markerarray)
         self._ego_markerarray_publisher.publish(self._driving_space._ego_markerarray)
+        self._drivable_area_markerarray_publisher.publish(self._driving_space._drivable_area_markerarray)
 
 if __name__ == "__main__":
     rospy.init_node("driving_space", log_level=rospy.INFO)

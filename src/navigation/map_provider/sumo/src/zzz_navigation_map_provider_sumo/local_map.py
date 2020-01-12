@@ -290,7 +290,6 @@ class LocalMap(object):
                 lane_wrapped.right_boundaries.append(right_bound)
 
         end = time.time()
-        print("\n\n\n\n\n\n\n\n\n\n\n\n")
         print end-start
 
         return lane_wrapped

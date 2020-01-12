@@ -69,6 +69,7 @@ class DrivingSpaceConstructor:
         assert type(state) == RigidBodyStateStamped
         with self._ego_vehicle_state_lock:
             self._ego_vehicle_state_buffer = state
+            #TODO: wrap ego vehicle just like wrapping obstacle
 
     def receive_traffic_light_detection(self, detection):
         assert type(detection) == DetectionBoxArray
@@ -97,6 +98,8 @@ class DrivingSpaceConstructor:
         tstates.static_map_lane_tangets = [[point.tangent for point in lane.central_path_points] for lane in tstates.static_map.lanes]
         tstates.obstacles = [] #about to add in the following steps
         tstates.ego_lane_index = -1 #about to modify in the following steps
+        tstates.ego_s = -1
+        tstates.drivable_area = []
 
         # Update driving_space with tstate
         if static_map.in_junction or len(static_map.lanes) == 0:
@@ -109,6 +112,7 @@ class DrivingSpaceConstructor:
             self.locate_obstacle_in_lanes(tstates)
             self.locate_stop_sign_in_lanes(tstates)
             self.locate_speed_limit_in_lanes(tstates)
+            self.calculate_drivable_area(tstates)
         
         self._driving_space = DrivingSpace()
 
@@ -128,7 +132,7 @@ class DrivingSpaceConstructor:
         self._lanes_markerarray = MarkerArray()
 
         count = 0
-        if not (tstates.static_map.in_junction or tstates.static_map.in_junction or tstates.ego_lane_index == -1):
+        if not (tstates.static_map.in_junction or tstates.ego_lane_index == -1):
             biggest_id = 0 #TODO: better way to find the smallest id
             
             for lane in tstates.static_map.lanes:
@@ -161,7 +165,7 @@ class DrivingSpaceConstructor:
         self._lanes_boundary_markerarray = MarkerArray()
 
         count = 0
-        if not (tstates.static_map.in_junction or tstates.static_map.in_junction or tstates.ego_lane_index == -1):
+        if not (tstates.static_map.in_junction or tstates.ego_lane_index == -1):
             #does not draw lane when ego vehicle is in the junction
             
             for lane in tstates.static_map.lanes:
@@ -413,7 +417,36 @@ class DrivingSpaceConstructor:
 
         self._ego_markerarray.markers.append(tempmarker)
 
-        #5. traffic lights
+        #6. drivable area
+        self._drivable_area_markerarray = MarkerArray()
+
+        count = 0
+        if not (tstates.static_map.in_junction or tstates.ego_lane_index == -1):
+            
+            tempmarker = Marker() #jxy: must be put inside since it is python
+            tempmarker.header.frame_id = "map"
+            tempmarker.header.stamp = rospy.Time.now()
+            tempmarker.ns = "zzz/cognition"
+            tempmarker.id = count
+            tempmarker.type = Marker.LINE_STRIP
+            tempmarker.action = Marker.ADD
+            tempmarker.scale.x = 0.12
+            tempmarker.color.r = 1.0
+            tempmarker.color.g = 0.0
+            tempmarker.color.b = 0.0
+            tempmarker.color.a = 0.5
+            tempmarker.lifetime = rospy.Duration(0.5)
+
+            for point in tstates.drivable_area:
+                p = Point()
+                p.x = point[0]
+                p.y = point[1]
+                p.z = 0 #TODO: the map does not provide z value
+                tempmarker.points.append(p)
+            self._drivable_area_markerarray.markers.append(tempmarker)
+            count = count + 1
+
+        #7. traffic lights
         self._traffic_lights_markerarray = MarkerArray()
 
         #TODO: now no lights are in. I'll check it when I run the codes.
@@ -430,7 +463,6 @@ class DrivingSpaceConstructor:
         Calculate (continuous) lane index for a object.
         Parameters: dist_list is the distance buffer. If not provided, it will be calculated
         '''
-        simplify_flag = 0
 
         if not dist_list:
             dist_list = np.array([dist_from_point_to_polyline2d(
@@ -513,27 +545,6 @@ class DrivingSpaceConstructor:
             if np.min(dist_left_list) * np.max(dist_right_list) >= 0:
                 # the object is out of the road
                 closest_lane = -1
-
-        #simplify: not considering the box size
-        if simplify_flag == 1:
-            lane_dist_left_t = dist_from_point_to_polyline2d(object.pose.pose.position.x, object.pose.pose.position.y,
-                    left_boundary_array)
-            lane_dist_right_t = dist_from_point_to_polyline2d(object.pose.pose.position.x, object.pose.pose.position.y,
-                    right_boundary_array)
-
-            print "center position:"
-            print object.pose.pose.position.x
-            print object.pose.pose.position.y
-            print "center dist:"
-            print lane_dist_left_t
-            print lane_dist_right_t
-            
-            print left_boundary_array
-
-            lane_dist_left_t = dist_from_point_to_polyline2d(object.pose.pose.position.x + dx[0]/2.0 + dy[0]/2.0, object.pose.pose.position.y + dx[1]/2.0 + dy[1]/2.0,
-                    left_boundary_array)
-            lane_dist_right_t = dist_from_point_to_polyline2d(object.pose.pose.position.x + dx[0]/2.0 + dy[0]/2.0, object.pose.pose.position.y + dx[1]/2.0 + dy[1]/2.0,
-                    right_boundary_array)
             
         ffstate = get_frenet_state(object,
                         tstates.static_map_lane_path_array[closest_lane],
@@ -541,8 +552,6 @@ class DrivingSpaceConstructor:
                     )
         lane_anglediff = ffstate.psi
         lane_dist_s = ffstate.s # this is also helpful in getting ego s coordinate in the road
-
-        
 
         # Judge whether the point is outside of lanes
         if closest_lane == -1:
@@ -575,7 +584,7 @@ class DrivingSpaceConstructor:
         ego_dimension.length_x = 4.0
         ego_dimension.length_y = 2.0 #jxy: I don't know
         ego_dimension.length_z = 1.8
-        ego_lane_index, _, _, _, _ = self.locate_object_in_lane(tstates.ego_vehicle_state.state, tstates, ego_dimension)
+        ego_lane_index, _, _, _, ego_s = self.locate_object_in_lane(tstates.ego_vehicle_state.state, tstates, ego_dimension)
         #TODO: should be added to converted ego msg
         ego_lane_index_rounded = int(round(ego_lane_index))
 
@@ -584,12 +593,77 @@ class DrivingSpaceConstructor:
         if ego_lane_index < 0 or self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded] <= lane_end_dist_thres:
             # Drive into junction, wait until next map
             tstates.ego_lane_index = -1
+            tstates.ego_s = -1
             rospy.logdebug("In junction due to close to intersection, ego_lane_index = %f, dist_to_lane_tail = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)])
             return
         else:
             tstates.ego_lane_index = ego_lane_index
+            tstates.ego_s = ego_s
             #TODO: this is not modified!
         rospy.logdebug("Distance to end: (lane %f) %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded])
+
+    def calculate_drivable_area(self, tstates):
+        '''
+        A list of boundary points of drivable area
+        '''
+        tstates.drivable_area = [] #clear in every step
+        ego_s = tstates.ego_s
+
+        if tstates.static_map.in_junction or tstates.ego_lane_index == -1:
+            return
+            #TODO: consider junction boundary in the next step
+        else:
+            #create a list of lane section, each section is defined as (start point s, end point s)
+            #calculate from the right most lane to the left most lane, drawing drivable area boundary in counterclockwise
+            lane_num = len(tstates.static_map.lanes)
+            lane_sections = np.zeros((lane_num, 2))
+            for i in range(len(tstates.static_map.lanes)):
+                lane_sections[i, 0] = max(ego_s - 50, 0)
+                lane_sections[i, 1] = min(ego_s + 50, tstates.static_map.lanes[i].central_path_points[-1].s)
+
+            for obstacle in tstates.obstacles:
+                if obstacle.lane_index == -1:
+                    continue
+                else:
+                    #the obstacle in on the same road as the ego vehicle
+                    lane_index_rounded = int(round(obstacle.lane_index))
+                    #TODO: consider those on the lane boundary
+                    if obstacle.lane_dist_s > ego_s and obstacle.lane_dist_s < lane_sections[lane_index_rounded, 1]:
+                        lane_sections[lane_index_rounded, 1] = obstacle.lane_dist_s
+                    elif obstacle.lane_dist_s <= ego_s and obstacle.lane_dist_s > lane_sections[lane_index_rounded, 0]:
+                        lane_sections[lane_index_rounded, 0] = obstacle.lane_dist_s
+            
+            for i in range(len(tstates.static_map.lanes)):
+                lane = tstates.static_map.lanes[i]
+                if i == 0:
+                    print "hahaha"
+                    print len(lane.right_boundaries)
+                    #the right most lane, draw its right boundary
+                    for j in range(len(lane.right_boundaries)):
+                        if lane.right_boundaries[j].boundary_point.s < lane_sections[i, 0]:
+                            print j
+                            print lane.right_boundaries[j].boundary_point.s
+                            print lane_sections[i, 0]
+                            if lane.right_boundaries[j+1].boundary_point.s > lane_sections[i, 0]:
+                                #if s < start point s, it cannot be the last point, so +1 is ok
+                                point1 = lane.right_boundaries[j].boundary_point
+                                point2 = lane.right_boundaries[j+1].boundary_point
+                                pointx = point1.position.x + (point2.position.x - point1.position.x) * (lane_sections[i, 0] - point1.s) / (point2.s - point1.s)
+                                pointy = point1.position.y + (point2.position.y - point1.position.y) * (lane_sections[i, 0] - point1.s) / (point2.s - point1.s)
+                                point = [pointx, pointy]
+                                tstates.drivable_area.append(point)
+                        elif lane.right_boundaries[j].boundary_point.s > lane_sections[i, 0] and lane.right_boundaries[j].boundary_point.s < lane_sections[i, 1]:
+                            point = [lane.right_boundaries[j].boundary_point.position.x, lane.right_boundaries[j].boundary_point.position.y]
+                            tstates.drivable_area.append(point)
+                        elif lane.right_boundaries[j].boundary_point.s > lane_sections[i, 1]:
+                            if lane.right_boundaries[j-1].boundary_point.s <= lane_sections[i, 1]:
+                                point1 = lane.right_boundaries[j-1].boundary_point
+                                point2 = lane.right_boundaries[j].boundary_point
+                                pointx = point1.position.x + (point2.position.x - point1.position.x) * (lane_sections[i, 1] - point1.s) / (point2.s - point1.s)
+                                pointy = point1.position.y + (point2.position.y - point1.position.y) * (lane_sections[i, 1] - point1.s) / (point2.s - point1.s)
+                                point = [pointx, pointy]
+                                tstates.drivable_area.append(point)
+
 
     def locate_traffic_light_in_lanes(self, tstates):
         # TODO: Currently it's a very simple rule to locate the traffic lights
