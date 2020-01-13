@@ -313,6 +313,10 @@ def frenet_optimal_planning_withRL(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob, RLS
         if len(fp.s) - 1 < num:
             num = len(fp.s) - 1
         pointdist = (fp.s[num] - RLS_action[0]) ** 2 + (fp.d[num] - RLS_action[1]) ** 2
+        print("----------------------------pointdist",pointdist)
+        print("---------------------------fp.s[num]",fp.s[num])
+        print("----------------------------fp.d[num]",fp.d[num])
+
         if mindist >= pointdist:
             mindist = pointdist
             bestpath = fp

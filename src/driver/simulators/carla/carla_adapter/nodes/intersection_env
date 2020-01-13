@@ -107,15 +107,13 @@ def pose_callback(msg):
     pose_buffer = msg
 
 
-def generate_traffic(carla_world,if_random,delay = 0.05):
+def generate_traffic(carla_world, blueprints, spawn_points, if_random,delay = 0.05):
     
-    # generate surrounding vehicles
-    blueprints = carla_world.get_blueprint_library().filter('vehicle.*')
-    
+    # generate surrounding vehicles   
     blueprints = [x for x in blueprints if int(x.get_attribute('number_of_wheels')) == 4]
     blueprints = [x for x in blueprints if not x.id.endswith('isetta')]
     
-    spawn_points = list(carla_world.get_map().get_spawn_points())
+    spawn_points = list(spawn_points)
 
     # print('found %d spawn points.' % len(spawn_points))
 
@@ -417,6 +415,7 @@ def stay_too_long(carla_world):
             v = vehicle.get_velocity()
             if abs(v.x) < 0.1 and abs(v.y) < 0.1:
                 stay = stay + 1
+                print("-------------------------stay",stay)
             else:
                 stay = 0
 
@@ -424,6 +423,22 @@ def stay_too_long(carla_world):
         return True
 
     return False
+
+def generate_remove_traffic(carla_world,delay = 0.05):
+    
+    # generate surrounding vehicles
+    blueprints = carla_world.get_blueprint_library().filter('vehicle.*')
+    spawn_points = carla_world.get_map().get_spawn_points()
+    while not rospy.is_shutdown():
+        # Generate surrounding vehicles
+        generate_traffic(carla_world, blueprints, spawn_points, 1)  #0 for fix point, 1 for random
+
+        # Generate pedestrians
+        # generate_pedestrians(carla_world,carla_client,0)
+
+        # Remove traffic too far
+        remove_non_traffic_circle_agents(carla_world)
+        time.sleep(delay)
 
 
 
@@ -450,48 +465,40 @@ if __name__ == "__main__":
     # Change enviornment
     change_the_world(carla_world)
 
-    # Generate Reference Path
+    # Change traffic lights
+    change_traffic_lights(carla_world)
+
+    # # Generate Reference Path
     setgoal = carla_world.get_map().get_spawn_points()[0]
-    setgoal.location.x = -50.8
-    setgoal.location.y = -38.8
+    setgoal.location.x = 33
+    setgoal.location.y = -39
     setgoal.location.z = 0
     setgoal.rotation.pitch = 0
     setgoal.rotation.yaw = 0 
     setgoal.rotation.roll = 0
     ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
 
-    
-    global published_exit_path
-    published_exit_path = False
     global collision_signal
     collision_signal = False
 
+    # generate and remove vehicles
+    thread.start_new_thread(generate_remove_traffic(carla_world, 5))
 
 
     rate = rospy.Rate(20)
     while not rospy.is_shutdown():
-        # Generate surrounding vehicles
-        generate_traffic(carla_world , 1)  #0 for fix point, 1 for random
-
-        # Generate pedestrians
-        # generate_pedestrians(carla_world,carla_client,0)
-
-        # Remove traffic too far
-        remove_non_traffic_circle_agents(carla_world)
-
+        
         # Record collision
         record_collsion_to_txt(carla_world , collision_signal , pose_buffer)
 
         # Restart ego vehicle
         if collision_signal:
-            rospy.sleep(2.)
+            rospy.sleep(2)
             restart_ego_vehicle(carla_world)
         if stay_too_long(carla_world):
             remove_stop_traffic(carla_world)
+            rospy.sleep(1)
             restart_ego_vehicle(carla_world)
-
-        # Change traffic lights
-        change_traffic_lights(carla_world)
 
         # Keep Generating Reference Path
         if pose_buffer is not None:
@@ -511,7 +518,7 @@ if __name__ == "__main__":
                     setgoal.rotation.yaw = 0 
                     setgoal.rotation.roll = 0
                     ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
-                    remove_stop_traffic(carla_world)
+                    # remove_stop_traffic(carla_world)
                     has_set = 1
 
             elif math.pow((ego_x+10),2) + math.pow((ego_y-90),2) < 64:
@@ -526,13 +533,12 @@ if __name__ == "__main__":
                     setgoal.rotation.yaw = 0 
                     setgoal.rotation.roll = 0
                     ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world,setgoal)
-                    remove_stop_traffic(carla_world)
+                    # remove_stop_traffic(carla_world)
                     has_set = 1
 
             else:
                 has_set = 0
                 set_goal_flag = 0
-
         rate.sleep()
 
 
