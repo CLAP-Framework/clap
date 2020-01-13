@@ -178,7 +178,7 @@ class DrivingSpaceConstructor:
                 #each lane has the right boundary, only the lane with the smallest id has the left boundary
                 tempmarker.type = Marker.LINE_STRIP
                 tempmarker.action = Marker.ADD
-                tempmarker.scale.x = 0.12
+                tempmarker.scale.x = 0.15
                 
                 if lane.right_boundaries[0].boundary_type == 1: #broken lane is set gray
                     tempmarker.color.r = 0.6
@@ -214,7 +214,7 @@ class DrivingSpaceConstructor:
                     #each lane has the right boundary, only the lane with the biggest id has the left boundary
                     tempmarker.type = Marker.LINE_STRIP
                     tempmarker.action = Marker.ADD
-                    tempmarker.scale.x = 0.12
+                    tempmarker.scale.x = 0.15
                     if lane.left_boundaries[0].boundary_type == 1: #broken lane is set gray
                         tempmarker.color.r = 0.6
                         tempmarker.color.g = 0.6
@@ -341,8 +341,7 @@ class DrivingSpaceConstructor:
                     tempmarker.color.g = 0.0
                     tempmarker.color.b = 1.0
                     tempmarker.color.a = 0.5
-                    tempmarker.text = "ego lane index: " + str(tstates.ego_lane_index) + " in junction: " + str(tstates.static_map.in_junction) + "\n lane_num: " + \
-                        str(len(tstates.static_map.lanes)) + " lane_index: " + str(obs.lane_index) + "\n lane_dist_right_t: " + str(obs.lane_dist_right_t) + "\n lane_dist_left_t: " + str(obs.lane_dist_left_t)
+                    tempmarker.text = " lane_index: " + str(obs.lane_index) + "\n lane_dist_right_t: " + str(obs.lane_dist_right_t) + "\n lane_dist_left_t: " + str(obs.lane_dist_left_t)
                     tempmarker.lifetime = rospy.Duration(0.5)
 
                     self._obstacles_label_markerarray.markers.append(tempmarker)
@@ -430,10 +429,10 @@ class DrivingSpaceConstructor:
             tempmarker.id = count
             tempmarker.type = Marker.LINE_STRIP
             tempmarker.action = Marker.ADD
-            tempmarker.scale.x = 0.12
+            tempmarker.scale.x = 0.20
             tempmarker.color.r = 1.0
             tempmarker.color.g = 0.0
-            tempmarker.color.b = 0.0
+            tempmarker.color.b = 1.0
             tempmarker.color.a = 0.5
             tempmarker.lifetime = rospy.Duration(0.5)
 
@@ -561,7 +560,11 @@ class DrivingSpaceConstructor:
             # The object is between center line of lanes
             a, b = closest_lane, second_closest_lane
             la, lb = abs(closest_lane_dist), abs(second_closest_lane_dist)
-            return (b*la + a*lb)/(lb + la), lane_dist_left_t, lane_dist_right_t, lane_anglediff, lane_dist_s
+            if lb + la == 0:
+                lane_index_return = -1
+            else:
+                lane_index_return = (b*la + a*lb)/(lb + la)
+            return lane_index_return, lane_dist_left_t, lane_dist_right_t, lane_anglediff, lane_dist_s
         
 
     def locate_obstacle_in_lanes(self, tstates):
@@ -627,43 +630,96 @@ class DrivingSpaceConstructor:
                 else:
                     #the obstacle in on the same road as the ego vehicle
                     lane_index_rounded = int(round(obstacle.lane_index))
+                    if lane_index_rounded == 0:
+                        print "object on the right most lane"
+                        print obstacle.lane_dist_s
                     #TODO: consider those on the lane boundary
                     if obstacle.lane_dist_s > ego_s and obstacle.lane_dist_s < lane_sections[lane_index_rounded, 1]:
-                        lane_sections[lane_index_rounded, 1] = obstacle.lane_dist_s
+                        lane_sections[lane_index_rounded, 1] = obstacle.lane_dist_s - obstacle.dimension.length_x / 2.0
+                        #TODO: a more robust way
                     elif obstacle.lane_dist_s <= ego_s and obstacle.lane_dist_s > lane_sections[lane_index_rounded, 0]:
-                        lane_sections[lane_index_rounded, 0] = obstacle.lane_dist_s
+                        lane_sections[lane_index_rounded, 0] = obstacle.lane_dist_s + obstacle.dimension.length_x / 2.0
             
             for i in range(len(tstates.static_map.lanes)):
                 lane = tstates.static_map.lanes[i]
                 if i == 0:
-                    print "hahaha"
-                    print len(lane.right_boundaries)
-                    #the right most lane, draw its right boundary
-                    for j in range(len(lane.right_boundaries)):
-                        if lane.right_boundaries[j].boundary_point.s < lane_sections[i, 0]:
-                            print j
-                            print lane.right_boundaries[j].boundary_point.s
-                            print lane_sections[i, 0]
-                            if lane.right_boundaries[j+1].boundary_point.s > lane_sections[i, 0]:
-                                #if s < start point s, it cannot be the last point, so +1 is ok
-                                point1 = lane.right_boundaries[j].boundary_point
-                                point2 = lane.right_boundaries[j+1].boundary_point
-                                pointx = point1.position.x + (point2.position.x - point1.position.x) * (lane_sections[i, 0] - point1.s) / (point2.s - point1.s)
-                                pointy = point1.position.y + (point2.position.y - point1.position.y) * (lane_sections[i, 0] - point1.s) / (point2.s - point1.s)
-                                point = [pointx, pointy]
-                                tstates.drivable_area.append(point)
-                        elif lane.right_boundaries[j].boundary_point.s > lane_sections[i, 0] and lane.right_boundaries[j].boundary_point.s < lane_sections[i, 1]:
-                            point = [lane.right_boundaries[j].boundary_point.position.x, lane.right_boundaries[j].boundary_point.position.y]
-                            tstates.drivable_area.append(point)
-                        elif lane.right_boundaries[j].boundary_point.s > lane_sections[i, 1]:
-                            if lane.right_boundaries[j-1].boundary_point.s <= lane_sections[i, 1]:
-                                point1 = lane.right_boundaries[j-1].boundary_point
-                                point2 = lane.right_boundaries[j].boundary_point
-                                pointx = point1.position.x + (point2.position.x - point1.position.x) * (lane_sections[i, 1] - point1.s) / (point2.s - point1.s)
-                                pointy = point1.position.y + (point2.position.y - point1.position.y) * (lane_sections[i, 1] - point1.s) / (point2.s - point1.s)
-                                point = [pointx, pointy]
-                                tstates.drivable_area.append(point)
+                    self.lane_section_points_generation(lane_sections[i, 0], lane_sections[i, 1], lane.right_boundaries, tstates)
+                
+                if i != 0:
+                    self.lane_section_points_generation(lane_sections[i-1, 1], lane_sections[i, 1], lane.right_boundaries, tstates)
+                    if i != len(tstates.static_map.lanes) - 1:
+                        self.lane_section_points_generation(lane_sections[i, 1], lane_sections[i+1, 1], lane.left_boundaries, tstates)
+                    else:
+                        self.lane_section_points_generation(lane_sections[i, 1], lane_sections[i, 0], lane.left_boundaries, tstates)
 
+                if len(tstates.static_map.lanes) == 1:
+                    self.lane_section_points_generation(lane_sections[i, 1], lane_sections[i, 0], lane.left_boundaries, tstates)
+
+            for j in range(len(tstates.static_map.lanes)):
+                i = len(tstates.static_map.lanes) - 1 - j
+                lane = tstates.static_map.lanes[i]                
+                if i != len(tstates.static_map.lanes) - 1:
+                    self.lane_section_points_generation(lane_sections[i+1, 0], lane_sections[i, 0], lane.left_boundaries, tstates)
+                    if i != 0:
+                        self.lane_section_points_generation(lane_sections[i, 0], lane_sections[i-1, 0], lane.right_boundaries, tstates)
+            
+            #close the figure
+            tstates.drivable_area.append(tstates.drivable_area[0])
+
+    def lane_section_points_generation(self, starts, ends, lane_boundaries, tstates):
+        if starts <= ends:
+            smalls = starts
+            bigs = ends
+        else:
+            smalls = ends
+            bigs = starts
+
+        print "smalls: " + str(smalls)
+        print "bigs: " + str(bigs)
+        
+        pointlist = []
+        print "boundary points:"
+        for j in range(len(lane_boundaries)):
+            print lane_boundaries[j].boundary_point.s
+            if lane_boundaries[j].boundary_point.s <= smalls:
+                print "smaller than smallest"
+                if j == len(lane_boundaries) - 1:
+                    break
+                if lane_boundaries[j+1].boundary_point.s > smalls:
+                    print "still can save"
+                    #if s < start point s, it cannot be the last point, so +1 is ok
+                    point1 = lane_boundaries[j].boundary_point
+                    point2 = lane_boundaries[j+1].boundary_point
+                    pointx = point1.position.x + (point2.position.x - point1.position.x) * (smalls - point1.s) / (point2.s - point1.s)
+                    pointy = point1.position.y + (point2.position.y - point1.position.y) * (smalls - point1.s) / (point2.s - point1.s)
+                    point = [pointx, pointy]
+                    pointlist.append(point)
+            elif lane_boundaries[j].boundary_point.s > smalls and lane_boundaries[j].boundary_point.s < bigs:
+                print "just ok"
+                point = [lane_boundaries[j].boundary_point.position.x, lane_boundaries[j].boundary_point.position.y]
+                pointlist.append(point)
+            elif lane_boundaries[j].boundary_point.s >= bigs:
+                print "bigger than biggest"
+                if j == 0:
+                    break
+                if lane_boundaries[j-1].boundary_point.s < bigs:
+                    print "still can save"
+                    point1 = lane_boundaries[j-1].boundary_point
+                    point2 = lane_boundaries[j].boundary_point
+                    pointx = point1.position.x + (point2.position.x - point1.position.x) * (bigs - point1.s) / (point2.s - point1.s)
+                    pointy = point1.position.y + (point2.position.y - point1.position.y) * (bigs - point1.s) / (point2.s - point1.s)
+                    point = [pointx, pointy]
+                    pointlist.append(point)
+
+        if starts <= ends:
+            for point in pointlist:
+                tstates.drivable_area.append(point)
+        else:
+            # in reverse order
+            print "in reverse order"
+            for i in range(len(pointlist)):
+                j = len(pointlist) - 1 - i
+                tstates.drivable_area.append(pointlist[j])
 
     def locate_traffic_light_in_lanes(self, tstates):
         # TODO: Currently it's a very simple rule to locate the traffic lights

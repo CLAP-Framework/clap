@@ -256,7 +256,7 @@ class LocalMap(object):
                 waypoint = self._world.get_map().get_waypoint(location)
 
                 angle = 3.1415927/2 - last_tangent
-                left_bound.boundary_point.s = waypoint.s
+                left_bound.boundary_point.s = point.s
                 left_bound.boundary_point.tangent = point.tangent # simplified, theoretically it should be the lane boundary direction
                 left_bound.boundary_point.position.x = x + waypoint.lane_width/2.0 * math.cos(angle + 3.1415927/2) # notice that the lane width is not constant, it can vary with s
                 left_bound.boundary_point.position.y = y + waypoint.lane_width/2.0 * math.sin(angle + 3.1415927/2)
@@ -272,7 +272,7 @@ class LocalMap(object):
                 else:
                     left_bound.boundary_type = 0
 
-                right_bound.boundary_point.s = waypoint.s
+                right_bound.boundary_point.s = point.s
                 right_bound.boundary_point.tangent = point.tangent # simplified, theoretically it should be the lane boundary direction
                 right_bound.boundary_point.position.x = x - waypoint.lane_width/2.0 * math.cos(angle + 3.1415927/2) # notice that the lane width is not constant, it can vary with s
                 right_bound.boundary_point.position.y = y - waypoint.lane_width/2.0 * math.sin(angle + 3.1415927/2)
