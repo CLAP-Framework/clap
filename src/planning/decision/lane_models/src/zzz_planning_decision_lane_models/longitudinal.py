@@ -9,10 +9,10 @@ from zzz_cognition_msgs.msg import RoadObstacle
 class IDM(object):
 
     def __init__(self):
-        self.T = 1.6
-        self.g0 = 7
-        self.a = 2.73
-        self.b = 1.65
+        self.T = 1.6 # TODO(carla challenge): time to collison ahead
+        self.g0 = 5 # TODO(carla challenge): minimum spacing
+        self.a = 5 # accelaration limit
+        self.b = 2 # deaccelaration limit
         self.delta = 4
         self.decision_dt = 0.75
         self.dynamic_map = None
