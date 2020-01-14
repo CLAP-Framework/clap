@@ -7,6 +7,8 @@ from zzz_cognition_msgs.msg import MapState
 from zzz_planning_decision_continuous_models.path_planner import Path_Planner
 from zzz_planning_decision_continuous_models.speed_decision import Speed_Decision
 from zzz_planning_decision_continuous_models import MainDecision
+from zzz_planning_decision_continuous_models.Werling_trajectory import Werling
+
 from zzz_planning_msgs.msg import DecisionTrajectory
 
 from nav_msgs.msg import Path  #FIXME(Nanshan)
@@ -23,12 +25,12 @@ class DecisionNode(object):
         self._rate = rospy.Rate(params.hz)
 
         #Use Trajectory Planner or Pathplanner+speed Decision?
-        self.decision_type = 1;
+        self.decision_type = 0;
 
         if self.decision_type == 0:
             # Setting Trajectory planner for both path and speed
-            model_trajectory = Trajectory_Planner()
-            self._decision_instance = MainDecision(path_decision=model_trajectory, speed_decision=model_trajectory, Planing_type = 1)
+            model_trajectory = Werling()
+            self._decision_instance = MainDecision(path_decision=model_trajectory, speed_decision=model_trajectory, Planning_type = 2)
 
         else:
             # Setting Path planner + Speed decision

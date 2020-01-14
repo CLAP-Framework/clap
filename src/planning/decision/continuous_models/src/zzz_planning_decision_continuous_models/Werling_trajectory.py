@@ -102,7 +102,7 @@ class Werling(object):
         tx, ty, tyaw, tc, csp = generate_target_course(Frenetrefx,Frenetrefy)
 
         now0 = rospy.get_rostime()
-        print("-----------------------------rule-based time consume inside111",now0.to_sec() - now00.to_sec())
+        # print("-----------------------------rule-based time consume inside111",now0.to_sec() - now00.to_sec())
         # initial state
         if len(self.last_trajectory_array_rule) > 5:
             # find closest point on the last trajectory
@@ -127,11 +127,11 @@ class Werling(object):
             s0 = ffstate.s #+ c_speed * 0.5      # current course position
 
         now1 = rospy.get_rostime()
-        print("-----------------------------rule-based time consume inside111",now1.to_sec() - now0.to_sec())
+        # print("-----------------------------rule-based time consume inside111",now1.to_sec() - now0.to_sec())
 
         generated_trajectory = frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
-        now2 = rospy.get_rostime()
-        print("-----------------------------rule-based time consume inside222",now2.to_sec() - now1.to_sec())
+        # now2 = rospy.get_rostime()
+        # print("-----------------------------rule-based time consume inside222",now2.to_sec() - now1.to_sec())
 
 
         if generated_trajectory is not None:
@@ -139,14 +139,13 @@ class Werling(object):
             trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
             trajectory_array = dense_polyline2d(trajectory_array_ori,1)
             self.last_trajectory_array_rule = trajectory_array
-            self.last_trajectory_rule = generated_trajectory
-
-            print("111111111111111111111111111")
-            print("111111111111111111111111111")
-            print("111111111111111111111111111")
-            print("111111111111111111111111111")
-            print("111111111111111111111111111")
-            print("111111111111111111111111111")
+            self.last_trajectory_rule = generated_trajectory              
+            # print("111111111111111111111111111")
+            # print("111111111111111111111111111")
+            # print("111111111111111111111111111")
+            # print("111111111111111111111111111")
+            # print("111111111111111111111111111")
+            # print("111111111111111111111111111")
             
             # for s in generated_trajectory.s:
                 # print("+++++++++++++++++++++++++++++++++++++pathstate.s",s)
@@ -154,14 +153,14 @@ class Werling(object):
         else:
             trajectory_array =  ref_path
             desired_speed = 3
-            print("3333333333333333333333333333")
-            print("3333333333333333333333333333")
-            print("3333333333333333333333333333")
-            print("3333333333333333333333333333")
-            print("3333333333333333333333333333")
-            print("3333333333333333333333333333")
-        now3 = rospy.get_rostime()
-        print("-----------------------------rule-based time consume inside333",now3.to_sec() - now2.to_sec())
+            # print("3333333333333333333333333333")
+            # print("3333333333333333333333333333")
+            # print("3333333333333333333333333333")
+            # print("3333333333333333333333333333")
+            # print("3333333333333333333333333333")
+            # print("3333333333333333333333333333")
+        # now3 = rospy.get_rostime()
+        # print("-----------------------------rule-based time consume inside333",now3.to_sec() - now2.to_sec())
         return trajectory_array, desired_speed, generated_trajectory
 
 
@@ -245,9 +244,12 @@ class Werling(object):
         if generated_trajectory is not None:
             desired_speed = generated_trajectory.s_d[-1] 
             trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
+            print("+++++++++++++++++++++++++++++++++++++inside 000000",len(generated_trajectory.x))
+
             trajectory_array = dense_polyline2d(trajectory_array_ori,1)
-            self.last_trajectory_array = trajectory_array
-            self.last_trajectory = generated_trajectory
+            self.last_trajectory_array_rule = trajectory_array
+            self.last_trajectory_rule = generated_trajectory       
+                    
 
             print("111111111111111111111111111")
             print("111111111111111111111111111")
@@ -262,14 +264,14 @@ class Werling(object):
         else:
             trajectory_array =  ref_path
             desired_speed = 3
-            generated_trajectory = []
             print("3333333333333333333333333333")
             print("3333333333333333333333333333")
             print("3333333333333333333333333333")
             print("3333333333333333333333333333")
             print("3333333333333333333333333333")
             print("3333333333333333333333333333")
-
+        # now3 = rospy.get_rostime()
+        # print("-----------------------------rule-based time consume inside333",now3.to_sec() - now2.to_sec())
         return trajectory_array, desired_speed, generated_trajectory
     ############
     ## TOOL BOXs
@@ -411,10 +413,13 @@ def calc_global_paths(fplist, csp):
             fp.yaw.append(math.atan2(dy, dx))
             fp.ds.append(math.sqrt(dx**2 + dy**2))
 
-        fp.yaw.append(fp.yaw[-1])
-        fp.ds.append(fp.ds[-1])
-        # fp.yaw.append(0)
-        # fp.ds.append(0)
+        
+        try:
+            fp.yaw.append(fp.yaw[-1])
+            fp.ds.append(fp.ds[-1])
+        except:
+            fp.yaw.append(0.1)
+            fp.ds.append(0.1)
 
         # calc curvature
         for i in range(len(fp.yaw) - 1):

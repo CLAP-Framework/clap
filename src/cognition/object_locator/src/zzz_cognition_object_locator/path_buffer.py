@@ -94,31 +94,32 @@ class PathBuffer:
         # tstates.reference_path = self._reference_path_buffer
         # reference_path = tstates.reference_path # for easy access
 
-        # Remove passed waypoints - dequeue
-        if len(self._reference_path_segment) > 1:
-            _, nearest_idx, _ = dist_from_point_to_polyline2d(
-                ego_state.pose.pose.position.x,
-                ego_state.pose.pose.position.y,
-                np.array(self._reference_path_segment)
-            )
-            for _ in range(nearest_idx-remained_passed_point):
-                removed_point = self._reference_path_segment.popleft()
-                rospy.logdebug("removed waypoint: %s, remaining count: %d", str(removed_point), len(self._reference_path_buffer))
+        # zwt modify to avoid reference path update in junction
+        if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:        # Remove passed waypoints - dequeue
+            if len(self._reference_path_segment) > 1:
+                _, nearest_idx, _ = dist_from_point_to_polyline2d(
+                    ego_state.pose.pose.position.x,
+                    ego_state.pose.pose.position.y,
+                    np.array(self._reference_path_segment)
+                )
+                for _ in range(nearest_idx-remained_passed_point):
+                    removed_point = self._reference_path_segment.popleft()
+                    rospy.logdebug("removed waypoint: %s, remaining count: %d", str(removed_point), len(self._reference_path_buffer))
 
-        # Current reference path is too short, require a new reference path
-        # if len(reference_path) < required_reference_path_length and not self._rerouting_sent:
-        #     if not self._rerouting_trigger:
-        #         self._rerouting_trigger()
-        #         self._rerouting_sent = True
-        # else:
-        #     self._rerouting_sent = False # reset flag
+            # Current reference path is too short, require a new reference path
+            # if len(reference_path) < required_reference_path_length and not self._rerouting_sent:
+            #     if not self._rerouting_trigger:
+            #         self._rerouting_trigger()
+            #         self._rerouting_sent = True
+            # else:
+            #     self._rerouting_sent = False # reset flag
 
-        # Choose points from reference path to buffer - enqueue
-        with self._reference_path_lock:
-            while self._reference_path_buffer and len(self._reference_path_segment) < self._buffer_size:
-                wp = self._reference_path_buffer.pop() # notice that the points are inserted reversely
-                # self.lane_change_smoothen(wp) # TODO(zhcao): find some bugs in this function, also change this to a planning module
-                self._reference_path_segment.append(wp)
+            # Choose points from reference path to buffer - enqueue
+            with self._reference_path_lock:
+                while self._reference_path_buffer and len(self._reference_path_segment) < self._buffer_size:
+                    wp = self._reference_path_buffer.pop() # notice that the points are inserted reversely
+                    # self.lane_change_smoothen(wp) # TODO(zhcao): find some bugs in this function, also change this to a planning module
+                    self._reference_path_segment.append(wp)
 
         # Put buffer into dynamic map
         for wp in self._reference_path_segment:

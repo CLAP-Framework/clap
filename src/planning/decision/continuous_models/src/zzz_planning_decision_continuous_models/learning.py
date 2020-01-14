@@ -75,6 +75,8 @@ class RLSPlanner(object):
         RL_state = self.wrap_state(closest_obs)
         sent_RL_msg = RL_state
 
+
+
         collision = int(self._collision_signal)
         self._collision_signal = False
         leave_current_mmap = 0
@@ -82,13 +84,15 @@ class RLSPlanner(object):
         sent_RL_msg.append(leave_current_mmap)
 
         # for teaching
-        trajectory_rule, desired_speed_rule, generated_trajectory_rule = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map, closest_obs)
-        delta_T = 0.75
-        RLpoint = self.get_RL_point_from_trajectory(generated_trajectory_rule , delta_T)
-        sent_RL_msg.append(RLpoint.location.x)
-        sent_RL_msg.append(RLpoint.location.y)
-        # sent_RL_msg.append(5.0) # RL.point
-        # sent_RL_msg.append(0.0)
+        try:
+            trajectory_rule, desired_speed_rule, generated_trajectory_rule = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map, closest_obs)
+            delta_T = 0.75
+            RLpoint = self.get_RL_point_from_trajectory(generated_trajectory_rule , delta_T)
+            sent_RL_msg.append(RLpoint.location.x)
+            sent_RL_msg.append(RLpoint.location.y)
+        except:
+            sent_RL_msg.append(5.0) # RL.point
+            sent_RL_msg.append(0.0)
         now2 = rospy.get_rostime()
         print("-----------------------------rule-based time consume",now2.to_sec() - now1.to_sec())
         print("-----------------------------",sent_RL_msg)
@@ -106,10 +110,12 @@ class RLSPlanner(object):
             print("-+++++++++++++++++++++++++++++++++++++++++++-generated RL trajectory")
             now4 = rospy.get_rostime()
             print("-----------------------------rl planning time consume",now4.to_sec() - now3.to_sec())
+            # return trajectory_rule, desired_speed_rule
             return trajectory, desired_speed 
 
         except:
             rospy.logerr("Continous RLS Model cannot receive an action")
+            # return trajectory_rule, desired_speed_rule
             return [], 0
             
             
@@ -159,11 +165,14 @@ class RLSPlanner(object):
     def found_closest_obstacles(self, num, dynamic_map):
         closest_obs = []
         obs_tuples = []
-        reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
-        
-        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
-        ref_path = dense_polyline2d(ref_path_ori, 1)
-        ref_path_tangets = np.zeros(len(ref_path))
+
+        try:
+            reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
+            ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+            ref_path = dense_polyline2d(ref_path_ori, 1)
+            ref_path_tangets = np.zeros(len(ref_path))
+        except:
+            return None
         
         for obs in self._dynamic_map.jmap.obstacles: 
             # calculate distance
