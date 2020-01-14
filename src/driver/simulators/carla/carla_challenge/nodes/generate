@@ -15,8 +15,8 @@ import time
 import thread
 
 RUNNING_TIME = 300
-CX = -0.4771
-CY = 0.1983
+CX = -0.5
+CY = -0.5
 
 ###########
 # Event 4 Environment Setting

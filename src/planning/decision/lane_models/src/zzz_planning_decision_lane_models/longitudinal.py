@@ -137,13 +137,14 @@ class IDM(object):
         vehicle_l = 4
         vehicle_w = 2
         vehicle_lw = np.linalg.norm([vehicle_l, vehicle_w]) / 2
+        lane_width = 23.5 - 19.8
 
         d_psi = vehicle_lw * math.cos(math.atan2(vehicle_l, vehicle_w) - abs(neighbor_lane.front_vehicles[0].ffstate.psi))
-        mmap_y = neighbor_lane.front_vehicles[0].ffstate.d + d_psi*(ego_idx - neighbor_idx)
-        rospy.logdebug("adjacent y modification: %.2f (on original %.2f)", d_psi*(ego_idx - neighbor_idx), neighbor_lane.front_vehicles[0].ffstate.d)
+        mmap_y = -neighbor_lane.front_vehicles[0].ffstate.d + d_psi*(ego_idx - neighbor_idx)
+        rospy.logdebug("adjacent y modification: %.2f (on original %.2f)", d_psi*(ego_idx - neighbor_idx), -neighbor_lane.front_vehicles[0].ffstate.d)
 
-        if ((neighbor_idx-mmap_y)*(ego_idx-mmap_y)) < 0:
-            rospy.logdebug("cut in judgement: ego_lane:%d, neighbor_lane:%d, mmap_y:%f",ego_idx,neighbor_idx,mmap_y)
+        if ((neighbor_idx * lane_width - mmap_y)*(ego_idx * lane_width - mmap_y)) < -0.8: # TODO(carla challenge): adjust -0.1 to adjust cut in confirmation thres
+            rospy.logdebug("cut in judgement: ego_idx:%d, neighbor_idx:%d, cal_y:%f", ego_idx, neighbor_idx, mmap_y)
             return True
 
         return False
