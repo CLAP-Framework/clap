@@ -133,8 +133,9 @@ class IDM(object):
         # TODO(zhcao): Planning should consider the 3D bounding box 
         vehicle_l = 4
         vehicle_w = 2
-        d_psi = math.cos(math.atan2(vehicle_l,vehicle_w)+neighbor_lane.front_vehicles[0].ffstate.psi) - vehicle_w/2
-        mmap_y = neighbor_lane.front_vehicles[0].ffstate.d + d_psi
+        vehicle_lw = np.norm([vehicle_l/2, vehicle_w/2])
+        d_psi = vehicle_lw * math.cos(abs(math.atan2(vehicle_l,vehicle_w))+neighbor_lane.front_vehicles[0].ffstate.psi) - vehicle_w/2
+        mmap_y = neighbor_lane.front_vehicles[0].ffstate.d + d_psi*(ego_lane-neighbor_lane)
 
         ego_idx = int(round(ego_lane.map_lane.index))
         neighbor_idx = int(round(neighbor_lane.map_lane.index))
