@@ -1,11 +1,12 @@
 <launch>
     <!-- Run Carla Bridge -->
     <rosparam file="$(find zzz_driver_simulators_carla_challenge)/launch/challenge.yaml" command="load" />
-    <node pkg="carla_ros_bridge" name="carla_client" type="client.py"/>
+    <node pkg="carla_ros_bridge" name="carla_ros_bridge" type="bridge.py" output="screen"/>
 
     <!-- Control vehicle 0 -->
     <group ns="veh0">
-        <node pkg="zzz_driver_simulators_carla_challenge" name="path_generate" type="generate"/>
+        <node pkg="zzz_driver_simulators_carla_challenge" name="path_generate" type="generate"
+              output="screen"/>
         <node pkg="zzz_navigation_pose_reporter" type="manual"
             name="pose_reporter" ns="zzz/navigation">
             <param name="map_origin" value="[49,8,0]"/>

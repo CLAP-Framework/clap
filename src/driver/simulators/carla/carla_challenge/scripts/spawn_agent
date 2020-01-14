@@ -50,12 +50,12 @@ default_sensor_configuration = {
 default_sensor_configuration = {
     'zzz_veh0': {
         'spawn_at': [1.4267581, 40.5108757, 1.843102, -88.891235],
-        'Sky': {
-            "type": "sensor.camera.rgb",
-            "x": 0, "y": 0, "z": 50,
-            "roll": 0.0, "pitch": -90.0, "yaw": 0,
-            "image_size_x": 800, "image_size_y": 600, "fov": 100
-        },
+        # 'Sky': {
+        #     "type": "sensor.camera.rgb",
+        #     "x": 0, "y": 0, "z": 50,
+        #     "roll": 0.0, "pitch": -90.0, "yaw": 0,
+        #     "image_size_x": 800, "image_size_y": 600, "fov": 100
+        # },
     },
     'zzz_veh1': {
         'spawn_at': [4.926103, 40.578606, 1.843102, -88.891235],
@@ -79,15 +79,14 @@ def setup(args):
     bplib = world.get_blueprint_library()
 
     # set a clear weather for debug
-    weather = world.get_weather()
-    weather.cloudyness = 0
-    weather.precipitation = 0
-    weather.precipitation_deposits = 0
-    weather.wind_intensity = 0
-    weather.sun_azimuth_angle = 0
-    weather.sun_altitude_angle = 90
-    world.set_weather(weather)
-    #
+    # weather = world.get_weather()
+    # weather.cloudyness = 0
+    # weather.precipitation = 0
+    # weather.precipitation_deposits = 0
+    # weather.wind_intensity = 0
+    # weather.sun_azimuth_angle = 0
+    # weather.sun_altitude_angle = 90
+    # world.set_weather(weather)
     
     vehicle_actors = {}
     for vehicle, config in args.configuration.items():
