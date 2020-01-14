@@ -22,18 +22,23 @@ class ControllerNode(object):
         self._control_instance = MainController()
 
         # TODO: add thread lock
-        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self._control_instance.update_pose)
+        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.sync_update_pose)
         self._decision_subscriber = rospy.Subscriber(params.trajectory_topic, DecisionTrajectory, self._control_instance.update_decision)
         self._command_publisher = rospy.Publisher(params.control_topic, ControlCommand, queue_size=1)
 
+    def sync_update_pose(self, pose):
+        self._control_instance.update_pose(pose)        
+        control_msg = self._control_instance.run_step()
+        self._command_publisher.publish(control_msg)
 
-    def loop(self):
-        while not rospy.is_shutdown():
-            self._rate.sleep()
-            control_msg = self._control_instance.run_step()
-            self._command_publisher.publish(control_msg)
+    # def loop(self):
+    #     while not rospy.is_shutdown():
+    #         self._rate.sleep()
+    #         control_msg = self._control_instance.run_step()
+    #         self._command_publisher.publish(control_msg)
 
 if __name__ == "__main__":
     rospy.init_node("latlon_controller", log_level=rospy.DEBUG)
     node = ControllerNode()
-    node.loop()
+    rospy.spin()
+    # node.loop()
