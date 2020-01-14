@@ -143,7 +143,7 @@ class IDM(object):
         mmap_y = -neighbor_lane.front_vehicles[0].ffstate.d + d_psi*(ego_idx - neighbor_idx)
         rospy.logdebug("adjacent y modification: %.2f (on original %.2f)", d_psi*(ego_idx - neighbor_idx), -neighbor_lane.front_vehicles[0].ffstate.d)
 
-        if ((neighbor_idx * lane_width - mmap_y)*(ego_idx * lane_width - mmap_y)) < -0.8: # TODO(carla challenge): adjust -0.1 to adjust cut in confirmation thres
+        if ((neighbor_idx * lane_width - mmap_y)*(ego_idx * lane_width - mmap_y)) < -vehicle_w/2: # TODO(carla challenge): adjust -0.1 to adjust cut in confirmation thres
             rospy.logdebug("cut in judgement: ego_idx:%d, neighbor_idx:%d, cal_y:%f", ego_idx, neighbor_idx, mmap_y)
             return True
 
