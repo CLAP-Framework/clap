@@ -13,7 +13,7 @@ import rospy
 import numpy as np
 from zzz_navigation_msgs.msg import Lane, LanePoint, LaneBoundary, Map
 from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Point32
 from nav_msgs.msg import Path
 
 if 'SUMO_HOME' in os.environ:
@@ -36,6 +36,8 @@ class LocalMap(object):
         self._current_edge_id = None # road id string
         self._reference_lane_list = deque(maxlen=20000)
         self._lane_search_radius = 4
+
+        self._in_section_flag = None
 
         client = carla.Client('localhost', 2000)
         client.set_timeout(10.0)
@@ -95,6 +97,7 @@ class LocalMap(object):
         self._reference_lane_list.clear()
         # todo this loop needs to be optimised later
 
+        '''
         for wp in reference_path.poses:
             # TODO: Takes too much time for processing
             print("running-------------------")
@@ -109,6 +112,7 @@ class LocalMap(object):
                 if len(self._reference_lane_list) != 0 and closestLane.getID() == self._reference_lane_list[-1].getID():
                     continue
                 self._reference_lane_list.append(closestLane)
+        '''
 
         return True
 
@@ -140,12 +144,21 @@ class LocalMap(object):
 
         lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self._lane_search_radius, includeJunctions=False)
         if len(lanes) > 0:
+            self._in_section_flag = 0
+
             _, closestLane = min((dist, lane) for lane, dist in lanes)
             new_edge = closestLane.getEdge()
             new_edge.id = new_edge.getID()
             rospy.logdebug("Found ego vehicle neighbor edge id = %s",new_edge.id)
             if self._current_edge_id is None or new_edge.id != self._current_edge_id:
                 rospy.loginfo("Should update static map, edge id %s -> %s", self._current_edge_id, new_edge.id)
+                return True
+            else:
+                rospy.loginfo("We are in the road, edge id is not changed, edge id is %s", self._current_edge_id)
+        if len(lanes) == 0:
+            print "Is in node!!!\n\n\n"
+            if self._in_section_flag == 0:
+                self._in_section_flag = 1
                 return True
         return False
 
@@ -162,11 +175,18 @@ class LocalMap(object):
         ''' 
         Update information in the static map if current location changed dramatically
         '''
+        start = time.time()
         map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
         rospy.logdebug("Updating static map")
         self.static_local_map = self.init_static_map() ## Return this one
-        self.update_lane_list()
-        self.update_target_lane()
+        lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self._lane_search_radius, includeJunctions=False)
+        if len(lanes) > 0:
+            self.update_lane_list()
+            self.update_target_lane()
+        else:
+            self.update_junction()
+            print "self.static_local_map.drivable_area.points:"
+            print self.static_local_map.drivable_area.points
 
         if not self.static_local_map.in_junction:
             self.calibrate_lane_index() # make the righest lane index 0
@@ -174,6 +194,55 @@ class LocalMap(object):
         rospy.loginfo("Updated static map info: lane_number = %d, in_junction = %d, current_edge_id = %s, target_lane_index = %s",
             len(self.static_local_map.lanes), int(self.static_local_map.in_junction),
             self._current_edge_id, self.static_local_map.target_lane_index)
+        end = time.time()
+        print "time consuming:"
+        print end-start
+
+    def update_junction(self):
+        print "update junction!\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        
+        self.static_local_map.in_junction = True
+        map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
+        r = 0.1
+        self.static_local_map.drivable_area.points = []
+        nodes = self._hdmap.getNodes() #sumo style
+        node_id = 0
+        closest_dist = 100
+
+        print "nodes num:"
+        print len(nodes)
+        for i in range(len(nodes)):
+            e = nodes[i]
+            d = sumolib.geomhelper.distancePointToPolygon((map_x, map_y), e.getShape())
+            if d < closest_dist:
+                node_id = i
+                closest_dist = d
+        
+        if closest_dist < 10:
+            #TODO: find a more robust method
+            print "select this node:"
+            print node_id
+            print closest_dist
+        else:
+            print "all nodes are too far, exit"
+
+        print "ego position:"
+        print map_x
+        print map_y
+        print "node id:"
+        print node_id
+        print "distance to the selected junction:"
+        print closest_dist
+
+        for node_point in nodes[node_id].getShape():
+            print "point:"
+            point = Point32()
+            point.x = node_point[0]
+            point.y = node_point[1]
+            print point.x
+            print point.y
+            self.static_local_map.drivable_area.points.append(point)
+        
 
     def update_lane_list(self):
         '''

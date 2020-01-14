@@ -104,6 +104,7 @@ class DrivingSpaceConstructor:
         # Update driving_space with tstate
         if static_map.in_junction or len(static_map.lanes) == 0:
             rospy.logdebug("In junction due to static map report junction location")
+            self.calculate_drivable_area(tstates)
         else:
             for lane in tstates.static_map.lanes:
                 self._driving_space.lanes.append(lane)
@@ -132,7 +133,7 @@ class DrivingSpaceConstructor:
         self._lanes_markerarray = MarkerArray()
 
         count = 0
-        if not (tstates.static_map.in_junction or tstates.ego_lane_index == -1):
+        if not (tstates.static_map.in_junction):
             biggest_id = 0 #TODO: better way to find the smallest id
             
             for lane in tstates.static_map.lanes:
@@ -165,7 +166,7 @@ class DrivingSpaceConstructor:
         self._lanes_boundary_markerarray = MarkerArray()
 
         count = 0
-        if not (tstates.static_map.in_junction or tstates.ego_lane_index == -1):
+        if not (tstates.static_map.in_junction):
             #does not draw lane when ego vehicle is in the junction
             
             for lane in tstates.static_map.lanes:
@@ -203,8 +204,6 @@ class DrivingSpaceConstructor:
 
                 #biggest id: draw left lane
                 if lane.index == biggest_id:
-                
-                    print "draw left lane boundary for the biggest id"
                     tempmarker = Marker() #jxy: must be put inside since it is python
                     tempmarker.header.frame_id = "map"
                     tempmarker.header.stamp = rospy.Time.now()
@@ -270,7 +269,7 @@ class DrivingSpaceConstructor:
                         tempmarker.color.r = 1.0
                         tempmarker.color.g = 0.0
                         tempmarker.color.b = 1.0
-                    if tstates.static_map.in_junction or tstates.ego_lane_index == -1:
+                    if tstates.static_map.in_junction:
                         tempmarker.color.r = 1.0
                         tempmarker.color.g = 0.0
                         tempmarker.color.b = 1.0
@@ -420,7 +419,7 @@ class DrivingSpaceConstructor:
         self._drivable_area_markerarray = MarkerArray()
 
         count = 0
-        if not (tstates.static_map.in_junction or tstates.ego_lane_index == -1):
+        if len(tstates.drivable_area) != 0:
             
             tempmarker = Marker() #jxy: must be put inside since it is python
             tempmarker.header.frame_id = "map"
@@ -532,7 +531,6 @@ class DrivingSpaceConstructor:
             lane_dist_left_t = 0
         else:
             lane_dist_left_t = np.sign(np.min(dist_left_list)) * np.min(np.abs(dist_left_list))
-            print lane_dist_left_t
 
         if np.min(dist_right_list) * np.max(dist_right_list) <= 0:
             # the object is on the right boundary of lane
@@ -596,7 +594,7 @@ class DrivingSpaceConstructor:
         if ego_lane_index < 0 or self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded] <= lane_end_dist_thres:
             # Drive into junction, wait until next map
             tstates.ego_lane_index = -1
-            tstates.ego_s = -1
+            tstates.ego_s = ego_s
             rospy.logdebug("In junction due to close to intersection, ego_lane_index = %f, dist_to_lane_tail = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)])
             return
         else:
@@ -611,11 +609,22 @@ class DrivingSpaceConstructor:
         '''
         tstates.drivable_area = [] #clear in every step
         ego_s = tstates.ego_s
+        print "ready to draw drivable area"
+        if tstates.static_map.in_junction:
+            print "Now we are in junction\n\n\n\n"
+            print "ego position:"
+            print tstates.ego_vehicle_state.state.pose.pose.position.x
+            print tstates.ego_vehicle_state.state.pose.pose.position.y
+            if len(tstates.static_map.drivable_area.points) != 0:
+                for node_point in tstates.static_map.drivable_area.points:
+                    point = [node_point.x, node_point.y]
+                    tstates.drivable_area.append(point)
+                    print point
+                #close the figure
+                tstates.drivable_area.append(tstates.drivable_area[0])
 
-        if tstates.static_map.in_junction or tstates.ego_lane_index == -1:
-            return
-            #TODO: consider junction boundary in the next step
         else:
+            print "Now we are in the road\n"
             #create a list of lane section, each section is defined as (start point s, end point s)
             #calculate from the right most lane to the left most lane, drawing drivable area boundary in counterclockwise
             lane_num = len(tstates.static_map.lanes)
@@ -630,9 +639,6 @@ class DrivingSpaceConstructor:
                 else:
                     #the obstacle in on the same road as the ego vehicle
                     lane_index_rounded = int(round(obstacle.lane_index))
-                    if lane_index_rounded == 0:
-                        print "object on the right most lane"
-                        print obstacle.lane_dist_s
                     #TODO: consider those on the lane boundary
                     if obstacle.lane_dist_s > ego_s and obstacle.lane_dist_s < lane_sections[lane_index_rounded, 1]:
                         lane_sections[lane_index_rounded, 1] = obstacle.lane_dist_s - obstacle.dimension.length_x / 2.0
@@ -673,20 +679,13 @@ class DrivingSpaceConstructor:
         else:
             smalls = ends
             bigs = starts
-
-        print "smalls: " + str(smalls)
-        print "bigs: " + str(bigs)
         
         pointlist = []
-        print "boundary points:"
         for j in range(len(lane_boundaries)):
-            print lane_boundaries[j].boundary_point.s
             if lane_boundaries[j].boundary_point.s <= smalls:
-                print "smaller than smallest"
                 if j == len(lane_boundaries) - 1:
                     break
                 if lane_boundaries[j+1].boundary_point.s > smalls:
-                    print "still can save"
                     #if s < start point s, it cannot be the last point, so +1 is ok
                     point1 = lane_boundaries[j].boundary_point
                     point2 = lane_boundaries[j+1].boundary_point
@@ -695,15 +694,12 @@ class DrivingSpaceConstructor:
                     point = [pointx, pointy]
                     pointlist.append(point)
             elif lane_boundaries[j].boundary_point.s > smalls and lane_boundaries[j].boundary_point.s < bigs:
-                print "just ok"
                 point = [lane_boundaries[j].boundary_point.position.x, lane_boundaries[j].boundary_point.position.y]
                 pointlist.append(point)
             elif lane_boundaries[j].boundary_point.s >= bigs:
-                print "bigger than biggest"
                 if j == 0:
                     break
                 if lane_boundaries[j-1].boundary_point.s < bigs:
-                    print "still can save"
                     point1 = lane_boundaries[j-1].boundary_point
                     point2 = lane_boundaries[j].boundary_point
                     pointx = point1.position.x + (point2.position.x - point1.position.x) * (bigs - point1.s) / (point2.s - point1.s)
@@ -716,7 +712,6 @@ class DrivingSpaceConstructor:
                 tstates.drivable_area.append(point)
         else:
             # in reverse order
-            print "in reverse order"
             for i in range(len(pointlist)):
                 j = len(pointlist) - 1 - i
                 tstates.drivable_area.append(pointlist[j])
