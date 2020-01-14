@@ -70,12 +70,11 @@ class RLSPlanner(object):
         now1 = rospy.get_rostime()
         self._dynamic_map = dynamic_map
         self._rule_based_trajectory_model_instance.update_dynamic_map(dynamic_map)        
+
         #found closest obs
         closest_obs = self.found_closest_obstacles(3, self._dynamic_map)
         RL_state = self.wrap_state(closest_obs)
         sent_RL_msg = RL_state
-
-
 
         collision = int(self._collision_signal)
         self._collision_signal = False
@@ -91,7 +90,7 @@ class RLSPlanner(object):
             sent_RL_msg.append(RLpoint.location.x)
             sent_RL_msg.append(RLpoint.location.y)
         except:
-            sent_RL_msg.append(5.0) # RL.point
+            sent_RL_msg.append(0.0) # RL.point
             sent_RL_msg.append(0.0)
         now2 = rospy.get_rostime()
         print("-----------------------------rule-based time consume",now2.to_sec() - now1.to_sec())
@@ -104,9 +103,9 @@ class RLSPlanner(object):
             rospy.logdebug("received action:%f, %f", RLS_action[0], RLS_action[1])
             now3 = rospy.get_rostime()
             print("-----------------------------socket time consume",now3.to_sec() - now2.to_sec())
-            RLS_action[0] = RLS_action[0] + 15.0
+            RLS_action[1] = RLS_action[1] + 15.0/3.6
             print("-+++++++++++++++++++++++++++++++++++++++++++befor-generated RL trajectory")
-            trajectory, desired_speed, generated_trajectory = self._rule_based_trajectory_model_instance.trajectory_update_withRL(dynamic_map, RLS_action)
+            trajectory, desired_speed = self._rule_based_trajectory_model_instance.trajectory_update_withRL_second(dynamic_map, RLS_action)
             print("-+++++++++++++++++++++++++++++++++++++++++++-generated RL trajectory")
             now4 = rospy.get_rostime()
             print("-----------------------------rl planning time consume",now4.to_sec() - now3.to_sec())
@@ -137,12 +136,10 @@ class RLSPlanner(object):
         ffstate = get_frenet_state(self._dynamic_map.ego_state, ref_path, ref_path_tangets)
 
         state = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-      
         state[0] = ffstate.s
         state[1] = -ffstate.d
         state[2] = ffstate.vs
         state[3] = ffstate.vd
-
         
         i = 0
         for obs in closest_obs: 
@@ -151,7 +148,6 @@ class RLSPlanner(object):
                 state[(i+1)*4+1] = obs[6]
                 state[(i+1)*4+2] = obs[7]
                 state[(i+1)*4+3] = obs[8]
-
                 i = i+1
             else:
                 break
@@ -186,8 +182,6 @@ class RLSPlanner(object):
             one_obs = (obs.state.pose.pose.position.x , obs.state.pose.pose.position.y , obs.state.twist.twist.linear.x , obs.state.twist.twist.linear.y , p4 , obs_ffstate.s , -obs_ffstate.d , obs_ffstate.vs , obs_ffstate.vd)
             # if obs.ffstate.s > 0.01:
             obs_tuples.append(one_obs)
-            print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++closestone_obs",one_obs[4])
-
         
         sorted_obs = sorted(obs_tuples, key=lambda obs: obs[4])   # sort by distance
         i = 0
@@ -201,90 +195,13 @@ class RLSPlanner(object):
         return closest_obs
 
 
-    def RL_model_matching(self):
-        pass
-
     def get_RL_point_from_trajectory(self, generated_trajectory , delta_T):
         RLpoint = Transform()
    
         if generated_trajectory is not None:
-            RLpoint.location.x = generated_trajectory.s[5] #only works when DT param of werling is 0.15
-            RLpoint.location.y = generated_trajectory.d[5]
+            RLpoint.location.x = generated_trajectory.d[15] #only works when DT param of werling is 0.15
+            RLpoint.location.y = generated_trajectory.s_d[15]
         else:
             RLpoint.location.x = 5
             RLpoint.location.y = 0           
         return RLpoint
-
-    def get_decision_from_continuous_action(self, action, delta_T, acc = 2,  hard_brake = 4):
-        # for a straight line when RL return x,y but not s,d 
-        print("__________________________________________action[0]",action[0])
-        print("__________________________________________action[1]",action[1])
-
-        action[0], action[1] = self.transfer_to_world(action[0],action[1], self._dynamic_map)
-        print("__________________________________________afteraction[0]",action[0])
-        print("__________________________________________afteraction[1]",action[1])
-        trajectoryx = [action[0], (action[0]+self._dynamic_map.ego_state.pose.pose.position.x)/2, self._dynamic_map.ego_state.pose.pose.position.x]
-        trajectoryy = [-action[1], (-action[1]+self._dynamic_map.ego_state.pose.pose.position.y)/2, self._dynamic_map.ego_state.pose.pose.position.y]
-
-        trajectory = np.c_[trajectoryx , trajectoryy]
-        trajectory_array = dense_polyline2d(trajectory,1)
-
-        p1 = np.array([self._dynamic_map.ego_state.pose.pose.position.x,self._dynamic_map.ego_state.pose.pose.position.y])
-        p2 = np.array([action[0],action[1]])
-        p3 = p2 - p1
-        p4 = math.hypot(p3[0],p3[1])
-
-        desired_speed = p4 / delta_T
-
-        return trajectory_array, desired_speed
-
-    def transfer_to_intersection(self, pointx, pointy, dynamic_map):
-        print("____________________transfer_to_intersection",dynamic_map.ego_state.pose.pose.position.x,dynamic_map.ego_state.pose.pose.position.y)
-
-        if 5.0 < dynamic_map.ego_state.pose.pose.position.x < 55.0 and -25.0 < -dynamic_map.ego_state.pose.pose.position.y < 25.0:
-            pointx = pointx - 5.0 - 25.0
-            pointy = pointy + 25.0 - 25.0
-            print("____________________intersection1")
-        elif 5.0 < dynamic_map.ego_state.pose.pose.position.x < 55.0 and -115.0 < -dynamic_map.ego_state.pose.pose.position.y < -65.0:
-            pointx = pointx - 5.0 - 25.0
-            pointy = pointy + 115.0 - 25.0
-            print("____________________intersection2")
-
-        elif -75.0 < dynamic_map.ego_state.pose.pose.position.x < -25.0 and -25.0 < -dynamic_map.ego_state.pose.pose.position.y < 25.0:
-            pointx = pointx + 75.0 - 25.0
-            pointy = pointy + 25.0 - 25.0
-            print("____________________intersection3")
-
-        elif -75.0 < dynamic_map.ego_state.pose.pose.position.x < -25.0 and -115.0 < -dynamic_map.ego_state.pose.pose.position.y < -65.0:
-            pointx = pointx + 75.0 - 25.0
-            pointy = pointy + 115.0 - 25.0
-            print("____________________intersection4")
-
-
-        return pointx, pointy
-
-    def transfer_to_world(self, pointx, pointy, dynamic_map):
-        print("____________________transfer_to_world",dynamic_map.ego_state.pose.pose.position.x,dynamic_map.ego_state.pose.pose.position.y)
-
-        if 5.0 < dynamic_map.ego_state.pose.pose.position.x < 55.0 and -25.0 < -dynamic_map.ego_state.pose.pose.position.y < 25.0:
-            pointx = pointx + 5.0 + 25.0
-            pointy = pointy - 25.0 + 25.0
-            print("____________________intersection1")
-
-        elif 5.0 < dynamic_map.ego_state.pose.pose.position.x < 55.0 and -115.0 < -dynamic_map.ego_state.pose.pose.position.y < -65.0:
-            pointx = pointx + 5.0 + 25.0
-            pointy = pointy - 115.0 + 25.0
-            print("____________________intersection2")
-
-        elif -75.0 < dynamic_map.ego_state.pose.pose.position.x < -25.0 and -25.0 < -dynamic_map.ego_state.pose.pose.position.y < 25.0:
-            pointx = pointx - 75.0 + 25.0
-            pointy = pointy - 25.0 + 25.0
-            print("____________________intersection3")
-
-        elif -75.0 < dynamic_map.ego_state.pose.pose.position.x < -25.0 and -115.0 < -dynamic_map.ego_state.pose.pose.position.y < -65.0:
-            pointx = pointx - 75.0 + 25.0
-            pointy = pointy - 115.0 + 25.0
-            print("____________________intersection4")
-
-
-        return pointx, pointy

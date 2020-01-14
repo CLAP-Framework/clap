@@ -121,7 +121,7 @@ def generate_traffic(carla_world, blueprints, spawn_points, if_random,delay = 0.
     if if_random == 1:
 
         #set_ramdom_vehicle_number
-        max_agents = 30
+        max_agents = 50
 
         actor_list = carla_world.get_actors()
         vehicle_list = actor_list.filter("*vehicle*")
