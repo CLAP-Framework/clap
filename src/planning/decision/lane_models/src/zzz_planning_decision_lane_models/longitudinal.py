@@ -2,6 +2,8 @@
 import numpy as np
 import rospy
 
+import math
+
 from zzz_navigation_msgs.msg import Lane
 from zzz_driver_msgs.utils import get_speed
 from zzz_cognition_msgs.msg import RoadObstacle
@@ -127,7 +129,12 @@ class IDM(object):
                             and neighbor_lane.front_vehicles[0].behavior is not RoadObstacle.BEHAVIOR_MOVING_RIGHT:
             return False
         
-        mmap_y = neighbor_lane.front_vehicles[0].ffstate.d
+        # FIXME(zhcao): To avoid large psi
+        # TODO(zhcao): Planning should consider the 3D bounding box 
+        vehicle_l = 4
+        vehicle_w = 2
+        d_psi = math.cos(math.atan2(vehicle_l,vehicle_w)+neighbor_lane.front_vehicles[0].ffstate.psi) - vehicle_w/2
+        mmap_y = neighbor_lane.front_vehicles[0].ffstate.d + d_psi
 
         ego_idx = int(round(ego_lane.map_lane.index))
         neighbor_idx = int(round(neighbor_lane.map_lane.index))
