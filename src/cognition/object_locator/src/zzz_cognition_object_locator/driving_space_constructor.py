@@ -341,7 +341,7 @@ class DrivingSpaceConstructor:
                     tempmarker.color.g = 0.0
                     tempmarker.color.b = 1.0
                     tempmarker.color.a = 0.5
-                    tempmarker.text = " lane_index: " + str(obs.lane_index) + "\n lane_dist_right_t: " + str(obs.lane_dist_right_t) + "\n lane_dist_left_t: " + str(obs.lane_dist_left_t)
+                    tempmarker.text = " lane_index: " + str(obs.lane_index) + "\n lane_dist_right_t: " + str(obs.lane_dist_right_t) + "\n lane_dist_left_t: " + str(obs.lane_dist_left_t) + "\n lane_anglediff: " + str(obs.lane_anglediff)
                     tempmarker.lifetime = rospy.Duration(0.5)
 
                     self._obstacles_label_markerarray.markers.append(tempmarker)
