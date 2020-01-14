@@ -11,7 +11,7 @@ from zzz_cognition_msgs.msg import RoadObstacle
 class IDM(object):
 
     def __init__(self):
-        self.T = 1.6 # TODO(carla challenge): time to collison ahead
+        self.T = 2 # TODO(carla challenge): time to collison ahead
         self.g0 = 5 # TODO(carla challenge): minimum spacing
         self.a = 5 # accelaration limit
         self.b = 2 # deaccelaration limit
@@ -128,20 +128,22 @@ class IDM(object):
         if neighbor_lane.front_vehicles[0].behavior is not RoadObstacle.BEHAVIOR_MOVING_LEFT \
                             and neighbor_lane.front_vehicles[0].behavior is not RoadObstacle.BEHAVIOR_MOVING_RIGHT:
             return False
+
+        ego_idx = int(round(ego_lane.map_lane.index))
+        neighbor_idx = int(round(neighbor_lane.map_lane.index))
         
         # FIXME(zhcao): To avoid large psi
         # TODO(zhcao): Planning should consider the 3D bounding box 
         vehicle_l = 4
         vehicle_w = 2
-        vehicle_lw = np.norm([vehicle_l/2, vehicle_w/2])
-        d_psi = vehicle_lw * math.cos(abs(math.atan2(vehicle_l,vehicle_w))+neighbor_lane.front_vehicles[0].ffstate.psi) - vehicle_w/2
-        mmap_y = neighbor_lane.front_vehicles[0].ffstate.d + d_psi*(ego_lane-neighbor_lane)
+        vehicle_lw = np.linalg.norm([vehicle_l, vehicle_w]) / 2
 
-        ego_idx = int(round(ego_lane.map_lane.index))
-        neighbor_idx = int(round(neighbor_lane.map_lane.index))
+        d_psi = vehicle_lw * math.cos(math.atan2(vehicle_l, vehicle_w) - abs(neighbor_lane.front_vehicles[0].ffstate.psi))
+        mmap_y = neighbor_lane.front_vehicles[0].ffstate.d + d_psi*(ego_idx - neighbor_idx)
+        rospy.logdebug("adjacent y modification: %.2f (on original %.2f)", d_psi*(ego_idx - neighbor_idx), neighbor_lane.front_vehicles[0].ffstate.d)
 
         if ((neighbor_idx-mmap_y)*(ego_idx-mmap_y)) < 0:
-            # rospy.logdebug("cut in judgement: ego_lane:%d, neighbor_lane:%d, mmap_y:%f",ego_idx,neighbor_idx,mmap_y)
+            rospy.logdebug("cut in judgement: ego_lane:%d, neighbor_lane:%d, mmap_y:%f",ego_idx,neighbor_idx,mmap_y)
             return True
 
         return False
