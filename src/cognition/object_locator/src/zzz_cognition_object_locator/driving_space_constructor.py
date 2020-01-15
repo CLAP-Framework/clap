@@ -5,6 +5,7 @@ from easydict import EasyDict as edict
 from threading import Lock
 import math
 import copy
+import time
 
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import Map, Lane
@@ -611,20 +612,146 @@ class DrivingSpaceConstructor:
         ego_s = tstates.ego_s
         print "ready to draw drivable area"
         if tstates.static_map.in_junction:
+            start = time.time()
             print "Now we are in junction\n\n\n\n"
             print "ego position:"
             print tstates.ego_vehicle_state.state.pose.pose.position.x
             print tstates.ego_vehicle_state.state.pose.pose.position.y
+            ego_x = tstates.ego_vehicle_state.state.pose.pose.position.x
+            ego_y = tstates.ego_vehicle_state.state.pose.pose.position.y
+
+            angle_list = []
+            dist_list = []
+
             if len(tstates.static_map.drivable_area.points) != 0:
-                for node_point in tstates.static_map.drivable_area.points:
-                    point = [node_point.x, node_point.y]
-                    tstates.drivable_area.append(point)
-                    print point
-                #close the figure
-                tstates.drivable_area.append(tstates.drivable_area[0])
+                for i in range(len(tstates.static_map.drivable_area.points)):
+                    node_point = tstates.static_map.drivable_area.points[i]
+                    last_node_point = tstates.static_map.drivable_area.points[i-1]
+                    #point = [node_point.x, node_point.y]
+                    #shatter the figure
+                    vertex_dist = math.sqrt(pow((node_point.x - last_node_point.x), 2) + pow((node_point.y - last_node_point.y), 2))
+                    if vertex_dist > 0.2:
+                        #add interp points by step of 0.2m
+                        for j in range(int(vertex_dist / 0.2)):
+                            x = last_node_point.x + 0.2 * (j + 1) / vertex_dist * (node_point.x - last_node_point.x)
+                            y = last_node_point.y + 0.2 * (j + 1) / vertex_dist * (node_point.y - last_node_point.y)
+                            #point = [x, y]
+                            #tstates.drivable_area.append(point)
+                            angle_list.append(math.atan2(y - ego_y, x - ego_x))
+                            dist_list.append(math.sqrt(pow((x - ego_x), 2) + pow((y - ego_y), 2)))
+                    
+                    #point = [node_point.x, node_point.y]
+                    #tstates.drivable_area.append(point)
+                    angle_list.append(math.atan2(node_point.y - ego_y, node_point.x - ego_x))
+                    dist_list.append(math.sqrt(pow((node_point.x - ego_x), 2) + pow((node_point.y - ego_y), 2)))
+            else:
+                return
+
+            #consider the vehicles in the junction
+            check_list = np.zeros(len(dist_list))
+
+            if len(tstates.surrounding_object_list) != 0:
+                for obs in tstates.surrounding_object_list:
+                    dist_to_ego = math.sqrt(math.pow((obs.state.pose.pose.position.x - tstates.ego_vehicle_state.state.pose.pose.position.x),2) 
+                        + math.pow((obs.state.pose.pose.position.y - tstates.ego_vehicle_state.state.pose.pose.position.y),2))
+                    
+                    if dist_to_ego < 20:
+                        #TODO: find a more robust method
+                        obs_x = obs.state.pose.pose.position.x
+                        obs_y = obs.state.pose.pose.position.y
+                        
+                        #Calculate the vertex points of the obstacle
+                        x = obs.state.pose.pose.orientation.x
+                        y = obs.state.pose.pose.orientation.y
+                        z = obs.state.pose.pose.orientation.z
+                        w = obs.state.pose.pose.orientation.w
+
+                        rotation_mat = np.array([[1-2*y*y-2*z*z, 2*x*y+2*w*z, 2*x*z-2*w*y], [2*x*y-2*w*z, 1-2*x*x-2*z*z, 2*y*z+2*w*x], [2*x*z+2*w*y, 2*y*z-2*w*x, 1-2*x*x-2*y*y]])
+                        rotation_mat_inverse = np.linalg.inv(rotation_mat) #those are the correct way to deal with quaternion
+
+                        vector_x = np.array([obs.dimension.length_x, 0, 0])
+                        vector_y = np.array([0, obs.dimension.length_y, 0])
+                        dx = np.matmul(rotation_mat_inverse, vector_x)
+                        dy = np.matmul(rotation_mat_inverse, vector_y)
+
+                        corner_list_x = np.zeros(4)
+                        corner_list_y = np.zeros(4)
+                        corner_list_x[0] = obs_x + dx[0]/2.0 + dy[0]/2.0
+                        corner_list_y[0] = obs_y + dx[1]/2.0 + dy[1]/2.0
+                        corner_list_x[1] = obs_x - dx[0]/2.0 + dy[0]/2.0
+                        corner_list_y[1] = obs_y - dx[1]/2.0 + dy[1]/2.0
+                        corner_list_x[2] = obs_x - dx[0]/2.0 - dy[0]/2.0
+                        corner_list_y[2] = obs_y - dx[1]/2.0 - dy[1]/2.0
+                        corner_list_x[3] = obs_x + dx[0]/2.0 - dy[0]/2.0
+                        corner_list_y[3] = obs_y + dx[1]/2.0 - dy[1]/2.0
+
+                        corner_list_angle = np.zeros(4)
+                        corner_list_dist = np.zeros(4)
+                        for j in range(4):
+                            corner_list_angle[j] = math.atan2(corner_list_y[j] - ego_y, corner_list_x[j] - ego_x)
+                            corner_list_dist[j] = math.sqrt(pow((corner_list_x[j] - ego_x), 2) + pow((corner_list_y[j] - ego_y), 2))
+
+                        small_corner_id = np.argmin(corner_list_angle)
+                        big_corner_id = np.argmax(corner_list_angle)
+
+                        if corner_list_angle[big_corner_id] - corner_list_angle[small_corner_id] > 5:
+                            #cross pi
+                            for j in range(4):
+                                if corner_list_angle[j] < 0:
+                                    corner_list_angle[j] += 2 * 3.1415927
+
+                        small_corner_id = np.argmin(corner_list_angle)
+                        big_corner_id = np.argmax(corner_list_angle)
+
+                        # add middle corner if we can see 3 corners
+                        smallest_dist_id = np.argmin(corner_list_dist)
+                        middle_corner_id = -1
+                        if not (small_corner_id == smallest_dist_id or big_corner_id == smallest_dist_id):
+                            middle_corner_id = smallest_dist_id
+
+                        for j in range(len(angle_list)):
+                            if angle_list[j] < corner_list_angle[big_corner_id] and angle_list[j] > corner_list_angle[small_corner_id]:
+                                rospy.loginfo("the angle %d is under check: %f, with original dist %f, the obstacle dist %f\n", j, angle_list[j], dist_list[j], corner_list_dist[big_corner_id])
+                                corner1 = -1
+                                corner2 = -1
+                                if middle_corner_id == -1:
+                                    corner1 = big_corner_id
+                                    corner2 = small_corner_id
+                                else:
+                                    if angle_list[j] < corner_list_angle[middle_corner_id]:
+                                        corner1 = middle_corner_id
+                                        corner2 = small_corner_id
+                                    else:
+                                        corner1 = big_corner_id
+                                        corner2 = middle_corner_id
+
+                                cross_position_x = corner_list_x[corner2] + (corner_list_x[corner1] - corner_list_x[corner2]) * (angle_list[j] - corner_list_angle[corner2]) / (corner_list_angle[corner1] - corner_list_angle[corner2])
+                                cross_position_y = corner_list_y[corner2] + (corner_list_y[corner1] - corner_list_y[corner2]) * (angle_list[j] - corner_list_angle[corner2]) / (corner_list_angle[corner1] - corner_list_angle[corner2])
+                                obstacle_dist = math.sqrt(pow((cross_position_x - ego_x), 2) + pow((cross_position_y - ego_y), 2))
+                                #TODO: find a more accurate method
+                                if dist_list[j] > obstacle_dist:
+                                    rospy.loginfo("blocked by obstacle")
+                                    dist_list[j] = obstacle_dist
+                                    angle_list[j] = math.atan2(cross_position_y - ego_y, cross_position_x - ego_x) #might slightly differ
+                                    check_list[j] = 1
+
+            for j in range(len(angle_list)):
+                x = ego_x + dist_list[j] * math.cos(angle_list[j])
+                y = ego_y + dist_list[j] * math.sin(angle_list[j])
+                point = [x, y]
+                #rospy.loginfo("angle_list %d: dist is %f", j, dist_list[j])
+                if check_list[j] == 1:
+                    print dist_list[j]
+                tstates.drivable_area.append(point)
+
+            #close the figure
+            tstates.drivable_area.append(tstates.drivable_area[0])
+
+            end = time.time()
+            print "time consuming:"
+            print end - start
 
         else:
-            print "Now we are in the road\n"
             #create a list of lane section, each section is defined as (start point s, end point s)
             #calculate from the right most lane to the left most lane, drawing drivable area boundary in counterclockwise
             lane_num = len(tstates.static_map.lanes)
