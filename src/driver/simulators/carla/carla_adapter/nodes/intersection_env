@@ -414,6 +414,19 @@ def stay_too_long(carla_world):
 
     return False
 
+def ego_vehicle_outside(carla_world):
+    circle_center = carla.Location(-10, -43, 0) # map/circle center
+    dist_range = 100.0 # 100 meters from traffic circle center
+       
+    actor_list = carla_world.get_actors()
+    vehicle_list = actor_list.filter("vehicle.*")
+    for vehicle in vehicle_list:
+        if vehicle.attributes['role_name'] == "ego_vehicle":
+            dist_from_origin = vehicle.get_location().distance(circle_center)
+            if dist_from_origin > dist_range:
+                return True
+
+
 def generate_remove_traffic(carla_world,delay = 0.05):
 
     # generate surrounding vehicles
@@ -483,11 +496,14 @@ if __name__ == "__main__":
 
         # Restart ego vehicle
         if collision_signal:
-            rospy.sleep(2.)
+            rospy.sleep(0.2)
             restart_ego_vehicle(carla_world)
         if stay_too_long(carla_world):
             remove_stop_traffic(carla_world)
-            rospy.sleep(1.)
+            rospy.sleep(0.2)
+            restart_ego_vehicle(carla_world)
+        if ego_vehicle_outside(carla_world):
+            rospy.sleep(0.2)
             restart_ego_vehicle(carla_world)
 
         # Keep Generating Reference Path

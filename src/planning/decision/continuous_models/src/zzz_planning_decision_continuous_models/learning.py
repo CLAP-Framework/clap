@@ -162,12 +162,12 @@ class RLSPlanner(object):
         closest_obs = []
         obs_tuples = []
 
-        try:
-            reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
-            ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+        reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
+        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+        if len(ref_path_ori[0]) > 1:
             ref_path = dense_polyline2d(ref_path_ori, 1)
             ref_path_tangets = np.zeros(len(ref_path))
-        except:
+        else:
             return None
         
         for obs in self._dynamic_map.jmap.obstacles: 

@@ -214,7 +214,7 @@ class Werling(object):
         # second trajectory initial state
         s0_s = first_trajectory.s[-1]  #+ c_speed * 0.5      # current course position
         c_d_s = first_trajectory.d[-1]    # current lateral position [m]
-        c_d_d_s = first_trajectory.d_d[-1]  # current lateral speed [m/s]
+        c_d_d_s = 0 #first_trajectory.d_d[-1]  # current lateral speed [m/s]
         c_d_dd_s = 0 #first_trajectory.d_dd[-1]   # current latral acceleration [m/s]
         c_speed_s = first_trajectory.s_d[-1]       # current speed [m/s]
         print("-------------------------- ffstate.s", first_trajectory.s[-1])
@@ -431,8 +431,8 @@ def prediction_obstacle(ob,prediction_model): # we should do prediciton in drivi
             obsp = Frenet_path()
             obsp.t = [t for t in np.arange(0.0, MAXT, DT)]
             for i in range(len(obsp.t)):
-                obspx = one_ob[0] + DT * one_ob[2]
-                obspy = one_ob[1] + DT * one_ob[3]
+                obspx = one_ob[0] + i * DT * one_ob[2]
+                obspy = one_ob[1] + i * DT * one_ob[3]
                 obsp.x.append(obspx)
                 obsp.y.append(obspy)
                 # obsp.x = [x for x in np.arange(one_ob[0] , one_ob[0] + MAXT * one_ob[2] ,DT * one_ob[2])] # keep speed
