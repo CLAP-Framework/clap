@@ -60,19 +60,21 @@ class MainDecision(object):
             # Should use lane model
             if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
                 if self.solve == False:
-                    self._path_model_instance.something_in_lane()
+                    self._path_model_instance.something_in_lane(dynamic_map)
                     self.solve = True
                 return None
             elif dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
                 self.solve = False
-
-            trajectory, desired_speed = self._path_model_instance.trajectory_update(dynamic_map)
-            if trajectory is not None:
-                msg = DecisionTrajectory()
-                msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory)
-                msg.desired_speed = desired_speed
-                return msg
-            else:
+            try:
+                trajectory, desired_speed = self._path_model_instance.trajectory_update(dynamic_map)
+                if trajectory is not None:
+                    msg = DecisionTrajectory()
+                    msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory)
+                    msg.desired_speed = desired_speed
+                    return msg
+                else:
+                    return None
+            except:
                 return None
 
         elif self.Planning_type == 3:

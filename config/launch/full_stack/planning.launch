@@ -23,20 +23,20 @@
 
 
     </node>
-    <node pkg="zzz_cognition_object_locator" type="nearest_locator"
+    <node pkg="zzz_cognition_object_locator" type="nearest_locator"  respawn="true"
           name="nearest_locator" output="screen" ns="/zzz/cognition">
         <param name="objects_topic" value="$(arg objects_topic)"/>
     </node>
-    <node pkg="zzz_cognition_object_locator" type="driving_space"
+    <node pkg="zzz_cognition_object_locator" type="driving_space"  respawn="true"
           name="driving_space" output="screen" ns="/zzz/cognition">
         <param name="objects_topic" value="$(arg objects_topic)"/>
     </node>
-    <node pkg="zzz_cognition_object_locator" type="put_buffer"
+    <node pkg="zzz_cognition_object_locator" type="put_buffer"  respawn="true"
           name="put_buffer" output="screen" ns="/zzz/cognition">
         <param name="reference_path_topic" value="$(arg waypoint_topic)"/>
     </node>
 
-    <node pkg="zzz_planning_decision_continuous_models" type="rls_train"
+    <node pkg="zzz_planning_decision_continuous_models" type="rls_train" 
           name="rls_train" output="screen" ns="/zzz/planning">
     </node>
 
@@ -46,14 +46,14 @@
     </node> -->
 
 
-    <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
+    <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"  respawn="true"
           name="idm_lane_utility" output="screen" ns="/zzz/planning">
     </node>
 
-    <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
+    <node pkg="zzz_planning_decision_safeguard" type="reachable_set"  respawn="true"
           name="safeguard" output="screen" ns="/zzz/planning">
     </node>
-    <node pkg="zzz_control_latlon_controllers" type="pure_persuit"
+    <node pkg="zzz_control_latlon_controllers" type="pure_persuit"  respawn="true"
           name="latlon_controller" output="screen" ns="/zzz/control">
     </node>
 </launch>

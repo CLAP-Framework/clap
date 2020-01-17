@@ -19,17 +19,17 @@ SIM_LOOP = 500
 
 # Parameter
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
-MAX_ACCEL = 2.0  # maximum acceleration [m/ss]
-MAX_CURVATURE = 2.0  # maximum curvature [1/m]
-MAX_ROAD_WIDTH = 3.5  # maximum road width [m] # related to RL action space
-D_ROAD_W = 1.75  # road width sampling length [m]
+MAX_ACCEL = 5.0  # maximum acceleration [m/ss]
+MAX_CURVATURE = 3.0  # maximum curvature [1/m]
+MAX_ROAD_WIDTH = 4.0  # maximum road width [m] # related to RL action space
+D_ROAD_W = 2.0  # road width sampling length [m]
 DT = 0.15  # time tick [s]
 MAXT = 4.6  # max prediction time [m]
 MINT = 4.0  # min prediction time [m]
 TARGET_SPEED = 15.0 / 3.6  # target speed [m/s]
 D_T_S = 5.0 / 3.6  # target speed sampling length [m/s]
-N_S_SAMPLE = 1  # sampling number of target speed
-ROBOT_RADIUS = 3.5  # robot radius [m]
+N_S_SAMPLE = 2  # sampling number of target speed
+ROBOT_RADIUS = 4.5  # robot radius [m]
 
 # Cost weights
 KJ = 0.1
@@ -102,7 +102,7 @@ class Werling(object):
         tx, ty, tyaw, tc, csp = generate_target_course(Frenetrefx,Frenetrefy)
 
         now0 = rospy.get_rostime()
-        # print("-----------------------------rule-based time consume inside111",now0.to_sec() - now00.to_sec())
+        print("-----------------------------rule-based time consume inside111",now0.to_sec() - now00.to_sec())
         # initial state
         if len(self.last_trajectory_array_rule) > 5:
             # find closest point on the last trajectory
@@ -127,11 +127,11 @@ class Werling(object):
             s0 = ffstate.s #+ c_speed * 0.5      # current course position
 
         now1 = rospy.get_rostime()
-        # print("-----------------------------rule-based time consume inside111",now1.to_sec() - now0.to_sec())
+        print("-----------------------------rule-based time consume inside111",now1.to_sec() - now0.to_sec())
 
         generated_trajectory = frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
-        # now2 = rospy.get_rostime()
-        # print("-----------------------------rule-based time consume inside222",now2.to_sec() - now1.to_sec())
+        now2 = rospy.get_rostime()
+        print("-----------------------------rule-based time consume inside222",now2.to_sec() - now1.to_sec())
 
 
         if generated_trajectory is not None:
@@ -145,15 +145,20 @@ class Werling(object):
             # print("111111111111111111111111111")
             # print("111111111111111111111111111")
             # print("111111111111111111111111111")
-            # print("111111111111111111111111111")
+            print("111111111111111111111111111")
             
             # for s in generated_trajectory.s:
                 # print("+++++++++++++++++++++++++++++++++++++pathstate.s",s)
+        elif len(self.last_trajectory_array_rule) > 5 and c_speed > 1:
+            trajectory_array = self.last_trajectory_array_rule
+            generated_trajectory = self.last_trajectory_rule
+            desired_speed =  0 #generated_trajectory.s_d[-1] 
+            print("252525252525252525252525")
 
         else:
             trajectory_array =  ref_path
-            desired_speed = 3
-            # print("3333333333333333333333333333")
+            desired_speed = 0
+            print("3333333333333333333333333333")
             # print("3333333333333333333333333333")
             # print("3333333333333333333333333333")
             # print("3333333333333333333333333333")
@@ -179,35 +184,39 @@ class Werling(object):
         ob = []
         ob = np.array(ob)
 
-        # first trajectory initial state
-        # if len(self.last_trajectory_array) > 5:
-        #     # find closest point on the last trajectory
-        #     mindist = float("inf")
-        #     for t in range(len(self.last_trajectory.t)):
-        #         pointdist = (self.last_trajectory.x[t] - dynamic_map.ego_state.pose.pose.position.x) ** 2 + (self.last_trajectory.y[t] - dynamic_map.ego_state.pose.pose.position.y) ** 2
-        #         if mindist >= pointdist:
-        #             mindist = pointdist
-        #             bestpoint = t
-        #     s0 = self.last_trajectory.s[bestpoint]
-        #     c_d = self.last_trajectory.d[bestpoint]
-        #     c_d_d = self.last_trajectory.d_d[bestpoint]
-        #     c_d_dd = self.last_trajectory.d_dd[bestpoint]
-        #     c_speed = self.last_trajectory.s_d[bestpoint]
-        # else:
-        ego_state = dynamic_map.ego_state
-        c_speed = get_speed(ego_state)       # current speed [m/s]
-        ffstate = get_frenet_state(dynamic_map.ego_state, ref_path, ref_path_tangets)
-        c_d = - ffstate.d  # current lateral position [m]
-        print("-------------------------- ffstate.d", -ffstate.d)
-        print("-------------------------- ffstate.d", -ffstate.d)
-        print("-------------------------- ffstate.vd ", ffstate.vd)
-        print("-------------------------- ffstate.vd ", ffstate.vd)
-        print("-------------------------- ffstate.s", ffstate.s)
-        print("-------------------------- ffstate.s", ffstate.s)
+        # emergency stop
+        if RLS_action[1] < 3.0/3.6:
+            return ref_path, 0.0
 
-        c_d_d = ffstate.vd  # current lateral speed [m/s]
-        c_d_dd = 0   # current latral acceleration [m/s]
-        s0 = ffstate.s + c_speed * 0.75      # current course position
+        # first trajectory initial state
+        if len(self.last_trajectory_array) > 5:
+            # find closest point on the last trajectory
+            mindist = float("inf")
+            for t in range(len(self.last_trajectory.t)):
+                pointdist = (self.last_trajectory.x[t] - dynamic_map.ego_state.pose.pose.position.x) ** 2 + (self.last_trajectory.y[t] - dynamic_map.ego_state.pose.pose.position.y) ** 2
+                if mindist >= pointdist:
+                    mindist = pointdist
+                    bestpoint = t
+            c_speed = self.last_trajectory.s_d[bestpoint]
+            s0 = self.last_trajectory.s[bestpoint] + get_speed(dynamic_map.ego_state) * 1.75
+            c_d = self.last_trajectory.d[bestpoint]
+            c_d_d = self.last_trajectory.d_d[bestpoint]
+            c_d_dd = self.last_trajectory.d_dd[bestpoint]
+        else:
+            ego_state = dynamic_map.ego_state
+            c_speed = get_speed(ego_state)       # current speed [m/s]
+            ffstate = get_frenet_state(dynamic_map.ego_state, ref_path, ref_path_tangets)
+            c_d = - ffstate.d  # current lateral position [m]
+            print("-------------------------- ffstate.d", -ffstate.d)
+            print("-------------------------- ffstate.d", -ffstate.d)
+            print("-------------------------- ffstate.vd ", ffstate.vd)
+            print("-------------------------- ffstate.vd ", ffstate.vd)
+            print("-------------------------- ffstate.s", ffstate.s)
+            print("-------------------------- ffstate.s", ffstate.s)
+
+            c_d_d = ffstate.vd  # current lateral speed [m/s]
+            c_d_dd = 0   # current latral acceleration [m/s]
+            s0 = ffstate.s + c_speed * 1.75      # current course position
 
         first_trajectory = frenet_optimal_planning_withRL(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob, RLS_action)
     
@@ -230,7 +239,7 @@ class Werling(object):
             connect_y = np.r_[first_trajectory.y, generated_trajectory.y]
             trajectory_array_ori = np.c_[connect_x, connect_y]          
             trajectory_array = dense_polyline2d(trajectory_array_ori,1)
-            desired_speed = first_trajectory.s_d[-1] 
+            desired_speed = RLS_action[1] #first_trajectory.s_d[-1] 
             self.last_trajectory_array_rule = trajectory_array
             self.last_trajectory_rule = generated_trajectory       
 
@@ -241,10 +250,11 @@ class Werling(object):
             print("111111111111111111111111111")
             print("111111111111111111111111111")
 
+
         else:
             trajectory_array_ori = np.c_[first_trajectory.x, first_trajectory.y]
             trajectory_array = dense_polyline2d(trajectory_array_ori, 1)
-            desired_speed = first_trajectory.s_d[-1] 
+            desired_speed = RLS_action[1] #first_trajectory.s_d[-1] 
 
             print("3333333333333333333333333333")
             print("3333333333333333333333333333")
@@ -266,12 +276,17 @@ def frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob):
     fplist = calc_frenet_paths(c_speed, c_d, c_d_d, c_d_dd, s0)
     now0 = rospy.get_rostime()
     print("-----------------------------frenet time consume inside111",now0.to_sec() - now00.to_sec())
+    print("-----------------------------fplist",len(fplist))
     fplist = calc_global_paths(fplist, csp)
     now1 = rospy.get_rostime()
     print("-----------------------------frenet time consume inside111",now1.to_sec() - now0.to_sec())
+    print("-----------------------------fplist",len(fplist))
+
     fplist = check_paths(fplist, ob)
     now2 = rospy.get_rostime()
     print("-----------------------------frenet time consume inside111",now2.to_sec() - now1.to_sec())
+    print("-----------------------------fplist",len(fplist))
+
     # find minimum cost path
     mincost = float("inf")
     bestpath = None
@@ -286,8 +301,14 @@ def frenet_optimal_planning_withRL(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob, RLS
     # this function use rl point to find the closest trajectory with the rl point at 0.75s
     
     Ti = 2.25
-    di = RLS_action[0]
     tv = RLS_action[1]
+
+    if RLS_action[1] < 5/3.6:
+        di = 0.0
+    else:
+        di = RLS_action[0]
+
+
 
     # calculate the only trajectory
     fplist = []
@@ -422,7 +443,7 @@ def calc_global_paths(fplist, csp):
     return fplist
 
 
-def prediction_obstacle(ob,prediction_model): # we should do prediciton in driving space
+def prediction_obstacle(ob, prediction_model): # we should do prediciton in driving space
     
     obs_paths = []
 
@@ -449,8 +470,8 @@ def check_collision(fp, ob):
     try:
         for obsp in obs_paths:
             for t in range(len(fp.t)):
-                d = (obsp.x[t] - fp.x[t]) **2 + (obsp.y[t] - fp.y[t]) **2
-                if d <= ROBOT_RADIUS**2: # collision
+                d = (obsp.x[t] - fp.x[t])**2 + (obsp.y[t] - fp.y[t])**2
+                if d <= ROBOT_RADIUS**2 and t > 1: # collision , t>0.75 to avoid to check the ego vehicle state
                     return False
     except:
         pass

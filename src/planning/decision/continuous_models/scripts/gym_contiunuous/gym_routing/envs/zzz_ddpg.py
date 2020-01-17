@@ -50,8 +50,8 @@ class ZZZCarlaEnv(gym.Env):
 
 
         # Set action space
-        low_action = np.array([-2.5,-5/3.6]) # di - ROAD_WIDTH, tv - TARGET_SPEED - D_T_S * N_S_SAMPLE
-        high_action = np.array([2.5, 5/3.6])  #Should be symmetry for DDPG
+        low_action = np.array([-2.5,-12.5/3.6]) # di - ROAD_WIDTH, tv - TARGET_SPEED - D_T_S * N_S_SAMPLE
+        high_action = np.array([2.5, 12.5/3.6])  #Should be symmetry for DDPG
         self.action_space = spaces.Box(low=low_action, high=high_action, dtype=np.float32)
 
         # Set State space = 4+4*obs_num
@@ -88,23 +88,30 @@ class ZZZCarlaEnv(gym.Env):
                 leave_current_mmap = received_msg[17]
                 RLpointx = received_msg[18]
                 RLpointy = received_msg[19]
+                ego_s = received_msg[20]
                 self.rule_based_action = [(RLpointx,RLpointy)]
 
                 # calculate reward
-                reward = 5 - (abs(action[0] - RLpointx) + abs(action[1] - (RLpointy - 15/3.6)))
-
-                if collision:
-                    print("+++++++++++++++++++++ received collision")
-                    reward = -50
-                
+                reward = 5 - (abs(action[0] - RLpointx) + abs(action[1] - (RLpointy - 15/3.6))) + ego_s
+              
                 # judge if finish
                 done = False
 
                 if collision:
                     done = True
+                    print("+++++++++++++++++++++ received collision")
+
                 
-                if leave_current_mmap:
+                if leave_current_mmap == 1:
                     done = True
+                    reward = +100
+                    print("+++++++++++++++++++++ successful pass intersection")
+
+                elif leave_current_mmap == 2:
+                    done = True
+                    print("+++++++++++++++++++++ restart by code")
+
+
 
                 return np.array(self.state), reward, done,  {}
 
@@ -148,13 +155,12 @@ class ZZZCarlaEnv(gym.Env):
                 print("------------- not received msg in reset")
                 collision = 0
                 leave_current_mmap = 0
-                RLpointx = 5
+                RLpointx = 0
                 RLpointy = 0
                 self.rule_based_action = [(RLpointx,RLpointy)]
 
                 return np.array(self.state) 
-
-    
+  
         return np.array(self.state) 
 
     def call_rulebased_action(self):
@@ -168,3 +174,4 @@ class ZZZCarlaEnv(gym.Env):
         #     #world_width = self.problem.xrange
         #     super(MyEnv, self).render(mode=mode)
         pass
+
