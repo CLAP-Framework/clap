@@ -158,7 +158,7 @@ class LocalMap(object):
         if len(lanes) == 0:
             if self._in_section_flag == 0:
                 self._in_section_flag = 1
-                #return True
+                return True
         return False
 
     def init_static_map(self):
