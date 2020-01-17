@@ -23,6 +23,7 @@
         <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"
             name="idm_lane_utility" ns="zzz/planning">
             <param name="dynamic_map_topic" value="/veh1/zzz/cognition/local_dynamic_map/map_with_ref"/>
+            <param name="utility_thres" value="2.5"/> <!-- TODO(carla challenge) -->
         </node>
         <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
             name="safeguard" ns="zzz/planning">

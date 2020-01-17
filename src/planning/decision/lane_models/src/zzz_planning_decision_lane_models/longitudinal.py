@@ -11,8 +11,8 @@ from zzz_cognition_msgs.msg import RoadObstacle
 class IDM(object):
 
     def __init__(self):
-        self.T = 2 # TODO(carla challenge): time to collison ahead
-        self.g0 = 5 # TODO(carla challenge): minimum spacing
+        self.T = 1.6 # TODO(carla challenge): time to collison ahead
+        self.g0 = 9 # TODO(carla challenge): minimum spacing
         self.a = 5 # accelaration limit
         self.b = 2 # deaccelaration limit
         self.delta = 4
@@ -138,13 +138,17 @@ class IDM(object):
         vehicle_w = 2
         vehicle_lw = np.linalg.norm([vehicle_l, vehicle_w]) / 2
         lane_width = 23.5 - 19.8
+        criteria_thres = -2 # TODO(carla challenge): adjust -0.1 to adjust cut in confirmation thres
 
         d_psi = vehicle_lw * math.cos(math.atan2(vehicle_l, vehicle_w) - abs(neighbor_lane.front_vehicles[0].ffstate.psi))
         mmap_y = -neighbor_lane.front_vehicles[0].ffstate.d + d_psi*(ego_idx - neighbor_idx)
         rospy.logdebug("adjacent y modification: %.2f (on original %.2f)", d_psi*(ego_idx - neighbor_idx), -neighbor_lane.front_vehicles[0].ffstate.d)
 
-        if ((neighbor_idx * lane_width - mmap_y)*(ego_idx * lane_width - mmap_y)) < -vehicle_w/2: # TODO(carla challenge): adjust -0.1 to adjust cut in confirmation thres
-            rospy.logdebug("cut in judgement: ego_idx:%d, neighbor_idx:%d, cal_y:%f", ego_idx, neighbor_idx, mmap_y)
+        in_lane_criteria = (neighbor_idx * lane_width - mmap_y)*(ego_idx * lane_width - mmap_y)
+        rospy.logdebug("check cut-in criteria: %.2f/%.2f", in_lane_criteria, criteria_thres)
+        if in_lane_criteria < criteria_thres: 
+        # if abs(in_lane_criteria) > abs(criteria_thres):
+            rospy.logdebug("cut in judgement: %d <- %d, cal_y:%.2f", ego_idx, neighbor_idx, mmap_y)
             return True
 
         return False
