@@ -16,11 +16,10 @@ from zzz_planning_decision_lane_models.local_trajectory import PolylineTrajector
 class MainDecision(object):
     def __init__(self, lon_decision=None, lat_decision=None, local_trajectory=None):
         self._dynamic_map_buffer = None
-        self._static_map_buffer = None
 
         self._longitudinal_model_instance = lon_decision
         self._lateral_model_instance = lat_decision
-        self._local_trajectory_instance = PolylineTrajectory() # MPCTrajectory()
+        self._local_trajectory_instance = local_trajectory
         self._local_trajectory_instance_for_ref = PolylineTrajectory() # TODO(Temps): Should seperate into continous models
 
         self._dynamic_map_lock = Lock()
@@ -47,7 +46,7 @@ class MainDecision(object):
             rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
             
             # TODO(Temps): Should seperate into continous models 
-            if changing_lane_index == -1:
+            if changing_lane_index == -1 :
                 trajectory = self._local_trajectory_instance_for_ref.get_trajectory(self._dynamic_map_buffer, changing_lane_index, desired_speed)#FIXME(ksj)
             else:
                 trajectory = self._local_trajectory_instance.get_trajectory(self._dynamic_map_buffer, changing_lane_index, desired_speed)

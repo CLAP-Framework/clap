@@ -29,10 +29,12 @@ class MapProvider(object):
             map_output_topic = "local_static_map", # /zzz/navigation/local_static_map
             map_file_type = "opendrive",
             pose_topic = "ego_pose", # /zzz/navigation/ego_pose
-            reference_path_topic = "reference_path" # /zzz/navigation/reference_path
+            reference_path_topic = "reference_path", # /zzz/navigation/reference_path
+            hz = 10
         )
         self._map_trigger = threading.Event()
         self._reference_path_trigger = 0
+        self._rate = rospy.Rate(params.hz)
 
         self._map_instance = LocalMap()
         if os.path.exists(params.map_file):
@@ -58,13 +60,19 @@ class MapProvider(object):
 
     def pose_callback(self, msg):
         # Note: Here we actually assume that pose is updating at highest frequency
-        if self._reference_path_trigger:
-            new_static_map = self._map_instance.receive_new_pose(msg.state.pose.pose.position.x, msg.state.pose.pose.position.y)
-            if new_static_map is not None:
-                self._local_map_publisher.publish(new_static_map)
-                rospy.logdebug("[%s] Publish new static map" % __module_name__)
+        self._map_instance.receive_new_pose(msg.state.pose.pose.position.x, msg.state.pose.pose.position.y)
+            
+    def loop(self):
+        while not rospy.is_shutdown():
+            self._rate.sleep()
+            if self._reference_path_trigger:
+                new_static_map = self._map_instance.update()
+                if new_static_map is not None:
+                    self._local_map_publisher.publish(new_static_map)
+                    rospy.logdebug("[%s] Publish new static map" % __module_name__)
+
 
 if __name__ == "__main__":
     rospy.init_node("map_provider", log_level=rospy.INFO)
     node = MapProvider()
-    rospy.spin()
+    node.loop()

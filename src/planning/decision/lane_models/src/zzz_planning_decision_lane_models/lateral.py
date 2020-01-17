@@ -16,18 +16,20 @@ class LaneUtility(object):
         self.longitudinal_model_instance.update_dynamic_map(dynamic_map)
         self.dynamic_map = dynamic_map
         # return -1, self.longitudinal_model_instance.longitudinal_speed(-1)#FIXME(ksj)
-        rospy.logdebug("map model is %d", dynamic_map.model)
+        # rospy.logdebug("map model is %d", dynamic_map.model)
         # Following reference path in junction
         if dynamic_map.model == MapState.MODEL_JUNCTION_MAP:
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         if dynamic_map.mmap.distance_to_junction < close_to_junction:
+            rospy.logdebug("lateral decision: close to junction")
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         # Case if cannot locate ego vehicle correctly
         # TODO: int?
         ego_lane_index_rounded = int(round(dynamic_map.mmap.ego_lane_index))
         if ego_lane_index_rounded < 0 or ego_lane_index_rounded > len(dynamic_map.mmap.lanes)-1:
+            rospy.logdebug("lateral decision: ego lane index error")
             return -1, self.longitudinal_model_instance.longitudinal_speed(-1)
 
         target_index = self.generate_lane_change_index()

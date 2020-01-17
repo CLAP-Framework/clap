@@ -127,12 +127,18 @@ class LocalMap(object):
         return x,y
 
     def receive_new_pose(self, x, y):
-        self._ego_vehicle_x = x
-        self._ego_vehicle_y = y
+        self._ego_vehicle_x_buffer = x
+        self._ego_vehicle_y_buffer = y
+
+    def update(self):
+        self._ego_vehicle_x = self._ego_vehicle_x_buffer
+        self._ego_vehicle_y = self._ego_vehicle_y_buffer
+
         if self.should_update_static_map():
             self.update_static_map()
             return self.static_local_map
         return None
+
 
     def should_update_static_map(self):
         '''

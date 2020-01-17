@@ -23,7 +23,7 @@ class DecisionNode(object):
         self._rate = rospy.Rate(params.hz)
 
         #Use Trajectory Planner or Pathplanner+speed Decision?
-        self.decision_type = 1;
+        self.decision_type = 1
 
         if self.decision_type == 0:
             # Setting Trajectory planner for both path and speed
