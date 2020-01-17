@@ -442,7 +442,6 @@ class PolylineTrajectory(object):
         # TODO: get smooth spline (write another module to generate spline)
         ego_x = dynamic_map.ego_state.pose.pose.position.x
         ego_y = dynamic_map.ego_state.pose.pose.position.y
-        print("ego state in world : ", dynamic_map.ego_state.pose.pose.position.x, dynamic_map.ego_state.pose.pose.position.y, dynamic_map.ego_state.twist.twist.linear.x,dynamic_map.ego_state.twist.twist.linear.y)
 
         if target_lane_index == -1:
             target_lane = dynamic_map.jmap.reference_path
