@@ -44,7 +44,7 @@ class MainController():
         d = np.linalg.norm(ego_loc - last_loc)
 
         if d < short_distance_thres:
-            rospy.loginfo("Vehicle stopped since it reached target point (dist:%.3f)", d)
+            rospy.loginfo("Vehicle stopped since it reached target point %f %f (dist:%.3f)", self.desired_trajectory.poses[-1].pose.position.x, self.desired_trajectory.poses[-1].pose.position.y, d)
             return False
         
         return True

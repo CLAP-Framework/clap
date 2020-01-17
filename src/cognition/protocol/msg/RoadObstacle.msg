@@ -16,8 +16,12 @@ zzz_driver_msgs/RigidBodyState state
 # Kinematic properties in Frenet Frame
 zzz_driver_msgs/FrenetSerretState2D ffstate
 
-# Continuous lane index, for prediction or locating
-float32 lane_index
+# Relationship to lane, for prediction or locating
+float32 lane_index # in which lane
+float32 lane_anglediff # angle difference
+float32 lane_dist_left_t # distance to lane
+float32 lane_dist_right_t
+float32 lane_dist_s # s position in the road
 
 # A flag to mark whether the object is static
 bool static
