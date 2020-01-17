@@ -37,6 +37,7 @@ class PurePersuitLateralController():
             control_target_distance = 3
 
         ego_loc = np.array([ego_pose.position.x, ego_pose.position.y])
+        print("---------------------control", ego_loc)
 
         trajectory_array = self.convert_trajectory_to_ndarray(trajectory)
 

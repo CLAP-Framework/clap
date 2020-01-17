@@ -610,13 +610,7 @@ class DrivingSpaceConstructor:
         '''
         tstates.drivable_area = [] #clear in every step
         ego_s = tstates.ego_s
-        print "ready to draw drivable area"
         if tstates.static_map.in_junction:
-            start = time.time()
-            print "Now we are in junction\n\n\n\n"
-            print "ego position:"
-            print tstates.ego_vehicle_state.state.pose.pose.position.x
-            print tstates.ego_vehicle_state.state.pose.pose.position.y
             ego_x = tstates.ego_vehicle_state.state.pose.pose.position.x
             ego_y = tstates.ego_vehicle_state.state.pose.pose.position.y
 
@@ -740,16 +734,10 @@ class DrivingSpaceConstructor:
                 y = ego_y + dist_list[j] * math.sin(angle_list[j])
                 point = [x, y]
                 #rospy.loginfo("angle_list %d: dist is %f", j, dist_list[j])
-                if check_list[j] == 1:
-                    print dist_list[j]
                 tstates.drivable_area.append(point)
 
             #close the figure
             tstates.drivable_area.append(tstates.drivable_area[0])
-
-            end = time.time()
-            print "time consuming:"
-            print end - start
 
         else:
             #create a list of lane section, each section is defined as (start point s, end point s)

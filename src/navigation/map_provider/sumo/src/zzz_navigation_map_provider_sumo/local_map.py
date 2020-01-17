@@ -156,10 +156,9 @@ class LocalMap(object):
             else:
                 rospy.loginfo("We are in the road, edge id is not changed, edge id is %s", self._current_edge_id)
         if len(lanes) == 0:
-            print "Is in node!!!\n\n\n"
             if self._in_section_flag == 0:
                 self._in_section_flag = 1
-                return True
+                #return True
         return False
 
     def init_static_map(self):
@@ -175,7 +174,6 @@ class LocalMap(object):
         ''' 
         Update information in the static map if current location changed dramatically
         '''
-        start = time.time()
         map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
         rospy.logdebug("Updating static map")
         self.static_local_map = self.init_static_map() ## Return this one
@@ -185,8 +183,6 @@ class LocalMap(object):
             self.update_target_lane()
         else:
             self.update_junction()
-            print "self.static_local_map.drivable_area.points:"
-            print self.static_local_map.drivable_area.points
 
         if not self.static_local_map.in_junction:
             self.calibrate_lane_index() # make the righest lane index 0
@@ -194,53 +190,26 @@ class LocalMap(object):
         rospy.loginfo("Updated static map info: lane_number = %d, in_junction = %d, current_edge_id = %s, target_lane_index = %s",
             len(self.static_local_map.lanes), int(self.static_local_map.in_junction),
             self._current_edge_id, self.static_local_map.target_lane_index)
-        end = time.time()
-        print "time consuming:"
-        print end-start
 
-    def update_junction(self):
-        print "update junction!\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+    def update_junction(self, closest_dist=100):
         
         self.static_local_map.in_junction = True
         map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
-        r = 0.1
         self.static_local_map.drivable_area.points = []
         nodes = self._hdmap.getNodes() #sumo style
         node_id = 0
-        closest_dist = 100
-
-        print "nodes num:"
-        print len(nodes)
         for i in range(len(nodes)):
             e = nodes[i]
             d = sumolib.geomhelper.distancePointToPolygon((map_x, map_y), e.getShape())
             if d < closest_dist:
                 node_id = i
                 closest_dist = d
-        
-        if closest_dist < 10:
-            #TODO: find a more robust method
-            print "select this node:"
-            print node_id
-            print closest_dist
-        else:
-            print "all nodes are too far, exit"
-
-        print "ego position:"
-        print map_x
-        print map_y
-        print "node id:"
-        print node_id
-        print "distance to the selected junction:"
-        print closest_dist
 
         for node_point in nodes[node_id].getShape():
-            print "point:"
             point = Point32()
             point.x = node_point[0]
             point.y = node_point[1]
-            print point.x
-            print point.y
+
             self.static_local_map.drivable_area.points.append(point)
         
 
@@ -279,7 +248,6 @@ class LocalMap(object):
         lane_wrapped.index = lane.getIndex()
         # lane_wrapped.width = lane.getWidth()
         last_x = last_y = last_s = last_tangent = None
-        start = time.time()
         count = 0
         for wp in lane.getShape():
             point = LanePoint()
@@ -333,13 +301,13 @@ class LocalMap(object):
                 rospy.loginfo("lane width %f at count %d: \n\n", waypoint.lane_width, count)
                 
                 if str(waypoint.left_lane_marking.type) == 'Broken' or str(waypoint.left_lane_marking.type) == 'BrokenBroken':
-                    left_bound.boundary_type = 1
+                    left_bound.boundary_type = left_bound.BOUNDARY_DASHED_WHITE
                 elif str(waypoint.left_lane_marking.type) == 'Solid' or str(waypoint.left_lane_marking.type) == 'SolidSolid' or str(waypoint.left_lane_marking.type) == 'BrokenSolid':
-                    left_bound.boundary_type = 3
+                    left_bound.boundary_type = left_bound.BOUNDARY_SOLID_WHITE
                 elif str(waypoint.left_lane_marking.type) == 'Curb':
-                    left_bound.boundary_type = 6
+                    left_bound.boundary_type = left_bound.BOUNDARY_CURB
                 else:
-                    left_bound.boundary_type = 0
+                    left_bound.boundary_type = left_bound.BOUNDARY_UNKNOWN
 
                 right_bound.boundary_point.s = point.s
                 right_bound.boundary_point.tangent = point.tangent # simplified, theoretically it should be the lane boundary direction
@@ -347,19 +315,17 @@ class LocalMap(object):
                 right_bound.boundary_point.position.y = y - waypoint.lane_width/2.0 * math.sin(angle + 3.1415927/2)
             
                 if str(waypoint.right_lane_marking.type) == 'Broken' or str(waypoint.right_lane_marking.type) == 'BrokenBroken':
-                    right_bound.boundary_type = 1
+                    right_bound.boundary_type = right_bound.BOUNDARY_DASHED_WHITE
                 elif str(waypoint.right_lane_marking.type) == 'Solid' or str(waypoint.right_lane_marking.type) == 'SolidSolid' or str(waypoint.right_lane_marking.type) == 'BrokenSolid':
-                    right_bound.boundary_type = 3
+                    right_bound.boundary_type = right_bound.BOUNDARY_SOLID_WHITE
                 elif str(waypoint.right_lane_marking.type) == 'Curb':
-                    right_bound.boundary_type = 6
+                    right_bound.boundary_type = right_bound.BOUNDARY_CURB
                 else:
-                    right_bound.boundary_type = 0
+                    right_bound.boundary_type = right_bound.BOUNDARY_UNKNOWN
                 
                 lane_wrapped.left_boundaries.append(left_bound)
                 lane_wrapped.right_boundaries.append(right_bound)
 
-        end = time.time()
-        print end-start
 
         return lane_wrapped
 
