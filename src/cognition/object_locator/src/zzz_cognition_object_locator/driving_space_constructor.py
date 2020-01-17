@@ -705,7 +705,6 @@ class DrivingSpaceConstructor:
 
                         for j in range(len(angle_list)):
                             if angle_list[j] < corner_list_angle[big_corner_id] and angle_list[j] > corner_list_angle[small_corner_id]:
-                                rospy.loginfo("the angle %d is under check: %f, with original dist %f, the obstacle dist %f\n", j, angle_list[j], dist_list[j], corner_list_dist[big_corner_id])
                                 corner1 = -1
                                 corner2 = -1
                                 if middle_corner_id == -1:
@@ -724,7 +723,6 @@ class DrivingSpaceConstructor:
                                 obstacle_dist = math.sqrt(pow((cross_position_x - ego_x), 2) + pow((cross_position_y - ego_y), 2))
                                 #TODO: find a more accurate method
                                 if dist_list[j] > obstacle_dist:
-                                    rospy.loginfo("blocked by obstacle")
                                     dist_list[j] = obstacle_dist
                                     angle_list[j] = math.atan2(cross_position_y - ego_y, cross_position_x - ego_x) #might slightly differ
                                     check_list[j] = 1
@@ -733,7 +731,6 @@ class DrivingSpaceConstructor:
                 x = ego_x + dist_list[j] * math.cos(angle_list[j])
                 y = ego_y + dist_list[j] * math.sin(angle_list[j])
                 point = [x, y]
-                #rospy.loginfo("angle_list %d: dist is %f", j, dist_list[j])
                 tstates.drivable_area.append(point)
 
             #close the figure

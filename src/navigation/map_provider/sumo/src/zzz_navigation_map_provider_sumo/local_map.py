@@ -297,8 +297,6 @@ class LocalMap(object):
                 left_bound.boundary_point.tangent = point.tangent # simplified, theoretically it should be the lane boundary direction
                 left_bound.boundary_point.position.x = x + waypoint.lane_width/2.0 * math.cos(angle + 3.1415927/2) # notice that the lane width is not constant, it can vary with s
                 left_bound.boundary_point.position.y = y + waypoint.lane_width/2.0 * math.sin(angle + 3.1415927/2)
-
-                rospy.loginfo("lane width %f at count %d: \n\n", waypoint.lane_width, count)
                 
                 if str(waypoint.left_lane_marking.type) == 'Broken' or str(waypoint.left_lane_marking.type) == 'BrokenBroken':
                     left_bound.boundary_type = left_bound.BOUNDARY_DASHED_WHITE
