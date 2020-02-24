@@ -42,7 +42,7 @@ class CarlaToRosWaypointConverter(object):
     """
     WAYPOINT_DISTANCE = 2.0
 
-    def __init__(self, carla_world, setgoal):
+    def __init__(self, carla_world, setstart, setgoal):
         self.world = carla_world
 
         #only for circles
@@ -56,6 +56,7 @@ class CarlaToRosWaypointConverter(object):
 
         # set initial goal
 
+        self.start = setstart
         self.goal = setgoal;
         
         self.current_route = None
@@ -101,7 +102,7 @@ class CarlaToRosWaypointConverter(object):
             self.current_route = None
             self.publish_waypoints()
         else:
-            self.current_route = self.calculate_route(self.goal)
+            self.current_route = self.calculate_route(self.start, self.goal)
         self.publish_waypoints()
 
     def find_ego_vehicle_actor(self, _):
@@ -131,7 +132,7 @@ class CarlaToRosWaypointConverter(object):
                 self.ego_vehicle = hero
                 self.reroute()
 
-    def calculate_route(self, goal):
+    def calculate_route(self, start, goal):
         """
         Calculate a route from the current location to 'goal'
         """
@@ -143,7 +144,9 @@ class CarlaToRosWaypointConverter(object):
         dao = GlobalRoutePlannerDAO(self.world.get_map())
         grp = GlobalRoutePlanner(dao)
         grp.setup()
-        route = grp.trace_route(self.ego_vehicle.get_location(),
+        route = grp.trace_route(carla.Location(start.location.x,
+                                               start.location.y,
+                                               start.location.z),
                                 carla.Location(goal.location.x,
                                                goal.location.y,
                                                goal.location.z))

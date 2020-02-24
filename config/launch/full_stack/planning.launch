@@ -4,7 +4,7 @@
     <arg name="waypoint_topic" default="/carla/ego_vehicle/waypoints"/>
     <arg name="objects_topic" default="/zzz/perception/objects_tracked"/>
 
-    <node pkg="zzz_navigation_pose_reporter" type="manual"
+    <node pkg="zzz_navigation_pose_reporter" type="manual" respawn="true"
           name="pose_reporter" output="screen" ns="/zzz/navigation">
         <param name="map_origin" value="[49,8,0]"/>
         <param name="odom_input_topic" value="$(arg odom_topic)"/>
@@ -14,7 +14,7 @@
 
         
     </node>
-    <node pkg="zzz_navigation_map_provider_sumo" type="local_map_generator"
+    <node pkg="zzz_navigation_map_provider_sumo" type="local_map_generator" respawn="true"
           name="static_map_builder" output="screen" ns="/zzz/navigation">
         <param name="reference_path_topic" value="$(arg waypoint_topic)"/>
 
