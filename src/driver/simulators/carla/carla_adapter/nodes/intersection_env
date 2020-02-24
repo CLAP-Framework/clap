@@ -419,7 +419,6 @@ def restart_ego_vehicle(carla_world):
 
 
 
-
 def record_collsion_to_txt(carla_world, collision_signal, pose_buffer):
     # if in intersection
     global if_write
@@ -684,3 +683,23 @@ if __name__ == "__main__":
     del ReferencePathGenerator
     del carla_world
     del carla_client
+
+
+global stopped_time
+stopped_time = np.zeros(1000000)
+
+def stopped_vehicle(ego_vehicle, stopped_time_thres = 20):
+    carla_world = ego_vehicle.get_world()
+    actor_list = carla_world.get_actors()
+    vehicle_list = actor_list.filter("*vehicle*")
+
+    for vehicle in vehicle_list:
+        if vehicle.attributes['role_name'] == "ego_vehicle":
+            pass
+        else:
+            velocity = vehicle.get_velocity()
+            if velocity.x < 0.02 and velocity.y < 0.02:
+                stopped_time[vehicle.id] = stopped_time[vehicle.id] + 1
+                if stopped_time[vehicle.id] > stopped_time_thres
+                    vehicle.destroy()
+    
