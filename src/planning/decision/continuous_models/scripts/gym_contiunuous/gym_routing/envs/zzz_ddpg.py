@@ -104,7 +104,7 @@ class ZZZCarlaEnv(gym.Env):
                 
                 if leave_current_mmap == 1:
                     done = True
-                    reward = +100
+                    reward = +1000
                     print("+++++++++++++++++++++ successful pass intersection")
 
                 elif leave_current_mmap == 2:

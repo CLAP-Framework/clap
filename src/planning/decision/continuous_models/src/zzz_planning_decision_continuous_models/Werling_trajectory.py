@@ -198,7 +198,7 @@ class Werling(object):
                     mindist = pointdist
                     bestpoint = t
             c_speed = self.last_trajectory.s_d[bestpoint]
-            s0 = self.last_trajectory.s[bestpoint] + get_speed(dynamic_map.ego_state) * 1.75
+            s0 = self.last_trajectory.s[bestpoint] + get_speed(dynamic_map.ego_state) * 1.0
             c_d = self.last_trajectory.d[bestpoint]
             c_d_d = self.last_trajectory.d_d[bestpoint]
             c_d_dd = self.last_trajectory.d_dd[bestpoint]
@@ -216,7 +216,7 @@ class Werling(object):
 
             c_d_d = ffstate.vd  # current lateral speed [m/s]
             c_d_dd = 0   # current latral acceleration [m/s]
-            s0 = ffstate.s + c_speed * 1.75      # current course position
+            s0 = ffstate.s + c_speed * 1.0      # current course position
 
         first_trajectory = frenet_optimal_planning_withRL(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob, RLS_action)
     
