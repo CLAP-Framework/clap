@@ -6,5 +6,6 @@
     <include file="$(env ZZZ_ROOT)/zzz/config/launch/full_stack/planning.launch">
         <arg name="objects_topic" value="/zzz/perception/objects_truth"/>
     </include>
-    <include file="$(env ZZZ_ROOT)/zzz/src/driver/simulators/carla/carla_adapter/scripts/use_bridge/auxiliary.launch"/>
+    <!-- xiaopeng adpater -->
+    <!-- <include file="$(env ZZZ_ROOT)/zzz/src/driver/simulators/carla/carla_adapter/scripts/use_bridge/auxiliary.launch"/> -->
 </launch>

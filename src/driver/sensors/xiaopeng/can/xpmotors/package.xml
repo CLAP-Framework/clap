@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>xpmotors</name>
+  <version>0.0.1</version>
+  <description>The xpmotors package</description>
+  <maintainer email="yong.zhu@novauto.com.cn">zhu yong</maintainer>
+  <license>GPLv2</license>
+  <author email="yong.zhu@novauto.com.cn">zhu yong</author>
+
+  <build_depend>roscpp</build_depend>
+  <exec_depend>roscpp</exec_depend>
+  <build_depend>xpmotors_can_msgs</build_depend>
+  <exec_depend>xpmotors_can_msgs</exec_depend>
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+  </export>
+</package>
