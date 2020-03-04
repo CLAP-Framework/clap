@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(zzz_perception_detection_lidar_detectors)
 
+add_compile_options(-std=c++11)
+
+find_package(Boost REQUIRED COMPONENTS system filesystem)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
@@ -31,6 +35,7 @@ add_dependencies(zzz_perception_detection_lidar_detectors
 )
 target_link_libraries(zzz_perception_detection_lidar_detectors
   ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
 )
 
 # Add node targets
@@ -44,6 +49,7 @@ add_dependencies(euclidean_cluster_detector
 target_link_libraries(euclidean_cluster_detector
   zzz_perception_detection_lidar_detectors
   ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
 )
 
 # Install files

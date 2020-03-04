@@ -51,6 +51,6 @@
     </node> -->
     
     <!-- adapter for xiaopeng' control module -->
-    <include file="$(find xpmotors)/launch/cxfollower.launch">
+    <include file="$(find xpmotors)/launch/cxfollower.launch" />
 
 </launch>
