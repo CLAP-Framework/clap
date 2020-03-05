@@ -21,6 +21,7 @@ if 'SUMO_HOME' in os.environ:
     sys.path.append(tools)
 else:   
     sys.exit("Please declare environment variable 'SUMO_HOME' (e.g. /usr/share/sumo)")
+    
 import sumolib
 
 class LocalMap(object):

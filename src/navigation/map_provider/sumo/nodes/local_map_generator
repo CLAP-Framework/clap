@@ -29,7 +29,7 @@ class MapProvider(object):
             map_output_topic = "local_static_map", # /zzz/navigation/local_static_map
             map_file_type = "opendrive",
             pose_topic = "ego_pose", # /zzz/navigation/ego_pose
-            reference_path_topic = "reference_path", # /zzz/navigation/reference_path
+            reference_path_topic = "reference_path", # /zzz/navigation/reference_path, waypoints
             hz = 10
         )
         self._map_trigger = threading.Event()
