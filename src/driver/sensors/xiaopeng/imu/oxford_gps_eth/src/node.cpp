@@ -41,7 +41,7 @@
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <nav_msgs/Odometry.h>
 #include<oxford_gps_eth/RigidBodyState.h>
-
+#include<oxford_gps_eth/RigidBodyStateStamped.h>
 // Tf Quaternions
 #include <tf/LinearMath/Quaternion.h>
 
@@ -342,19 +342,19 @@ static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, r
     //ximenjiayouzhan wei yuandian 
     X=X-20441065.1238410;
     Y=Y-4429649.9202231;
-    oxford_gps_eth::RigidBodyState state;
+    oxford_gps_eth::RigidBodyStateStamped state;
 
     /**pose**/
-    state.child_frame_id="odom";
-    state.pose.pose.position.x=X;
-    state.pose.pose.position.y=Y;
-    state.pose.pose.position.z=msg_fix.altitude;
-    state.pose.pose.orientation=msg_imu.orientation;
+    state.state.child_frame_id="odom";
+    state.state.pose.pose.position.x=X;
+    state.state.pose.pose.position.y=Y;
+    state.state.pose.pose.position.z=msg_fix.altitude;
+    state.state.pose.pose.orientation=msg_imu.orientation;
     /*twist*/
-    state.twist.twist.linear=msg_vel.twist.twist.linear;
-    state.twist.twist.angular=msg_imu.angular_velocity;
+    state.state.twist.twist.linear=msg_vel.twist.twist.linear;
+    state.state.twist.twist.angular=msg_imu.angular_velocity;
     /**accel**/
-    state.accel.accel.linear=msg_imu.linear_acceleration;
+    state.state.accel.accel.linear=msg_imu.linear_acceleration;
 
     pub_ego_pose.publish(state);
 
@@ -408,7 +408,7 @@ int main(int argc, char **argv)
     ros::Publisher pub_vel = node.advertise<geometry_msgs::TwistWithCovarianceStamped>("gps/vel", 2);
     ros::Publisher pub_imu = node.advertise<sensor_msgs::Imu>("imu/data", 2);
     ros::Publisher pub_odom = node.advertise<nav_msgs::Odometry>("gps/odom", 2);
-    ros::Publisher pub_ego_pose = node.advertise<oxford_gps_eth::RigidBodyState>("ego_pose", 2);
+    ros::Publisher pub_ego_pose = node.advertise<oxford_gps_eth::RigidBodyStateStamped>("/zzz/navigation/ego_pose", 2);
     
 
     // Variables

@@ -54,8 +54,8 @@ class CarlaToRosWaypointConverter(object):
 
         # self._pose_publisher = rospy.Publisher(params.pose_output_topic, RigidBodyStateStamped, queue_size=1)
         self._pose_publisher = rospy.Publisher('/zzz/navigation/ego_pose', RigidBodyStateStamped, queue_size=1)
-        self._thread = threading.Thread(target=self.run)
-        self._thread.start()
+        # self._thread = threading.Thread(target=self.run)
+        # self._thread.start()
 
     def run(self):
         flag = False;
