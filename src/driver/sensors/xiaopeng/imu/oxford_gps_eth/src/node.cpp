@@ -40,6 +40,7 @@
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <nav_msgs/Odometry.h>
+#include<oxford_gps_eth/RigidBodyState.h>
 
 // Tf Quaternions
 #include <tf/LinearMath/Quaternion.h>
@@ -116,7 +117,7 @@ static inline double SQUARE(double x)
 
 static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, ros::Publisher &pub_vel,
                                 ros::Publisher &pub_imu, ros::Publisher &pub_odom, const std::string &frame_id,
-                                const std::string &frame_id_vel)
+                                const std::string &frame_id_vel,ros::Publisher &pub_ego_pose)
 {
   static uint8_t fix_status = sensor_msgs::NavSatStatus::STATUS_FIX;
   static uint8_t position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_UNKNOWN;
@@ -314,6 +315,49 @@ static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, r
     msg_odom.child_frame_id = "base_link";
     msg_odom.twist = msg_vel.twist;
     pub_odom.publish(msg_odom);
+
+    /**egopose**/
+    double f;
+    double a,b,e,N,M,H,A,B,C,T,FE,X,Y,k0,L,L0;
+    double PI=3.141592654;
+
+    B=PI*msg_fix.latitude/180.0;
+    L=PI*msg_fix.longitude/180.0;
+    a=6378137;
+    b=6356752.3142;
+    k0=1;
+    H=20;
+    L0=PI*117/180.0;
+    f=sqrt((a/b)*(a/b)-1);
+    e=sqrt(1-(b/a)*(b/a));
+    N=(a*a/b)/sqrt(1+f*f*cos(B)*cos(B));
+    M=a*((1-e*e/4-3*pow(e,4)/64-5*pow(e,6)/256)*B-(3*e*e/8+3*pow(e,4)/32+45*pow(e,6)/1024)*sin(2*B)+(15*pow(e,4)/256+45*pow(e,6)/1024)*sin(4*B)-sin(6*B)*35*pow(e,6)/3072);
+    A=(L-L0)*cos(B);
+    C=f*f*cos(B)*cos(B);
+    T=tan(B)*tan(B);
+    FE=500000+H*1000000;
+    Y=k0*(M+N*tan(B)*(A*A/2+(5-T+9*C+4*pow(C,2))*pow(A,4)/24)+(61-58*T+T*T+270*C-330*T*C)*pow(A,6)/720);
+    X=FE+k0*N*(A+(1-T+C)*pow(A,3)/6+(5-18*T+T*T+14*C-58*T*C)*pow(A,5)/120);    
+
+    //ximenjiayouzhan wei yuandian 
+    X=X-20441065.1238410;
+    Y=Y-4429649.9202231;
+    oxford_gps_eth::RigidBodyState state;
+
+    /**pose**/
+    state.child_frame_id="odom";
+    state.pose.pose.position.x=X;
+    state.pose.pose.position.y=Y;
+    state.pose.pose.position.z=msg_fix.altitude;
+    state.pose.pose.orientation=msg_imu.orientation;
+    /*twist*/
+    state.twist.twist.linear=msg_vel.twist.twist.linear;
+    state.twist.twist.angular=msg_imu.angular_velocity;
+    /**accel**/
+    state.accel.accel.linear=msg_imu.linear_acceleration;
+
+    pub_ego_pose.publish(state);
+
 #if OXFORD_DISPLAY_INFO
   } else {
     ROS_WARN("Nav Status: %u", packet->nav_status);
@@ -364,6 +408,8 @@ int main(int argc, char **argv)
     ros::Publisher pub_vel = node.advertise<geometry_msgs::TwistWithCovarianceStamped>("gps/vel", 2);
     ros::Publisher pub_imu = node.advertise<sensor_msgs::Imu>("imu/data", 2);
     ros::Publisher pub_odom = node.advertise<nav_msgs::Odometry>("gps/odom", 2);
+    ros::Publisher pub_ego_pose = node.advertise<oxford_gps_eth::RigidBodyState>("ego_pose", 2);
+    
 
     // Variables
     Packet packet;
@@ -378,7 +424,7 @@ int main(int argc, char **argv)
             first = false;
             ROS_INFO("Connected to Oxford GPS at %s:%u", inet_ntoa(((sockaddr_in*)&source)->sin_addr), htons(((sockaddr_in*)&source)->sin_port));
           }
-          handlePacket(&packet, pub_fix, pub_vel, pub_imu, pub_odom, frame_id, frame_id_vel);
+          handlePacket(&packet, pub_fix, pub_vel, pub_imu, pub_odom, frame_id, frame_id_vel,pub_ego_pose);
         }
       }
 

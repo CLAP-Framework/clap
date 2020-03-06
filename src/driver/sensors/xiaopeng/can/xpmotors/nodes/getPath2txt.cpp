@@ -114,7 +114,9 @@ int main(int argc, char **argv)
     ros::Subscriber sub7_ = n.subscribe("gps/fix", 10, callback_gpsfix);
  
     //数据采集    
-    ofile.open("/home/icv/vehicle/Vehicle data/Path.txt");     //作为输出文件打开
+    ofile.open("/home/icv/vehicle/Vehicle data/MeiyPath2.txt");     //作为输出文件打开
+    ofile<<"x "<<" y "<<" theta "<<" latitude "<<" longtitude "<<endl;//写入txt数据
+
     signal(SIGINT, MySigintHandler);
     //ros::ok()返回false会停止运行，进程终止。
     while(ros::ok())
@@ -124,7 +126,8 @@ int main(int argc, char **argv)
     if(callback_imu_flag&callback_gpsfix_flag)
     {
         // ofile<<setiosflags(ios::fixed)<<setprecision(7)<<Current_Point.x<<" "<<Current_Point.y<<" "<<Current_Point.theta<<" "<<latitude<<" "<<longitude<<endl;//写入txt数据 
-        ofile<<setiosflags(ios::fixed)<<setprecision(3)<<Current_Point.x<<" "<<Current_Point.y<<" "<<Current_Point.theta<<endl;//写入txt数据 
+        ofile<<setiosflags(ios::fixed)<<setprecision(3)<<Current_Point.x<<" "<<Current_Point.y<<" "<<Current_Point.theta<<endl;//写入txt数据
+        // ofile<<setiosflags(ios::fixed)<<setprecision(7)<<latitude<<" "<<longitude<<endl;//写入txt数据  
     }
     ros::spinOnce();	
     loop_rate.sleep();	//按前面设置的10Hz频率将程序挂起

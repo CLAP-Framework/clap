@@ -53,5 +53,6 @@ class Node(object):
 if __name__ == "__main__":
 
     rospy.init_node("put_buffer", log_level=rospy.DEBUG)
+    rospy.logdebug("### put_buffer launched ###")
     node = Node()
     node.loop()

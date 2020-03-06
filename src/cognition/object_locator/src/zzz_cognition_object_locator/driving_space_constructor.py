@@ -56,8 +56,13 @@ class DrivingSpaceConstructor:
         assert type(static_map) == Map
         with self._static_map_lock:
             self._static_map_buffer = static_map
-            rospy.loginfo("Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
+            '''
+            rospy.loginfo("!!!! Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
                 len(static_map.lanes), int(static_map.in_junction), static_map.target_lane_index)
+            rospy.loginfo("!!!! lane0 - {}, lane1 - {}".format(
+                static_map.lanes[0].central_path_points[2357], 
+                static_map.lanes[1].central_path_points[2188]))
+            '''
 
     def receive_object_list(self, object_list):
         assert type(object_list) == TrackingBoxArray
@@ -71,6 +76,7 @@ class DrivingSpaceConstructor:
         with self._ego_vehicle_state_lock:
             self._ego_vehicle_state_buffer = state
             #TODO: wrap ego vehicle just like wrapping obstacle
+        rospy.loginfo("temp safe2...")
 
     def receive_traffic_light_detection(self, detection):
         assert type(detection) == DetectionBoxArray
@@ -83,6 +89,8 @@ class DrivingSpaceConstructor:
 
         tstates = edict()
 
+        # rospy.loginfo("temp safe3...")
+
         # Skip if not ready
         if not self._ego_vehicle_state_buffer:
             return None
@@ -90,9 +98,10 @@ class DrivingSpaceConstructor:
         with self._ego_vehicle_state_lock:
             tstates.ego_vehicle_state = copy.deepcopy(self._ego_vehicle_state_buffer) 
 
+        # rospy.loginfo("temp safe4...")
+
         # Update buffer information
         tstates.surrounding_object_list = copy.deepcopy(self._surrounding_object_list_buffer or [])
-
         tstates.static_map = copy.deepcopy(self._static_map_buffer or navigation_default(Map)) 
         static_map = tstates.static_map # for easier access
         tstates.static_map_lane_path_array = get_lane_array(tstates.static_map.lanes)
@@ -102,7 +111,11 @@ class DrivingSpaceConstructor:
         tstates.ego_s = -1
         tstates.drivable_area = []
 
+        # rospy.loginfo("temp safe5...")
+        rospy.loginfo("------------------num of lanes: %d", len(tstates.static_map.lanes))
+
         # Update driving_space with tstate
+        self._driving_space = DrivingSpace()
         if static_map.in_junction or len(static_map.lanes) == 0:
             rospy.logdebug("In junction due to static map report junction location")
             self.calculate_drivable_area(tstates)
@@ -115,8 +128,6 @@ class DrivingSpaceConstructor:
             self.locate_stop_sign_in_lanes(tstates)
             self.locate_speed_limit_in_lanes(tstates)
             self.calculate_drivable_area(tstates)
-        
-        self._driving_space = DrivingSpace()
 
         self._driving_space.header.frame_id = "map"
         self._driving_space.header.stamp = rospy.Time.now()
@@ -127,11 +138,14 @@ class DrivingSpaceConstructor:
 
         self._driving_space.obstacles = tstates.obstacles
    
-        rospy.logdebug("len(self._static_map.lanes): %d", len(tstates.static_map.lanes))
+        # rospy.logdebug("len(self._static_map.lanes): %d", len(tstates.static_map.lanes))
 
+        # rospy.loginfo("temp safe6...")
         #visualization
         #1. lanes
         self._lanes_markerarray = MarkerArray()
+
+        rospy.loginfo("------------------num of lanes: %d", len(tstates.static_map.lanes))
 
         count = 0
         if not (tstates.static_map.in_junction):
@@ -181,6 +195,9 @@ class DrivingSpaceConstructor:
                 tempmarker.type = Marker.LINE_STRIP
                 tempmarker.action = Marker.ADD
                 tempmarker.scale.x = 0.15
+
+                if len(lane.right_boundaries) == 0:
+                    break
                 
                 if lane.right_boundaries[0].boundary_type == 1: #broken lane is set gray
                     tempmarker.color.r = 0.6
@@ -485,85 +502,95 @@ class DrivingSpaceConstructor:
         left_boundary_array = np.array([(lbp.boundary_point.position.x, lbp.boundary_point.position.y) for lbp in lane.left_boundaries])
         right_boundary_array = np.array([(lbp.boundary_point.position.x, lbp.boundary_point.position.y) for lbp in lane.right_boundaries])
 
-        # Distance to lane considering the size of the object
-        x = object.pose.pose.orientation.x
-        y = object.pose.pose.orientation.y
-        z = object.pose.pose.orientation.z
-        w = object.pose.pose.orientation.w
-
-        rotation_mat = np.array([[1-2*y*y-2*z*z, 2*x*y+2*w*z, 2*x*z-2*w*y], [2*x*y-2*w*z, 1-2*x*x-2*z*z, 2*y*z+2*w*x], [2*x*z+2*w*y, 2*y*z-2*w*x, 1-2*x*x-2*y*y]])
-        rotation_mat_inverse = np.linalg.inv(rotation_mat) #those are the correct way to deal with quaternion
-
-        vector_x = np.array([dimension.length_x, 0, 0])
-        vector_y = np.array([0, dimension.length_y, 0])
-        dx = np.matmul(rotation_mat_inverse, vector_x)
-        dy = np.matmul(rotation_mat_inverse, vector_y)
-
-        #the four corners of the object, in bird view: left front is 0, counterclockwise.
-        #TODO: may consider 8 corners in the future
-        corner_list_x = np.zeros(4)
-        corner_list_y = np.zeros(4)
-        corner_list_x[0] = object.pose.pose.position.x + dx[0]/2.0 + dy[0]/2.0
-        corner_list_y[0] = object.pose.pose.position.y + dx[1]/2.0 + dy[1]/2.0
-        corner_list_x[1] = object.pose.pose.position.x - dx[0]/2.0 + dy[0]/2.0
-        corner_list_y[1] = object.pose.pose.position.y - dx[1]/2.0 + dy[1]/2.0
-        corner_list_x[2] = object.pose.pose.position.x - dx[0]/2.0 - dy[0]/2.0
-        corner_list_y[2] = object.pose.pose.position.y - dx[1]/2.0 - dy[1]/2.0
-        corner_list_x[3] = object.pose.pose.position.x + dx[0]/2.0 - dy[0]/2.0
-        corner_list_y[3] = object.pose.pose.position.y + dx[1]/2.0 - dy[1]/2.0
-
-        dist_left_list_all = np.array([dist_from_point_to_polyline2d(
-                corner_list_x[i],
-                corner_list_y[i],
-                left_boundary_array) for i in range(4)])
-        dist_right_list_all = np.array([dist_from_point_to_polyline2d(
-                corner_list_x[i],
-                corner_list_y[i],
-                right_boundary_array) for i in range(4)])
-
-        dist_left_list = dist_left_list_all[:, 0]
-        dist_right_list = dist_right_list_all[:, 0]
-
-        lane_dist_left_t = -99
-        lane_dist_right_t = -99
-
-        if np.min(dist_left_list) * np.max(dist_left_list) <= 0:
-            # the object is on the left boundary of lane
-            lane_dist_left_t = 0
+        if len(left_boundary_array) == 0:
+            ffstate = get_frenet_state(object,
+                            tstates.static_map_lane_path_array[closest_lane],
+                            tstates.static_map_lane_tangets[closest_lane]
+                        )
+            lane_anglediff = ffstate.psi
+            lane_dist_s = ffstate.s
+            return closest_lane, -1, -1, lane_anglediff, lane_dist_s
+        
         else:
-            lane_dist_left_t = np.sign(np.min(dist_left_list)) * np.min(np.abs(dist_left_list))
+            # Distance to lane considering the size of the object
+            x = object.pose.pose.orientation.x
+            y = object.pose.pose.orientation.y
+            z = object.pose.pose.orientation.z
+            w = object.pose.pose.orientation.w
 
-        if np.min(dist_right_list) * np.max(dist_right_list) <= 0:
-            # the object is on the right boundary of lane
-            lane_dist_right_t = 0
-        else:
-            lane_dist_right_t = np.sign(np.min(dist_right_list)) * np.min(np.abs(dist_right_list))
+            rotation_mat = np.array([[1-2*y*y-2*z*z, 2*x*y+2*w*z, 2*x*z-2*w*y], [2*x*y-2*w*z, 1-2*x*x-2*z*z, 2*y*z+2*w*x], [2*x*z+2*w*y, 2*y*z-2*w*x, 1-2*x*x-2*y*y]])
+            rotation_mat_inverse = np.linalg.inv(rotation_mat) #those are the correct way to deal with quaternion
 
-        if np.min(dist_left_list) * np.max(dist_left_list) > 0 and np.min(dist_right_list) * np.max(dist_right_list) > 0:
-            if np.min(dist_left_list) * np.max(dist_right_list) >= 0:
-                # the object is out of the road
-                closest_lane = -1
-            
-        ffstate = get_frenet_state(object,
-                        tstates.static_map_lane_path_array[closest_lane],
-                        tstates.static_map_lane_tangets[closest_lane]
-                    )
-        lane_anglediff = ffstate.psi
-        lane_dist_s = ffstate.s # this is also helpful in getting ego s coordinate in the road
+            vector_x = np.array([dimension.length_x, 0, 0])
+            vector_y = np.array([0, dimension.length_y, 0])
+            dx = np.matmul(rotation_mat_inverse, vector_x)
+            dy = np.matmul(rotation_mat_inverse, vector_y)
 
-        # Judge whether the point is outside of lanes
-        if closest_lane == -1:
-            # The object is at left or right most
-            return closest_lane, lane_dist_left_t, lane_dist_right_t, lane_anglediff, lane_dist_s
-        else:
-            # The object is between center line of lanes
-            a, b = closest_lane, second_closest_lane
-            la, lb = abs(closest_lane_dist), abs(second_closest_lane_dist)
-            if lb + la == 0:
-                lane_index_return = -1
+            #the four corners of the object, in bird view: left front is 0, counterclockwise.
+            #TODO: may consider 8 corners in the future
+            corner_list_x = np.zeros(4)
+            corner_list_y = np.zeros(4)
+            corner_list_x[0] = object.pose.pose.position.x + dx[0]/2.0 + dy[0]/2.0
+            corner_list_y[0] = object.pose.pose.position.y + dx[1]/2.0 + dy[1]/2.0
+            corner_list_x[1] = object.pose.pose.position.x - dx[0]/2.0 + dy[0]/2.0
+            corner_list_y[1] = object.pose.pose.position.y - dx[1]/2.0 + dy[1]/2.0
+            corner_list_x[2] = object.pose.pose.position.x - dx[0]/2.0 - dy[0]/2.0
+            corner_list_y[2] = object.pose.pose.position.y - dx[1]/2.0 - dy[1]/2.0
+            corner_list_x[3] = object.pose.pose.position.x + dx[0]/2.0 - dy[0]/2.0
+            corner_list_y[3] = object.pose.pose.position.y + dx[1]/2.0 - dy[1]/2.0
+
+            dist_left_list_all = np.array([dist_from_point_to_polyline2d(
+                    corner_list_x[i],
+                    corner_list_y[i],
+                    left_boundary_array) for i in range(4)])
+            dist_right_list_all = np.array([dist_from_point_to_polyline2d(
+                    corner_list_x[i],
+                    corner_list_y[i],
+                    right_boundary_array) for i in range(4)])
+
+            dist_left_list = dist_left_list_all[:, 0]
+            dist_right_list = dist_right_list_all[:, 0]
+
+            lane_dist_left_t = -99
+            lane_dist_right_t = -99
+
+            if np.min(dist_left_list) * np.max(dist_left_list) <= 0:
+                # the object is on the left boundary of lane
+                lane_dist_left_t = 0
             else:
-                lane_index_return = (b*la + a*lb)/(lb + la)
-            return lane_index_return, lane_dist_left_t, lane_dist_right_t, lane_anglediff, lane_dist_s
+                lane_dist_left_t = np.sign(np.min(dist_left_list)) * np.min(np.abs(dist_left_list))
+
+            if np.min(dist_right_list) * np.max(dist_right_list) <= 0:
+                # the object is on the right boundary of lane
+                lane_dist_right_t = 0
+            else:
+                lane_dist_right_t = np.sign(np.min(dist_right_list)) * np.min(np.abs(dist_right_list))
+
+            if np.min(dist_left_list) * np.max(dist_left_list) > 0 and np.min(dist_right_list) * np.max(dist_right_list) > 0:
+                if np.min(dist_left_list) * np.max(dist_right_list) >= 0:
+                    # the object is out of the road
+                    closest_lane = -1
+                
+            ffstate = get_frenet_state(object,
+                            tstates.static_map_lane_path_array[closest_lane],
+                            tstates.static_map_lane_tangets[closest_lane]
+                        )
+            lane_anglediff = ffstate.psi
+            lane_dist_s = ffstate.s # this is also helpful in getting ego s coordinate in the road
+
+            # Judge whether the point is outside of lanes
+            if closest_lane == -1:
+                # The object is at left or right most
+                return closest_lane, lane_dist_left_t, lane_dist_right_t, lane_anglediff, lane_dist_s
+            else:
+                # The object is between center line of lanes
+                a, b = closest_lane, second_closest_lane
+                la, lb = abs(closest_lane_dist), abs(second_closest_lane_dist)
+                if lb + la == 0:
+                    lane_index_return = -1
+                else:
+                    lane_index_return = (b*la + a*lb)/(lb + la)
+                return lane_index_return, lane_dist_left_t, lane_dist_right_t, lane_anglediff, lane_dist_s
         
 
     def locate_obstacle_in_lanes(self, tstates):
@@ -617,7 +644,7 @@ class DrivingSpaceConstructor:
             angle_list = []
             dist_list = []
 
-            if len(tstates.static_map.drivable_area.points) != 0:
+            if len(tstates.static_map.drivable_area.points) >= 3:
                 for i in range(len(tstates.static_map.drivable_area.points)):
                     node_point = tstates.static_map.drivable_area.points[i]
                     last_node_point = tstates.static_map.drivable_area.points[i-1]
@@ -782,7 +809,8 @@ class DrivingSpaceConstructor:
                         self.lane_section_points_generation(lane_sections[i, 0], lane_sections[i-1, 0], lane.right_boundaries, tstates)
             
             #close the figure
-            tstates.drivable_area.append(tstates.drivable_area[0])
+            if len(tstates.drivable_area) != 0:
+                tstates.drivable_area.append(tstates.drivable_area[0])
 
     def lane_section_points_generation(self, starts, ends, lane_boundaries, tstates):
         if starts <= ends:

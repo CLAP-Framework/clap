@@ -41,6 +41,8 @@ class DrivingSpaceNode(object):
         self._drivable_area_markerarray_publisher = rospy.Publisher("drivable_area_markerarray", MarkerArray, queue_size=1)
 
     def pose_callback(self, msg):
+        rospy.loginfo("temp safe1...")
+        # print("\n\n\n\n\n\n\n\n\n\n")
         self._driving_space.receive_ego_state(msg)
         self._driving_space.update_driving_space()
 

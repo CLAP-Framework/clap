@@ -84,8 +84,12 @@ class NativeMap(object):
         # map_x, map_y = self._ego_vehicle_x, self._ego_vehicle_y
         
         # Left is 0 
+        self.static_local_map.in_junction = False
         self.static_local_map.lanes.append(self._lanes[0])
         self.static_local_map.lanes.append(self._lanes[1])
+        # rospy.loginfo("### native map update lane0 - {}, lane1 - {}".format(
+        #     self.static_local_map.lanes[0].central_path_points[2357], 
+        #     self.static_local_map.lanes[1].central_path_points[2188]))
 
 
     def get_lane(self, central_points): # outside
