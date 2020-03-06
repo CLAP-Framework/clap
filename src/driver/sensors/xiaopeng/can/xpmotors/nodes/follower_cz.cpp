@@ -347,6 +347,14 @@ double qua_to_rpy(geometry_msgs::Quaternion posedata)
     float R = atan2((2*(w*x+y*z)),(1-2*(x*x+y*y)));
     float P = asin(2*(w*y-z*x));
     float Y = atan2((2*(w*z+x*y)),(1-2*(z*z+y*y)));
+    if(Y<0)
+    {
+        Y=-1*Y;
+    }
+    else if (Y>0)
+    {
+        Y=360-Y;
+    }  
     return Y/PI*180.0;
 }
 void callback_Config(const  xpmotors_can_msgs::AutoCtlReq &config)
@@ -412,14 +420,7 @@ void callback_imu(const sensor_msgs::Imu &msg)
     // Pitch = (asin(2*(w*y-z*x)))/PI*180;
     // Yaw = (atan2((2*(w*z+x*y)),(1-2*(z*z+y*y))))/PI*180;  
     Yaw=qua_to_rpy(msg.orientation);
-    if(Yaw<0)
-    {
-        Yaw=-1*Yaw;
-    }
-    else if (Yaw>0)
-    {
-        Yaw=360-Yaw;
-    }  
+
     Current_Point.theta=Yaw;
     cout<<Yaw<<" YAw"<<endl;
     callback_imu_flag=true;
