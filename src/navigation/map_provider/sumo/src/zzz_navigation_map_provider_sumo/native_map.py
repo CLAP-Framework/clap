@@ -31,9 +31,10 @@ class NativeMap(object):
     def load_lanes(self):
         inner_path = os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/inner_loop.dat'
         outer_path = os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/outer_loop.dat'
-        # inner 0, outer 1
-        self._lanes.append(self.get_lane(np.loadtxt(inner_path, delimiter=',')))
+        # inner 1, outer 0
         self._lanes.append(self.get_lane(np.loadtxt(outer_path, delimiter=',')))
+        self._lanes.append(self.get_lane(np.loadtxt(inner_path, delimiter=',')))
+        
 
 
     def receive_new_pose(self, x, y):
@@ -84,7 +85,7 @@ class NativeMap(object):
         # map_x, map_y = self._ego_vehicle_x, self._ego_vehicle_y
         
         # Left is 0 
-        self.static_local_map.in_junction = False
+        self.static_local_map.in_junction = False # lane change
         self.static_local_map.lanes.append(self._lanes[0])
         self.static_local_map.lanes.append(self._lanes[1])
         # rospy.loginfo("### native map update lane0 - {}, lane1 - {}".format(

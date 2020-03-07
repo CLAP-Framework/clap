@@ -21,11 +21,13 @@ class DrivingSpaceNode(object):
             pose_topic = "/zzz/navigation/ego_pose",
             traffic_light_topic = "/zzz/perception/traffic_lights",
             driving_space_topic = "driving_space",
+            hz = 20,
         )
 
         self._driving_space = DrivingSpaceConstructor()
+        self._rate = rospy.Rate(params.hz)
 
-        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.pose_callback)
+        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self._driving_space.receive_ego_state)
         self._surrounding_vehicle_subscriber = rospy.Subscriber(params.objects_topic, TrackingBoxArray, self._driving_space.receive_object_list)
         self._static_map_subscriber = rospy.Subscriber(params.map_input_topic, Map, self._driving_space.receive_static_map)
         self._driving_space_publisher = rospy.Publisher(params.driving_space_topic, DrivingSpace, queue_size=1)
@@ -40,22 +42,34 @@ class DrivingSpaceNode(object):
         self._ego_markerarray_publisher = rospy.Publisher("ego_markerarray", MarkerArray, queue_size=1)
         self._drivable_area_markerarray_publisher = rospy.Publisher("drivable_area_markerarray", MarkerArray, queue_size=1)
 
-    def pose_callback(self, msg):
-        rospy.loginfo("temp safe1...")
-        # print("\n\n\n\n\n\n\n\n\n\n")
-        self._driving_space.receive_ego_state(msg)
-        self._driving_space.update_driving_space()
+    def loop(self):
+        while not rospy.is_shutdown():
+            self._rate.sleep() 
+            self._driving_space.update_driving_space()
+            self._driving_space_publisher.publish(self._driving_space.driving_space)
+            self._obstacles_markerarray_publisher.publish(self._driving_space._obstacles_markerarray)
+            self._obstacles_label_markerarray_publisher.publish(self._driving_space._obstacles_label_markerarray)
+            self._lanes_markerarray_publisher.publish(self._driving_space._lanes_markerarray)
+            # self._lanes_boundary_markerarray_publisher.publish(self._driving_space._lanes_boundary_markerarray)
+            self._ego_markerarray_publisher.publish(self._driving_space._ego_markerarray)
+            # self._drivable_area_markerarray_publisher.publish(self._driving_space._drivable_area_markerarray)
 
-        self._driving_space_publisher.publish(self._driving_space.driving_space)
-        self._obstacles_markerarray_publisher.publish(self._driving_space._obstacles_markerarray)
-        self._obstacles_label_markerarray_publisher.publish(self._driving_space._obstacles_label_markerarray)
-        self._lanes_markerarray_publisher.publish(self._driving_space._lanes_markerarray)
-        self._lanes_boundary_markerarray_publisher.publish(self._driving_space._lanes_boundary_markerarray)
-        self._ego_markerarray_publisher.publish(self._driving_space._ego_markerarray)
-        self._drivable_area_markerarray_publisher.publish(self._driving_space._drivable_area_markerarray)
+    # def pose_callback(self, msg):
+    #     rospy.loginfo("temp safe1...")
+    #     # print("\n\n\n\n\n\n\n\n\n\n")
+    #     self._driving_space.receive_ego_state(msg)
+    #     self._driving_space.update_driving_space()
+
+    #     self._driving_space_publisher.publish(self._driving_space.driving_space)
+    #     self._obstacles_markerarray_publisher.publish(self._driving_space._obstacles_markerarray)
+    #     self._obstacles_label_markerarray_publisher.publish(self._driving_space._obstacles_label_markerarray)
+    #     self._lanes_markerarray_publisher.publish(self._driving_space._lanes_markerarray)
+    #     self._lanes_boundary_markerarray_publisher.publish(self._driving_space._lanes_boundary_markerarray)
+    #     self._ego_markerarray_publisher.publish(self._driving_space._ego_markerarray)
+    #     self._drivable_area_markerarray_publisher.publish(self._driving_space._drivable_area_markerarray)
 
 if __name__ == "__main__":
     rospy.init_node("driving_space", log_level=rospy.INFO)
     
     node = DrivingSpaceNode()
-    rospy.spin()
+    node.loop()

@@ -118,7 +118,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "Speedtest");	
     ros::NodeHandle n;	
     ros::Publisher pub = n.advertise<xpmotors_can_msgs::AutoCtlReq>("/xp/auto_control", 1000);	//告诉系统要发布话题了，话题名为“str_message”，类型为std_msgs::String，缓冲队列为1000。
-    ros::Rate loop_rate(1);	
+    ros::Rate loop_rate(100);	
     ros::Subscriber sub1_ = n.subscribe("config/waypoint_follower", 10, callback_Config);
     ros::Subscriber sub2_ = n.subscribe("/xp/auto_state_ex", 10, callback_auto_state_ex);
     ros::Subscriber sub3_ = n.subscribe("/xp/auto_state", 10, callback_auto_state);
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub7_ = n.subscribe("/gps/fix", 10, callback_gpsfix);
     ros::Subscriber sub_8 =  n.subscribe("/gps/vel",10,callback_gpsvel);
 //  ros::Publisher pub_vel = node.advertise<geometry_msgs::TwistWithCovarianceStamped>("gps/vel", 2);
-    ros::Publisher pub_ego_pose = n.advertise<zzz_driver_msgs::RigidBodyStateStamped>("/zzz/navigation/ego_pose", 10);	//告诉系统要发布话题了，话题名为“str_message”，类型为std_msgs::String，缓冲队列为1000
+    ros::Publisher pub_ego_pose = n.advertise<zzz_driver_msgs::RigidBodyStateStamped>("/zzz/navigation/ego_pose", 1000);	//告诉系统要发布话题了，话题名为“str_message”，类型为std_msgs::String，缓冲队列为1000
     
     state.state.child_frame_id="odom";
     signal(SIGINT, MySigintHandler);

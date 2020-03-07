@@ -48,9 +48,9 @@
           name="idm_lane_utility" output="screen" ns="/zzz/planning">
     </node>
 
-    <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
+    <!-- <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
           name="safeguard" output="screen" ns="/zzz/planning">
-    </node>
+    </node> -->
 
     <!-- 
       <node pkg="zzz_control_latlon_controllers" type="pure_persuit"
