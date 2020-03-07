@@ -32,8 +32,8 @@ class NativeMap(object):
         inner_path = os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/inner_loop.dat'
         outer_path = os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/outer_loop.dat'
         # inner 0, outer 1
-        self._lanes.append(self.get_lane(np.loadtxt(inner_path)))
-        self._lanes.append(self.get_lane(np.loadtxt(outer_path)))
+        self._lanes.append(self.get_lane(np.loadtxt(inner_path, delimiter=',')))
+        self._lanes.append(self.get_lane(np.loadtxt(outer_path, delimiter=',')))
 
 
     def receive_new_pose(self, x, y):
@@ -98,6 +98,7 @@ class NativeMap(object):
         for wp in central_points: # TODO Consider ego pose where is the start and end point.
             point = LanePoint()
             x, y = wp[0], wp[1]   # Point XY
+            #x, y = wp[1], wp[0]
             point.position.x = x
             point.position.y = y
             lane_wrapped.central_path_points.append(point)

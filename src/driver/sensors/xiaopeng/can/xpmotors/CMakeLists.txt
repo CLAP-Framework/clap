@@ -6,11 +6,14 @@ add_compile_options(-std=c++11)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp xpmotors_can_msgs std_msgs message_generation
+find_package(catkin REQUIRED COMPONENTS roscpp xpmotors_can_msgs std_msgs message_generation  geodesy
 std_msgs geometry_msgs nav_msgs)
+
+find_package(Eigen3 REQUIRED)
 
 ## pkg-config libraries
 # find_package(PkgConfig REQUIRED)
+
 
 
 ## Generate messages in the 'msg' folder
@@ -50,6 +53,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 ## build can-net udp library 
@@ -70,8 +74,9 @@ add_executable(auto_state_node nodes/auto_state_node.cpp)
 add_executable(speedpub nodes/speedpub.cpp)
 add_executable(follower_cz nodes/follower_cz.cpp)
 add_executable(getPath2txt nodes/getPath2txt.cpp)
+add_executable(GPS2ego_pose nodes/GPS2ego_pose.cpp)
 
-## Rename C++ executable without prefix
+## Rename C++ executable without prefixGPS2ego_pose
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
 ## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
@@ -87,6 +92,7 @@ target_link_libraries(auto_state_node ${catkin_LIBRARIES} ${PROJECT_NAME})
 target_link_libraries(speedpub ${catkin_LIBRARIES} ${PROJECT_NAME})
 target_link_libraries(follower_cz ${catkin_LIBRARIES} ${PROJECT_NAME})
 target_link_libraries(getPath2txt ${catkin_LIBRARIES} ${PROJECT_NAME})
+target_link_libraries(GPS2ego_pose ${catkin_LIBRARIES} ${PROJECT_NAME})
 #############
 ## Install ##
 #############

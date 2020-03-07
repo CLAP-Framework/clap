@@ -11,23 +11,17 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 )
 ## Generate messages in the 'msg' folder
-add_message_files(DIRECTORY msg FILES
-RigidBodyState.msg
-RigidBodyStateStamped.msg
-  
-)
+#add_message_files(DIRECTORY msg FILES
+#RigidBodyState.msg
+#RigidBodyStateStamped.msg
+#)
+
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs  # Or other packages containing msgs
-  geometry_msgs
-)
-catkin_package(
-)
-
-
-
-
+#generate_messages(
+#  DEPENDENCIES
+#  std_msgs  # Or other packages containing msgs
+#  geometry_msgs
+#)
 
 catkin_package(
   CATKIN_DEPENDS
@@ -37,6 +31,7 @@ catkin_package(
 
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  /home/yli/zzz/devel/include
 )
 
 add_executable(${PROJECT_NAME}_gps_node src/node.cpp)

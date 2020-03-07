@@ -28,6 +28,14 @@
 #include "xpmotors_can_msgs/ESCStatus.h"
 #include "xpmotors_can_msgs/EPSStatus.h"
 #include "xpmotors/DecisionTrajectory.h"
+
+#include <geographic_msgs/GeoPointStamped.h>
+#include <geodesy/utm.h>
+#include <geodesy/wgs84.h>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+
+
 using namespace std;
 double PI= 3.141592654;
 
@@ -147,8 +155,8 @@ int main(int argc, char **argv)
       steer_send=factor*steer_send_old+(1-factor)*steer_send;
       ctrmsg.EPSAngleReq=steer_send;
       steer_send_old=steer_send;
-      cout<<"steer1 "<<steer1<<"steer2 "<<steer2<<endl;
-      cout<<"cte_d "<<cte_D<<"   cte_A  "<<cte_A<<"steer"<<steer_send<<endl;
+      // cout<<"steer1 "<<steer1<<"steer2 "<<steer2<<endl;
+      // cout<<"cte_d "<<cte_D<<"   cte_A  "<<cte_A<<"steer"<<steer_send<<endl;
       if(!CurDriveMode)
       {
 
@@ -347,14 +355,6 @@ double qua_to_rpy(geometry_msgs::Quaternion posedata)
     float R = atan2((2*(w*x+y*z)),(1-2*(x*x+y*y)));
     float P = asin(2*(w*y-z*x));
     float Y = atan2((2*(w*z+x*y)),(1-2*(z*z+y*y)));
-    if(Y<0)
-    {
-        Y=-1*Y;
-    }
-    else if (Y>0)
-    {
-        Y=360-Y;
-    }  
     return Y/PI*180.0;
 }
 void callback_Config(const  xpmotors_can_msgs::AutoCtlReq &config)
@@ -420,9 +420,15 @@ void callback_imu(const sensor_msgs::Imu &msg)
     // Pitch = (asin(2*(w*y-z*x)))/PI*180;
     // Yaw = (atan2((2*(w*z+x*y)),(1-2*(z*z+y*y))))/PI*180;  
     Yaw=qua_to_rpy(msg.orientation);
-
+    if(Yaw<0)
+    {
+        Yaw=-1*Yaw;
+    }
+    else if (Yaw>0)
+    {
+        Yaw=360-Yaw;
+    }  
     Current_Point.theta=Yaw;
-    cout<<Yaw<<" YAw"<<endl;
     callback_imu_flag=true;
 }
 
@@ -468,9 +474,28 @@ void callback_gpsfix(const sensor_msgs::NavSatFix &msg)
     //ximenjiayouzhan wei yuandian 
     X=X-20441065.1238410;
     Y=Y-4429649.9202231;
+
+    // utm coordinates
+    geographic_msgs::GeoPointStampedPtr gps_msg(new geographic_msgs::GeoPointStamped());
+    gps_msg->position.latitude = msg.latitude;
+    gps_msg->position.longitude = msg.longitude;
+    gps_msg->position.altitude = msg.altitude;
+
+    geodesy::UTMPoint utm;
+    geodesy::fromMsg(gps_msg->position, utm);
+    Eigen::Vector3d xyz(utm.easting, utm.northing, utm.altitude);
+
+    // X=X-4429649.9202231;
+    // Y=Y-20441065.1238410;
+    // Current_Point.x=X;
+    // Current_Point.y=Y;
+    //442867,4427888)
+    Current_Point.x=utm.easting-442867;
+    Current_Point.y=utm.northing-4427888;
+
     Current_Point.x=X+0.3*sin(Yaw*PI/180);
     Current_Point.y=Y+0.3*cos(Yaw*PI/180);
-    cout<<Current_Point.x<<"   kkkk   "<<Current_Point.y<<endl;
+    //cout<<Current_Point.x<<"   kkkk   "<<Current_Point.y<<endl;
 
 }
 void MySigintHandler(int sig)

@@ -113,24 +113,24 @@ SendCanFrame (int16 steeringAngleIn, int16 wheelspeedIn, uint8 control_mode,
 
   xudp.Send (ipAddr.c_str (), ipPort, Buf5f0, 13);	// Send to Auto.
 
-  std::cout << "voice and mode " << (int16) Buf5f0[5] << std::endl;
-  std::cout << "speed L " << (int16) Buf5f0[6] << std::endl;
-  std::cout << "speed H " << (int16) Buf5f0[7] << std::endl;
-  std::cout << "eps angle request " << epsangele_req1 << std::endl;
-  std::cout << "angle L " << (int16) Buf5f0[10] << std::endl;
-  std::cout << "angle H " << (int16) Buf5f0[11] << std::endl;
-  std::cout << "-------Send control message ---------" << std::endl;
+  // std::cout << "voice and mode " << (int16) Buf5f0[5] << std::endl;
+  // std::cout << "speed L " << (int16) Buf5f0[6] << std::endl;
+  // std::cout << "speed H " << (int16) Buf5f0[7] << std::endl;
+  // std::cout << "eps angle request " << epsangele_req1 << std::endl;
+  // std::cout << "angle L " << (int16) Buf5f0[10] << std::endl;
+  // std::cout << "angle H " << (int16) Buf5f0[11] << std::endl;
+  // std::cout << "-------Send control message ---------" << std::endl;
 }
 
 void
 callBack (const xpmotors_can_msgs::AutoCtlReq & msg)
 {
-  cout << "received messages: " << endl;
-  cout << "auto mode " << (uint8) msg.AutoMode << endl;
-  cout << "VoiceAlarm " << (uint8) msg.VoiceAlarm << endl;
-  cout << "tar speed " << (int16) msg.TarSpeedReq << endl;
-  cout << "EPS angle " << (uint16) msg.EPSAngleReq << endl;
-  cout << "TurnLight " << (uint8) msg.TurnLight << endl;
+  // cout << "received messages: " << endl;
+  // cout << "auto mode " << (uint8) msg.AutoMode << endl;
+  // cout << "VoiceAlarm " << (uint8) msg.VoiceAlarm << endl;
+  // cout << "tar speed " << (int16) msg.TarSpeedReq << endl;
+  // cout << "EPS angle " << (uint16) msg.EPSAngleReq << endl;
+  // cout << "TurnLight " << (uint8) msg.TurnLight << endl;
   // usleep(1);
   SendCanFrame (msg.EPSAngleReq, msg.TarSpeedReq, msg.AutoMode,
 	msg.VoiceAlarm, msg.TurnLight);

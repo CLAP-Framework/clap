@@ -12,7 +12,7 @@
   <build_depend>xpmotors_can_msgs</build_depend>
   <exec_depend>xpmotors_can_msgs</exec_depend>
   <buildtool_depend>catkin</buildtool_depend>
-<exec_depend>message_runtime</exec_depend>
+  <exec_depend>message_runtime</exec_depend>
   <export>
   </export>
 </package>

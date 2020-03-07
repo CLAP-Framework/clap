@@ -15,6 +15,7 @@ The goal is either read from the ROS topic `/carla/<ROLE NAME>/move_base_simple/
 
 The calculated route is published on '/carla/<ROLE NAME>/waypoints'
 """
+import os
 import math
 import time
 import threading 
@@ -46,14 +47,14 @@ class CarlaToRosWaypointConverter(object):
         self.ego_vehicle = None
         self.role_name = 'ego_vehicle'
 
-        self.current_route = np.loadtxt('/home/yli/inner_piece.dat')
+        self.current_route = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/outer_loop.dat', delimiter=',')
         self.current_outer = np.loadtxt('/home/yli/outer_piece.dat')
 
         self.waypoint_publisher = rospy.Publisher(
             '/carla/{}/waypoints'.format(self.role_name), Path, queue_size=1, latch=True)
 
         # self._pose_publisher = rospy.Publisher(params.pose_output_topic, RigidBodyStateStamped, queue_size=1)
-        self._pose_publisher = rospy.Publisher('/zzz/navigation/ego_pose', RigidBodyStateStamped, queue_size=1)
+        # self._pose_publisher = rospy.Publisher('/zzz/navigation/ego_pose', RigidBodyStateStamped, queue_size=1)
         # self._thread = threading.Thread(target=self.run)
         # self._thread.start()
 
@@ -87,6 +88,8 @@ class CarlaToRosWaypointConverter(object):
             pose = PoseStamped()
             pose.pose.position.x = wp[0]
             pose.pose.position.y = wp[1]
+	    #pose.pose.position.x = wp[1]
+            #pose.pose.position.y = wp[0]
             pose.pose.position.z = 0.0
 
             msg.poses.append(pose)
@@ -134,7 +137,6 @@ def main():
         rospy.spin()
 
     finally:
-        del waypointConverter
         rospy.loginfo("Done")
 
 

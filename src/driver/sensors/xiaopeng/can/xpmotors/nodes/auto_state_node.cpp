@@ -68,8 +68,8 @@ main (int argc, char **argv)
       memset (ip, 0, sizeof (ip));
 
       len = xudp.Receive (buf, 512, ip);
-      cout << buf << endl;
-      cout << " received length: " << len << endl;
+    //   cout << buf << endl;
+    //   cout << " received length: " << len << endl;
 
       int n = len / 13;
       p = buf;
@@ -155,7 +155,8 @@ main (int argc, char **argv)
 			break;
 		}
 		default:
-			cout << "other ids." << endl;
+			break;
+			// cout << "other ids." << endl;
 
 		}
 	      n--;

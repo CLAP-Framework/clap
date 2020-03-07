@@ -40,8 +40,8 @@
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <nav_msgs/Odometry.h>
-#include<oxford_gps_eth/RigidBodyState.h>
-#include<oxford_gps_eth/RigidBodyStateStamped.h>
+#include <zzz_driver_msgs/RigidBodyState.h>
+#include <zzz_driver_msgs/RigidBodyStateStamped.h>
 // Tf Quaternions
 #include <tf/LinearMath/Quaternion.h>
 
@@ -342,7 +342,7 @@ static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, r
     //ximenjiayouzhan wei yuandian 
     X=X-20441065.1238410;
     Y=Y-4429649.9202231;
-    oxford_gps_eth::RigidBodyStateStamped state;
+    zzz_driver_msgs::RigidBodyStateStamped state;
 
     /**pose**/
     state.state.child_frame_id="odom";
@@ -408,7 +408,7 @@ int main(int argc, char **argv)
     ros::Publisher pub_vel = node.advertise<geometry_msgs::TwistWithCovarianceStamped>("gps/vel", 2);
     ros::Publisher pub_imu = node.advertise<sensor_msgs::Imu>("imu/data", 2);
     ros::Publisher pub_odom = node.advertise<nav_msgs::Odometry>("gps/odom", 2);
-    ros::Publisher pub_ego_pose = node.advertise<oxford_gps_eth::RigidBodyStateStamped>("/zzz/navigation/ego_pose", 2);
+    ros::Publisher pub_ego_pose = node.advertise<zzz_driver_msgs::RigidBodyStateStamped>("/zzz/navigation/ego_pose", 2);
     
 
     // Variables
