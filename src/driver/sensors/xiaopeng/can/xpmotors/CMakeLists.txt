@@ -3,6 +3,9 @@ project(xpmotors)
 
 add_compile_options(-std=c++11)
 
+find_package(Boost REQUIRED COMPONENTS system filesystem)
+
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -89,10 +92,10 @@ add_executable(GPS2ego_pose nodes/GPS2ego_pose.cpp)
 ## Specify libraries to link a library or executable target against
 target_link_libraries(auto_control_node ${catkin_LIBRARIES} ${PROJECT_NAME})
 target_link_libraries(auto_state_node ${catkin_LIBRARIES} ${PROJECT_NAME})
-target_link_libraries(speedpub ${catkin_LIBRARIES} ${PROJECT_NAME})
-target_link_libraries(follower_cz ${catkin_LIBRARIES} ${PROJECT_NAME})
+target_link_libraries(speedpub ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME})
+target_link_libraries(follower_cz ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME})
 target_link_libraries(getPath2txt ${catkin_LIBRARIES} ${PROJECT_NAME})
-target_link_libraries(GPS2ego_pose ${catkin_LIBRARIES} ${PROJECT_NAME})
+target_link_libraries(GPS2ego_pose ${catkin_LIBRARIES}  ${Boost_LIBRARIES} ${PROJECT_NAME})
 #############
 ## Install ##
 #############

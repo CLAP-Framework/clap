@@ -48,7 +48,6 @@ class CarlaToRosWaypointConverter(object):
         self.role_name = 'ego_vehicle'
 
         self.current_route = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/outer_loop.dat', delimiter=',')
-        self.current_outer = np.loadtxt('/home/yli/outer_piece.dat')
 
         self.waypoint_publisher = rospy.Publisher(
             '/carla/{}/waypoints'.format(self.role_name), Path, queue_size=1, latch=True)
