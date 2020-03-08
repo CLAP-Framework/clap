@@ -36,6 +36,12 @@
 // #include <sstream>
 #include "obstacle_set_ros_msg.h"
 
+
+#include <zzz_perception_msgs/TrackingBox.h>
+#include <zzz_perception_msgs/TrackingBoxArray.h>
+
+
+
 class imu_lidar{
 public:
     imu_lidar(const ros::NodeHandle& node_handle):nh(node_handle){R_ego << 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0; T_ego << 0.0,1.0,1.0;};
@@ -97,8 +103,10 @@ public:
         obs_msg_static = obs_msg;
         int scale_vel = 5;
 
-        for (int i = 0; i < obs_msg.obstcles.size(); i++){
-        
+        zzz_perception_msgs::TrackingBoxArray obs_array;
+        obs_array.header.stamp = ros::Time::now();
+        obs_array.header.frame_id = "map";
+        for (int i = 0; i < obs_msg.obstcles.size(); i++) {
             // int i = 0;
             //std::cout <<"-------- " << i << "--" << obs_msg.obstcles[i].tracker_id << " -----------: " << obs_msg.obstcles[i].geo_center.x << " " << obs_msg.obstcles[i].geo_center.y << " " << obs_msg.obstcles[i].geo_center.z << " " <<std::endl;
             Eigen::Vector3d old_geo_center, new_geo_center;
@@ -142,7 +150,53 @@ public:
             // cv::circle(tmp_disp, p2, 4, cv::Scalar(0, 0, 0), -1);
             // //cv::arrowedLine(tmp_disp, p2, p3, cv::Scalar(125, 125, 125));
             // cv::arrowedLine(tmp_disp, p2, p4, cv::Scalar(0, 0, 0), 2);
+#if 0            
+            array = TrackingBoxArray()
+            array.header.stamp = self._last_timestamp
+            array.header.frame_id = self._last_frameid
+            for idx_tr in self._tracked_objects.keys():
+                trackbox = TrackingBox()
+                trackbox.classes = self._tracked_features[idx_tr].classes
+                trackbox.bbox.pose.pose.position.x = self._tracked_objects[idx_tr].pose_state[0]
+                trackbox.bbox.pose.pose.position.y = self._tracked_objects[idx_tr].pose_state[1]
+                trackbox.bbox.pose.pose.position.z = self._tracked_objects[idx_tr].pose_state[2]
+                trackbox.bbox.dimension.length_x = self._tracked_features[idx_tr].shape_state[0]
+                trackbox.bbox.dimension.length_y = self._tracked_features[idx_tr].shape_state[1]
+                trackbox.bbox.dimension.length_z = self._tracked_features[idx_tr].shape_state[2]
+                trackbox.twist.twist.linear.x = self._tracked_objects[idx_tr].pose_state[3]
+                trackbox.twist.twist.linear.y = self._tracked_objects[idx_tr].pose_state[4]
+                trackbox.twist.twist.linear.z = self._tracked_objects[idx_tr].pose_state[5]
+                # TODO: Filling out more fields
+                trackbox.uid = idx_tr
+                # TODO: Add option to track these targets using static coordinate
+                # FIXME: This is a very naive confidence report
+                trackbox.confidence = min(1, (self._counter_track[idx_tr] + 5) / 10.)
+                array.targets.append(trackbox)
+#endif
+            zzz_perception_msgs::TrackingBox obs_box;
+            // TODO 
+            obs_box.classes[0].classid = obs_box.classes[0].VEHICLE;
+            obs_box.classes[0].score = obs_msg_static.obstcles[i].type_confidence;
+
+            obs_box.uid = obs_msg_static.obstcles[i].id;
+            obs_box.confidence = 1.0;
+            // pose
+            obs_box.bbox.pose.pose.position.x = obs_msg_static.obstcles[i].geo_center.x;
+            obs_box.bbox.pose.pose.position.y = obs_msg_static.obstcles[i].geo_center.y;
+            obs_box.bbox.pose.pose.position.z = obs_msg_static.obstcles[i].geo_center.z;
+            // TODO default value should be changed.
+            obs_box.bbox.dimension.length_x = 4;
+            obs_box.bbox.dimension.length_y = 2;
+            obs_box.bbox.dimension.length_z = 1.8;
+            // twist
+            obs_box.twist.twist.linear.x = obs_msg_static.obstcles[i].velocity.x;
+            obs_box.twist.twist.linear.y = obs_msg_static.obstcles[i].velocity.y;
+            obs_box.twist.twist.linear.z = obs_msg_static.obstcles[i].velocity.z;
+
+            obs_array.targets.push_back(obs_box);
         }
+
+        obs_pub_.publish(obs_array);
         // cv::Point p3(int((T_static(0)-442860)*5+600),int((T_static(1)-4427880)*5+600));
         // cv::Point p5(int((T_static(0)-442860)*5+600+scale_vel*vel_static(0)),int((T_static(1)-4427880)*5+600+scale_vel*vel_static(1)));
         // cv::circle(tmp_disp, p3, 8, cv::Scalar(0, 0, 255), -1);
@@ -160,7 +214,7 @@ public:
         obs_sub = nh.subscribe("/rs_obstacle", 1, &imu_lidar::obs_callback,this);
         gps_vel_sub = nh.subscribe("/gps/vel", 200, &imu_lidar::gps_vel_callback,this);
         
-
+        obs_pub_ = nh.advertise<zzz_perception_msgs::TrackingBoxArray>("zzz/perception/objects_tracked", 2);
 
     
     }
@@ -181,6 +235,9 @@ public:
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::NavSatFix, sensor_msgs::Imu> MySyncPolicy;
     std::unique_ptr<message_filters::Synchronizer<MySyncPolicy>> sync;
     ros::Subscriber obs_sub, gps_vel_sub;
+
+    // /zzz/perception/objects_tracked
+    ros::Publisher obs_pub_; 
 
     cv::Mat disp = cv::Mat::zeros(800, 800, CV_8UC3);
 
