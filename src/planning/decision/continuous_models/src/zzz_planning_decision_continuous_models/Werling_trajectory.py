@@ -19,8 +19,8 @@ SIM_LOOP = 500
 
 # Parameter
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
-MAX_ACCEL = 5.0  # maximum acceleration [m/ss]
-MAX_CURVATURE = 3.0  # maximum curvature [1/m]
+MAX_ACCEL = 10.0  # maximum acceleration [m/ss]
+MAX_CURVATURE = 10.0  # maximum curvature [1/m]
 MAX_ROAD_WIDTH = 4.0  # maximum road width [m] # related to RL action space
 D_ROAD_W = 2.0  # road width sampling length [m]
 DT = 0.15  # time tick [s]
@@ -102,7 +102,7 @@ class Werling(object):
         tx, ty, tyaw, tc, csp = generate_target_course(Frenetrefx,Frenetrefy)
 
         now0 = rospy.get_rostime()
-        print("-----------------------------rule-based time consume inside111",now0.to_sec() - now00.to_sec())
+        # print("-----------------------------rule-based time consume inside111",now0.to_sec() - now00.to_sec())
         # initial state
         if len(self.last_trajectory_array_rule) > 5:
             # find closest point on the last trajectory
@@ -127,11 +127,11 @@ class Werling(object):
             s0 = ffstate.s #+ c_speed * 0.5      # current course position
 
         now1 = rospy.get_rostime()
-        print("-----------------------------rule-based time consume inside111",now1.to_sec() - now0.to_sec())
+        # print("-----------------------------rule-based time consume inside111",now1.to_sec() - now0.to_sec())
 
         generated_trajectory = frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob)
         now2 = rospy.get_rostime()
-        print("-----------------------------rule-based time consume inside222",now2.to_sec() - now1.to_sec())
+        # print("-----------------------------rule-based time consume inside222",now2.to_sec() - now1.to_sec())
 
 
         if generated_trajectory is not None:
@@ -244,11 +244,11 @@ class Werling(object):
             self.last_trajectory_rule = generated_trajectory       
 
             print("111111111111111111111111111")
-            print("111111111111111111111111111")
-            print("111111111111111111111111111")
-            print("111111111111111111111111111")
-            print("111111111111111111111111111")
-            print("111111111111111111111111111")
+            # print("111111111111111111111111111")
+            # print("111111111111111111111111111")
+            # print("111111111111111111111111111")
+            # print("111111111111111111111111111")
+            # print("111111111111111111111111111")
 
 
         else:
@@ -257,11 +257,11 @@ class Werling(object):
             desired_speed = RLS_action[1] #first_trajectory.s_d[-1] 
 
             print("3333333333333333333333333333")
-            print("3333333333333333333333333333")
-            print("3333333333333333333333333333")
-            print("3333333333333333333333333333")
-            print("3333333333333333333333333333")
-            print("3333333333333333333333333333")
+            # print("3333333333333333333333333333")
+            # print("3333333333333333333333333333")
+            # print("3333333333333333333333333333")
+            # print("3333333333333333333333333333")
+            # print("3333333333333333333333333333")
 
         return trajectory_array, desired_speed
 

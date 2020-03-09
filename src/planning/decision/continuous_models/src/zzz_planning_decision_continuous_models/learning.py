@@ -64,6 +64,7 @@ class RLSPlanner(object):
         sent_RL_msg.append(5.0) # RL.point
         sent_RL_msg.append(0.0)
         sent_RL_msg.append(0.0)
+        sent_RL_msg.append(10000000)
 
         # print("-----------------------------",sent_RL_msg)
         self.sock.sendall(msgpack.packb(sent_RL_msg))
@@ -96,6 +97,7 @@ class RLSPlanner(object):
         self._dynamic_map = dynamic_map
         self._rule_based_trajectory_model_instance.update_dynamic_map(dynamic_map)        
         closest_obs = []
+        threshold = 5
 
         #found closest obs
         
@@ -126,36 +128,53 @@ class RLSPlanner(object):
             sent_RL_msg.append(RLpoint.location.x)
             sent_RL_msg.append(RLpoint.location.y)
             sent_RL_msg.append(ego_s)
+            sent_RL_msg.append(threshold)
 
         except:
             sent_RL_msg.append(0.0) # RL.point
             sent_RL_msg.append(0.0)
             sent_RL_msg.append(ego_s)
+            sent_RL_msg.append(threshold)
+
 
         now2 = rospy.get_rostime()
-        print("-----------------------------rule-based time consume",now2.to_sec() - now1.to_sec())
+        # print("-----------------------------rule-based time consume",now2.to_sec() - now1.to_sec())
         print("-----------------------------",sent_RL_msg)
         self.sock.sendall(msgpack.packb(sent_RL_msg))
 
         try:
             # received RL action and plan a RL trajectory
-            RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
-            rospy.logdebug("received action:%f, %f", RLS_action[0], RLS_action[1])
-            now3 = rospy.get_rostime()
-            print("-----------------------------socket time consume",now3.to_sec() - now2.to_sec())
-            RLS_action[1] = RLS_action[1] + 12.5/3.6
-            print("-+++++++++++++++++++++++++++++++++++++++++++befor-generated RL trajectory")
-            trajectory, desired_speed = self._rule_based_trajectory_model_instance.trajectory_update_withRL_second(dynamic_map, RLS_action)
-            print("-+++++++++++++++++++++++++++++++++++++++++++-generated RL trajectory")
-            now4 = rospy.get_rostime()
-            print("-----------------------------rl planning time consume",now4.to_sec() - now3.to_sec())
-            # return trajectory_rule, desired_speed_rule
-            return trajectory, desired_speed 
+            received_msg = msgpack.unpackb(self.sock.recv(self._buffer_size))
+            print("-----------------------------",received_msg)
 
+            rl_action = [received_msg[0], received_msg[1]]
+            q_value = received_msg[2]
+            rule_q = received_msg[3]
+            print("rl_action", rl_action[0], rl_action[1])
+            print("q_value", q_value)
+            print("rule_q", rule_q)
+
+            rospy.logdebug("received action:%f, %f", rl_action[0], rl_action[1])
+            now3 = rospy.get_rostime()
+
+
+            if q_value - rule_q > threshold:
+                rl_action[1] = rl_action[1] + 12.5/3.6
+                print("-+++++++++++++++++++++++++++++++++++++++++++befor-generated RL trajectory")
+                trajectory, desired_speed = self._rule_based_trajectory_model_instance.trajectory_update_withRL_second(dynamic_map, rl_action)
+                print("-+++++++++++++++++++++++++++++++++++++++++++-generated RL trajectory")
+                now4 = rospy.get_rostime()
+                print("-----------------------------rl planning time consume",now4.to_sec() - now3.to_sec())
+                # return trajectory_rule, desired_speed_rule
+                return trajectory, desired_speed 
+            else:
+                return trajectory_rule, desired_speed_rule
+
+            
         except:
             rospy.logerr("Continous RLS Model cannot receive an action")
-            # return trajectory_rule, desired_speed_rule
-            return [], 0
+            return trajectory_rule, desired_speed_rule
+            # return [], 0
             
             
     def wrap_state(self, closest_obs):

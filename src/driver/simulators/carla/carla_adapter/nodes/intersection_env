@@ -303,21 +303,21 @@ def record_vehicle_states(carla_world, delay):
         v_in_fourth = 0
         ego = 0
         collision = 0
-
-        ego_x = pose_buffer.state.pose.pose.position.x#ego_vehicle.get_location().x
-        ego_y = pose_buffer.state.pose.pose.position.y#-ego_vehicle.get_location().y
-        if -55.0 < ego_x < -40.0 and -10.0 < ego_y < 10.0:
-            ego = 1
-        elif -55.0 < ego_x < -40.0 and 80.0 < ego_y < 95.0:
-            ego = 2
-        elif 20.0 < ego_x < 40 and -10.0 < ego_y < 10.0:
-            ego = 3
-        elif 20.0 < ego_x < 40 and 80.0 < ego_y < 95.0:
-            ego = 4
-        elif -55.0 < ego_x < -40.0 or 20.0 < ego_x < 40:
-            if -10.0 < ego_y < 10.0 or 80.0 < ego_y < 95.0:
-                if collision_signal:
-                    collision = 1
+        if pose_buffer is not None:
+            ego_x = pose_buffer.state.pose.pose.position.x#ego_vehicle.get_location().x
+            ego_y = pose_buffer.state.pose.pose.position.y#-ego_vehicle.get_location().y
+            if -55.0 < ego_x < -40.0 and -10.0 < ego_y < 10.0:
+                ego = 1
+            elif -55.0 < ego_x < -40.0 and 80.0 < ego_y < 95.0:
+                ego = 2
+            elif 20.0 < ego_x < 40 and -10.0 < ego_y < 10.0:
+                ego = 3
+            elif 20.0 < ego_x < 40 and 80.0 < ego_y < 95.0:
+                ego = 4
+            elif -55.0 < ego_x < -40.0 or 20.0 < ego_x < 40:
+                if -10.0 < ego_y < 10.0 or 80.0 < ego_y < 95.0:
+                    if collision_signal:
+                        collision = 1
 
         for vehicle in vehicle_list:
             location = vehicle.get_location()
@@ -348,48 +348,53 @@ def record_vehicle_states(carla_world, delay):
         fw.close()
         time.sleep(delay)
             
-def record_collsion_to_txt(carla_world, collision_signal):
+def record_collsion_to_txt(carla_world):
     # if in intersection
     global if_write
     global if_write_collision
     global stay
     global pose_buffer
+    global collision_signal
 
     if_intersection = False
-    ego_x = pose_buffer.state.pose.pose.position.x#ego_vehicle.get_location().x
-    ego_y = pose_buffer.state.pose.pose.position.y#-ego_vehicle.get_location().y
-    if -55.0 < ego_x < -40.0 or 20.0 < ego_x < 40:
-        if -10.0 < ego_y < 10.0 or 80.0 < ego_y < 95.0:
-            if_intersection = True
-            # print("++++++++++++++++++++++++++ in intersection")
-            
-    else:
-        if_intersection = False
-        if_write = False
-        if_write_collision = False
+    if pose_buffer is not None:
+        ego_x = pose_buffer.state.pose.pose.position.x#ego_vehicle.get_location().x
+        ego_y = pose_buffer.state.pose.pose.position.y#-ego_vehicle.get_location().y
+        if -55.0 < ego_x < -40.0 or 20.0 < ego_x < 40:
+            if -10.0 < ego_y < 10.0 or 80.0 < ego_y < 95.0:
+                if_intersection = True
+                # print("++++++++++++++++++++++++++ in intersection")
+                
+        else:
+            if_intersection = False
+            if_write = False
+            if_write_collision = False
 
-    if if_intersection == True and if_write == False:
-        fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_collision.txt", 'a')   
-        fw.write("into_intersection")   
-        fw.write("\n")
-        fw.close()
-        if_write = True
-
-
-    if if_intersection == True and if_write_collision == False:    
-        if collision_signal and stay < 10:
-            # fw = open("/home/carla/ZZZ/zzz/src/driver/simulators/carla/carla_adapter/nodes/record_collision.txt", 'a')   
+        if if_intersection == True and if_write == False:
             fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_collision.txt", 'a')   
-            fw.write("collision")
-            fw.close()   
-            
-            fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_vehicle.txt", 'a')   
-            fw.write("collision")
+            fw.write("into_intersection")   
             fw.write("\n")
-            fw.close()   
+            fw.close()               
+            print("++++++++++++++++++++++++++ in intersection")
 
-            print("++++++++++++++++++++++++++ write something")
-            if_write_collision = True
+            if_write = True
+
+
+        if if_intersection == True and if_write_collision == False:    
+
+            if collision_signal and stay < 10:
+                # fw = open("/home/carla/ZZZ/zzz/src/driver/simulators/carla/carla_adapter/nodes/record_collision.txt", 'a')   
+                fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_collision.txt", 'a')   
+                fw.write("collision")
+                fw.close()   
+                
+                fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_vehicle.txt", 'a')   
+                fw.write("collision")
+                fw.write("\n")
+                fw.close()   
+
+                print("++++++++++++++++++++++++++ write something")
+                if_write_collision = True
 
 #########
 # Ego vehicle related
@@ -447,7 +452,10 @@ def stay_too_long_world(carla_world):
             else:
                 stay = 0
 
-    if stay > 800:
+    if stay > 1000:
+        fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_collision.txt", 'a')   
+        fw.write("stay too long")
+        fw.close()   
         return True
 
     return False
@@ -529,14 +537,17 @@ def restart_ego_vehicle(carla_world, ego_vehicle):
     global stay
     global collision_signal
     global trajectory_state
+    global pose_buffer
     
     restart = False
     # print("-------------restart")
     if collision_signal:
-        # rospy.sleep(0.5)
+        time.sleep(0.5) #leave time for record
         restart = True
         collision_signal = False
         print("----> Restart: Collision")
+        print("----> egox",pose_buffer.state.pose.pose.position.x)
+        print("----> egoy",pose_buffer.state.pose.pose.position.y)
     if not restart and stay_too_long_world(carla_world):
         # rospy.sleep(0.5)
         restart = True
@@ -586,7 +597,7 @@ if __name__ == "__main__":
 
     # Setting simulation FPS
     settings = carla_world.get_settings()
-    # settings.fixed_delta_seconds = None
+    settings.fixed_delta_seconds = 0.1
     settings.no_rendering_mode = True # close render to make simulation faster
     carla_world.apply_settings(settings)
 
@@ -629,6 +640,9 @@ if __name__ == "__main__":
     thread.start_new_thread(record_vehicle_states,(carla_world, 1))
 
     while not rospy.is_shutdown():
+        # Record collision
+        record_collsion_to_txt(carla_world) #before restart,we should record
+
         # Restart ego when needed
         restart_ego_vehicle(carla_world, ego_vehicle)
 
@@ -638,13 +652,10 @@ if __name__ == "__main__":
         adjust_ref_path() # FIXME(zhcao)
 
         # generate_remove_traffic(carla_world)
-
-        # # Record collision
-        record_collsion_to_txt(carla_world , collision_signal)
         time.sleep(0.05)
+        # rate.sleep()
 
 
-    del ReferencePathGenerator
     del carla_world
     del carla_client
 
