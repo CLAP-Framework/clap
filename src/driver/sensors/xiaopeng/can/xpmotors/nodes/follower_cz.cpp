@@ -127,7 +127,7 @@ int main(int argc, char **argv)
   ros::Subscriber sub5_ = n.subscribe("/xp/eps_status", 10, callback_eps);
   ros::Subscriber sub6_ = n.subscribe("/imu/data", 10, callback_imu);
   ros::Subscriber sub7_ = n.subscribe("gps/fix", 10, callback_gpsfix);
-  ros::Subscriber sub8_=n.subscribe("/zzz/planning/safeguard_trajectory",10,callback_Path);
+  ros::Subscriber sub8_=n.subscribe("/zzz/planning/decision_trajectory",10,callback_Path);
   //getparam from launchfile
   double target_speed;
   float steer_send=0;
@@ -340,7 +340,9 @@ void    callback_Path(const zzz_planning_msgs::DecisionTrajectory &msg)
   {
     Waypoints[i].x=msg.trajectory.poses[i].pose.position.x;
     Waypoints[i].y=msg.trajectory.poses[i].pose.position.y;
+    cout<<"Waypoints.x= "<<Waypoints[i].x<<"Waypoints.y= "<<Waypoints[i].y<<endl;
     Waypoints[i].theta=qua_to_rpy(msg.trajectory.poses[i].pose.orientation); 
+    
     Waypoints[i].v=msg.desired_speed;
   }
   callback_Path_flag=true;

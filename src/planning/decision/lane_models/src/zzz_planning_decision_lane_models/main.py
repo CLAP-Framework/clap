@@ -64,6 +64,7 @@ class MainDecision(object):
             pose = PoseStamped()
             pose.pose.position.x = wp[0]
             pose.pose.position.y = wp[1]
+            
             msg.poses.append(pose)
         msg.header.frame_id = "map"
 

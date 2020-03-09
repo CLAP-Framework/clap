@@ -63,7 +63,7 @@ class NativeMap(object):
         Generate null static map
         '''
         init_static_map = Map()
-        init_static_map.in_junction = True
+        init_static_map.in_junction = False
         init_static_map.target_lane_index = -1
         return init_static_map
 
