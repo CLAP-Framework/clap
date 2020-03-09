@@ -48,6 +48,10 @@
           name="idm_lane_utility" output="screen" ns="/zzz/planning">
     </node>
 
+    <node pkg="imu_lidar" type="imu_lidar_node"
+          name="imu_lidar" output="screen" >
+    </node>
+
     <!-- <node pkg="zzz_planning_decision_safeguard" type="reachable_set"
           name="safeguard" output="screen" ns="/zzz/planning">
     </node> -->

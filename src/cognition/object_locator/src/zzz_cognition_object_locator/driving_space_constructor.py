@@ -65,6 +65,7 @@ class DrivingSpaceConstructor:
             '''
 
     def receive_object_list(self, object_list):
+        rospy.loginfo("$$$$$ object_list length - {}".format(len(object_list.targets)))
         assert type(object_list) == TrackingBoxArray
         with self._surrounding_object_list_lock:
             if self._ego_vehicle_state_buffer != None:
@@ -76,7 +77,7 @@ class DrivingSpaceConstructor:
         with self._ego_vehicle_state_lock:
             self._ego_vehicle_state_buffer = state
             #TODO: wrap ego vehicle just like wrapping obstacle
-        rospy.loginfo("temp safe2...")
+        rospy.loginfo("!!!!! ego pose ")
 
     def receive_traffic_light_detection(self, detection):
         assert type(detection) == DetectionBoxArray
@@ -259,6 +260,7 @@ class DrivingSpaceConstructor:
         count = 0
         if tstates.surrounding_object_list is not None:
             for obs in tstates.surrounding_object_list:
+                rospy.loginfo("@@@@@@ {}-{} ".format(obs.state.pose.pose.position.x, obs.state.pose.pose.position.y))
                 dist_to_ego = math.sqrt(math.pow((obs.state.pose.pose.position.x - tstates.ego_vehicle_state.state.pose.pose.position.x),2) 
                     + math.pow((obs.state.pose.pose.position.y - tstates.ego_vehicle_state.state.pose.pose.position.y),2))
                 

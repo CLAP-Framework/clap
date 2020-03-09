@@ -84,7 +84,7 @@ public:
     }
 
     void gps_vel_callback(const geometry_msgs::TwistWithCovarianceStamped& vel_msg){
-        ROS_INFO("++++++++++++++++++++gps_vel_callback+++++++++++++++++++");
+        // ROS_INFO("++++++++++++++++++++gps_vel_callback+++++++++++++++++++");
         // std::cout<<"x: ";
         // std::cout<<vel_msg.twist.twist.linear.x<<std::endl;
         // std::cout<<"y: ";
@@ -97,7 +97,7 @@ public:
 
 
     void obs_callback(const rs_perception::obstacle_set_ros_msg& obs_msg){
-        ROS_INFO("**********************obs_callback**************************");
+        ROS_INFO("***** obs_callback %d", obs_msg.obstcles.size());
         // std::cout << obs_msg.obstcles[1].geo_center.x<<std::endl;
         cv::Mat tmp_disp = cv::Mat(1200, 1200, CV_8UC3, cv::Scalar(255,255,255));
         obs_msg_static = obs_msg;
@@ -150,39 +150,25 @@ public:
             // cv::circle(tmp_disp, p2, 4, cv::Scalar(0, 0, 0), -1);
             // //cv::arrowedLine(tmp_disp, p2, p3, cv::Scalar(125, 125, 125));
             // cv::arrowedLine(tmp_disp, p2, p4, cv::Scalar(0, 0, 0), 2);
-#if 0            
-            array = TrackingBoxArray()
-            array.header.stamp = self._last_timestamp
-            array.header.frame_id = self._last_frameid
-            for idx_tr in self._tracked_objects.keys():
-                trackbox = TrackingBox()
-                trackbox.classes = self._tracked_features[idx_tr].classes
-                trackbox.bbox.pose.pose.position.x = self._tracked_objects[idx_tr].pose_state[0]
-                trackbox.bbox.pose.pose.position.y = self._tracked_objects[idx_tr].pose_state[1]
-                trackbox.bbox.pose.pose.position.z = self._tracked_objects[idx_tr].pose_state[2]
-                trackbox.bbox.dimension.length_x = self._tracked_features[idx_tr].shape_state[0]
-                trackbox.bbox.dimension.length_y = self._tracked_features[idx_tr].shape_state[1]
-                trackbox.bbox.dimension.length_z = self._tracked_features[idx_tr].shape_state[2]
-                trackbox.twist.twist.linear.x = self._tracked_objects[idx_tr].pose_state[3]
-                trackbox.twist.twist.linear.y = self._tracked_objects[idx_tr].pose_state[4]
-                trackbox.twist.twist.linear.z = self._tracked_objects[idx_tr].pose_state[5]
-                # TODO: Filling out more fields
-                trackbox.uid = idx_tr
-                # TODO: Add option to track these targets using static coordinate
-                # FIXME: This is a very naive confidence report
-                trackbox.confidence = min(1, (self._counter_track[idx_tr] + 5) / 10.)
-                array.targets.append(trackbox)
-#endif
+
             zzz_perception_msgs::TrackingBox obs_box;
             // TODO 
-            obs_box.classes[0].classid = obs_box.classes[0].VEHICLE;
+            zzz_perception_msgs::ObjectClass t;
+            if (obs_msg_static.obstcles[i].type == 3 || 
+                obs_msg_static.obstcles[i].type == 4) {
+                t.classid = 1;
+            } else {
+                t.classid = 2;
+            }
+            obs_box.classes.push_back(t);
             obs_box.classes[0].score = obs_msg_static.obstcles[i].type_confidence;
 
             obs_box.uid = obs_msg_static.obstcles[i].id;
             obs_box.confidence = 1.0;
             // pose
-            obs_box.bbox.pose.pose.position.x = obs_msg_static.obstcles[i].geo_center.x;
-            obs_box.bbox.pose.pose.position.y = obs_msg_static.obstcles[i].geo_center.y;
+            // TODO (map origin for temp 442867, 4427888)
+            obs_box.bbox.pose.pose.position.x = obs_msg_static.obstcles[i].geo_center.x - 442867;
+            obs_box.bbox.pose.pose.position.y = obs_msg_static.obstcles[i].geo_center.y - 4427888;
             obs_box.bbox.pose.pose.position.z = obs_msg_static.obstcles[i].geo_center.z;
             // TODO default value should be changed.
             obs_box.bbox.dimension.length_x = 4;
@@ -195,7 +181,7 @@ public:
 
             obs_array.targets.push_back(obs_box);
         }
-
+        ROS_INFO("##### obs_array length - %d", obs_array.targets.size());
         obs_pub_.publish(obs_array);
         // cv::Point p3(int((T_static(0)-442860)*5+600),int((T_static(1)-4427880)*5+600));
         // cv::Point p5(int((T_static(0)-442860)*5+600+scale_vel*vel_static(0)),int((T_static(1)-4427880)*5+600+scale_vel*vel_static(1)));
