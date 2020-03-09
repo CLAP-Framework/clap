@@ -155,7 +155,7 @@ int main(int argc, char **argv)
       steer_send=factor*steer_send_old+(1-factor)*steer_send;
       ctrmsg.EPSAngleReq=steer_send;
       steer_send_old=steer_send;
-      // cout<<"steer1 "<<steer1<<"steer2 "<<steer2<<endl;
+      cout<<"steer1 "<<steer1<<"steer2 "<<steer2<<endl;
       // cout<<"cte_d "<<cte_D<<"   cte_A  "<<cte_A<<"steer"<<steer_send<<endl;
       if(!CurDriveMode)
       {
@@ -192,7 +192,8 @@ int main(int argc, char **argv)
           ROS_INFO("Vehicle is Automode!!!");
           ctrmsg.AutoMode=1;
           ctrmsg.TarSpeedReq=SpeedReq;      //m/s                     
-      }         
+      }  
+      cout<<"sterangle= "<<ctrmsg.EPSAngleReq<<endl;       
       pub.publish(ctrmsg);	//发布控制信号
     }    
     loop_rate.sleep();	//按前面设置的10Hz频率将程序挂起
@@ -340,9 +341,13 @@ void    callback_Path(const zzz_planning_msgs::DecisionTrajectory &msg)
   {
     Waypoints[i].x=msg.trajectory.poses[i].pose.position.x;
     Waypoints[i].y=msg.trajectory.poses[i].pose.position.y;
-    cout<<"Waypoints.x= "<<Waypoints[i].x<<"Waypoints.y= "<<Waypoints[i].y<<endl;
+    // cout<<"Waypoints.x= "<<Waypoints[i].x<<"Waypoints.y= "<<Waypoints[i].y<<endl;
     Waypoints[i].theta=qua_to_rpy(msg.trajectory.poses[i].pose.orientation); 
-    
+    if(Waypoints[i].theta<0)
+    {
+      Waypoints[i].theta+=360;
+    }
+    // cout<<"Waypoints[i].theta=  "<<Waypoints[i].theta<<endl;//zx
     Waypoints[i].v=msg.desired_speed;
   }
   callback_Path_flag=true;
@@ -357,15 +362,9 @@ double qua_to_rpy(geometry_msgs::Quaternion posedata)
     float R = atan2((2*(w*x+y*z)),(1-2*(x*x+y*y)));
     float P = asin(2*(w*y-z*x));
     float Y = atan2((2*(w*z+x*y)),(1-2*(z*z+y*y)));
-        if(Y<0)
-    {
-        Y=-1*Y;
-    }
-    else if (Y>0)
-    {
-        Y=360-Y;
-    } 
-    return Y/PI*180.0;
+    Y=Y*180/PI;
+ 
+    return Y;
 }
 void callback_Config(const  xpmotors_can_msgs::AutoCtlReq &config)
 {
@@ -424,7 +423,16 @@ void callback_imu(const sensor_msgs::Imu &msg)
     Imu_accZ=msg.linear_acceleration.z;
 
     Yaw=qua_to_rpy(msg.orientation);
- 
+    
+       if(Yaw<0)
+    {
+        Yaw=-1*Yaw;
+    }
+    else if (Yaw>0)
+    {
+        Yaw=360-Yaw;
+    } 
+    // cout<<"Yaw= "<<Yaw<<endl;//zx
     Current_Point.theta=Yaw;
     callback_imu_flag=true;
 }

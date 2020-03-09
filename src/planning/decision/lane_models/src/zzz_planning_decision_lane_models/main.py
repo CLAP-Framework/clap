@@ -2,6 +2,7 @@
 
 import rospy
 import numpy as np
+import math
 from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from zzz_planning_msgs.msg import DecisionTrajectory
 from threading import Lock
@@ -60,11 +61,23 @@ class MainDecision(object):
 
     def convert_ndarray_to_pathmsg(self, path): 
         msg = Path()
-        for wp in path:
+        for i, wp in enumerate(path):
             pose = PoseStamped()
             pose.pose.position.x = wp[0]
             pose.pose.position.y = wp[1]
-            
+            if i < len(path)-1:
+                wp_next = path[i+1]
+                yaw = math.atan2(wp_next[0]-wp[0], wp_next[1]-wp[1])
+            else:
+                wp_last = path[i-1]
+                yaw = math.atan2(wp[0]-wp_last[0], wp[1]-wp_last[1])
+            rospy.loginfo("++++++ yaw - {}".format(yaw))
+            cy = math.cos(yaw*0.5)
+            sy = math.sin(yaw*0.5)
+            pose.pose.orientation.w = cy
+            pose.pose.orientation.x = 0
+            pose.pose.orientation.y = 0
+            pose.pose.orientation.z = sy
             msg.poses.append(pose)
         msg.header.frame_id = "map"
 
