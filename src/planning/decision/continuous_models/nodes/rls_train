@@ -21,11 +21,11 @@ class RLSNode(object):
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
             collision_topic="/carla/ego_vehicle/collision",
             RVIZ_decision_trajectory_topic="decision_trajectory_path", 
-            hz = 1.33,
+            hz = 20,
         )
         self._rate = rospy.Rate(params.hz)
         model_trajectory = RLSPlanner()
-        self._decision_instance = MainDecision(path_decision=model_trajectory, speed_decision=model_trajectory, Planning_type = 2)
+        self._decision_instance = MainDecision(trajectory_planner=model_trajectory)
 
         # ROS messages
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)

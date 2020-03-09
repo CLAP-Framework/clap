@@ -12,13 +12,13 @@ from zzz_driver_msgs.utils import get_speed, get_yaw
 
 
 class MainDecision(object):
-    def __init__(self, path_decision=None, speed_decision=None, Planning_type=None):
+    def __init__(self, trajectory_planner=None):
         self._dynamic_map_buffer = None
 
-        self._path_model_instance = path_decision
-        self._speed_model_instance = speed_decision
-        self.Planning_type = Planning_type
+        self._trajectory_planner = trajectory_planner
         self.solve = False
+
+        self.Planning_type = 3
 
         
     def receive_dynamic_map(self, dynamic_map):
@@ -32,16 +32,14 @@ class MainDecision(object):
         if self._dynamic_map_buffer is None:
             return None
         dynamic_map = self._dynamic_map_buffer
-
-
         reference_path_from_map = dynamic_map.jmap.reference_path
 
         if self.Planning_type == 1:
             # Only follow path
             trajectory = reference_path_from_map
-            desired_speed = self._speed_model_instance.speed_update(trajectory, dynamic_map)
+            desired_speed = self._trajectory_planner.speed_update(trajectory, dynamic_map)
 
-            # Process reference path  What happened here?? 
+            # Process reference path
             if trajectory is not None:
                 send_trajectory = self.process_reference_path(trajectory,dynamic_map,desired_speed)
 
@@ -60,13 +58,13 @@ class MainDecision(object):
             # Should use lane model
             if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
                 if self.solve == False:
-                    self._path_model_instance.something_in_lane(dynamic_map)
+                    self._trajectory_planner.something_in_lane(dynamic_map)
                     self.solve = True
                 return None
             elif dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
                 self.solve = False
             try:
-                trajectory, desired_speed = self._path_model_instance.trajectory_update(dynamic_map)
+                trajectory, desired_speed = self._trajectory_planner.trajectory_update(dynamic_map)
                 if trajectory is not None:
                     msg = DecisionTrajectory()
                     msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory)
@@ -78,25 +76,15 @@ class MainDecision(object):
                 return None
 
         elif self.Planning_type == 3:
-            # Replanning only when dynamic obstacles predict to collide with me
+            # Keep replanning
+            self._trajectory_planner.clear_buff(dynamic_map)
+            if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
+                trajectory_msg = self._trajectory_planner.trajectory_update(dynamic_map)
+                return trajectory_msg
+            elif dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
+                return None
 
-            # Collision check
-            Collision_and_Replan = collision_check_dynamic(dynamic_map)
-            if Collision_and_Replan == 1:
-                trajectory = self._path_model_instance.trajectory_update(dynamic_map)
-
-        elif self.Planning_type == 4:
-            # Replanning only when fixed obstacles on my path
-
-            # Collision check
-            Collision_and_Replan = collision_check_fixed(dynamic_map)
-
-            if Collision_and_Replan == 1:
-                # Path update
-                trajectory = self._path_model_instance.path_update(dynamic_map)
-
-            # Speed update
-            self._speed_model_instance.speed_update(trajectory, dynamic_map)
+            
 
 
     def convert_XY_to_pathmsg(self,XX,YY,path_id = 'map'):
@@ -128,49 +116,7 @@ class MainDecision(object):
         nearest_dis = abs(nearest_dis)
         front_path = dense_centrol_path[nearest_idx:]
         dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path, axis=0), axis = 1))
-        return front_path[:np.searchsorted(dis_to_ego, desired_speed*time_ahead+distance_ahead)-1]
-
-
-    def collision_check_fixed(self, dynamic_map):
-        return 0
-
-    def collision_check_dynamic(self, dynamic_map):
-        return 0 
-
-
-    def get_trajectory(self, dynamic_map, target_lane_index, desired_speed,
-                resolution=0.5, time_ahead=5, distance_ahead=10, rectify_thres=2,
-                lc_dt = 1.5, lc_v = 2.67):
-        # TODO: get smooth spline (write another module to generate spline)
-        ego_x = dynamic_map.ego_state.pose.pose.position.x
-        ego_y = dynamic_map.ego_state.pose.pose.position.y
-        if target_lane_index == -1:
-            target_lane = dynamic_map.jmap.reference_path
-        else:
-            target_lane = dynamic_map.mmap.lanes[int(target_lane_index)]
-
-        central_path = self.convert_path_to_ndarray(target_lane.map_lane.central_path_points)
-
-        # if ego vehicle is on the target path
-        # works for lane change, lane follow and reference path follow
-        dense_centrol_path = dense_polyline2d(central_path, resolution)
-        nearest_dis, nearest_idx, _ = dist_from_point_to_polyline2d(ego_x, ego_y, dense_centrol_path)
-        nearest_dis = abs(nearest_dis)
-
-        if nearest_dis > rectify_thres:
-            if dynamic_map.model == MapState.MODEL_MULTILANE_MAP and target_lane_index != -1:
-                rectify_dt = abs(dynamic_map.mmap.ego_lane_index - target_lane_index)*lc_dt
-            else:
-                rectify_dt = nearest_dis/lc_v
-            return self.generate_smoothen_lane_change_trajectory(dynamic_map, target_lane, rectify_dt, desired_speed)
-
-        else:
-            front_path = dense_centrol_path[nearest_idx:]
-            dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path, axis=0), axis = 1))
-            trajectory = front_path[:np.searchsorted(dis_to_ego, desired_speed*time_ahead+distance_ahead)-1]
-            return trajectory
-
-    
+        return front_path[:np.searchsorted(dis_to_ego, desired_speed*time_ahead+distance_ahead)-1]   
 
     # TODO(zyxin): Add these to zzz_navigation_msgs.utils
     def convert_path_to_ndarray(self, path):
@@ -188,66 +134,38 @@ class MainDecision(object):
 
         return msg
 
-    def generate_smoothen_lane_change_trajectory(self, dynamic_map, target_lane,
-        rectify_dt, desired_speed, lc_dt = 1.5, rectify_min_d = 6, resolution=0.5, time_ahead=5, distance_ahead=10):
+    def found_closest_obstacles(self, num, dynamic_map):
+        closest_obs = []
+        obs_tuples = []
 
-        target_lane_center_path = self.convert_path_to_ndarray(target_lane.map_lane.central_path_points)
+        reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
+        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+        if ref_path_ori is not None:
+            ref_path = dense_polyline2d(ref_path_ori, 1)
+            ref_path_tangets = np.zeros(len(ref_path))
+        else:
+            return None
+        
+        for obs in self._dynamic_map.jmap.obstacles: 
+            # calculate distance
+            p1 = np.array([self._dynamic_map.ego_state.pose.pose.position.x , self._dynamic_map.ego_state.pose.pose.position.y])
+            p2 = np.array([obs.state.pose.pose.position.x , obs.state.pose.pose.position.y])
+            p3 = p2 - p1
+            p4 = math.hypot(p3[0],p3[1])
 
-        ego_x = dynamic_map.ego_state.pose.pose.position.x
-        ego_y = dynamic_map.ego_state.pose.pose.position.y
-
-        # Calculate the longitudinal distance for lane Change
-        # Considering if the ego_vehicle is in a lane Change
-        lc_dis = max(rectify_dt*desired_speed,rectify_min_d)
-
-        dense_target_centrol_path = dense_polyline2d(target_lane_center_path, resolution)
-        _, nearest_idx, _ = dist_from_point_to_polyline2d(ego_x, ego_y, dense_target_centrol_path)
-        front_path = dense_target_centrol_path[nearest_idx:]
-        dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path, axis=0), axis = 1))
-
-        start_point = np.array([ego_x,ego_y])
-        end_point = front_path[np.searchsorted(dis_to_ego, lc_dis)]
-
-        # calculate start direction and end direction for control
-
-        ego_direction = get_yaw(dynamic_map.ego_state)
-        _, nearest_end_idx, _ = dist_from_point_to_polyline2d(end_point[0], end_point[1], target_lane_center_path)
-        end_point_direction = target_lane.map_lane.central_path_points[nearest_end_idx].tangent
-
-        start_tangent = np.array([np.cos(ego_direction),np.sin(ego_direction)])
-        end_tangent = np.array([np.cos(end_point_direction),np.sin(end_point_direction)])
-
-        lc_path = self.cubic_hermite_spline(p0 = start_point, p1 = end_point,
-                                            m0 = start_tangent, m1 = end_tangent)
-
-        # get ahead Path
-        ahead_dis = desired_speed*time_ahead+distance_ahead
-        path_after_lc = front_path[np.searchsorted(dis_to_ego, lc_dis):np.searchsorted(dis_to_ego, ahead_dis)-1]
-
-        # replace lane change path into ahead path
-        smoothen_lc_path = np.concatenate((lc_path,path_after_lc),axis = 0)
-
-        return smoothen_lc_path
-
-    def cubic_hermite_spline(self, p0, p1, m0, m1, resolution = 20):
-        """
-        Generate cubic hermit spline
-        p0: start point np.array(2)
-        p1: end point np.array(2)
-        m0: start tangent np.array(2)
-        m1: end tangent np.array(2)
-        return path from start point to end point
-        """
-
-        t = np.linspace(0,1,num = resolution)
-        h00 = (2*t*t*t-3*t*t+1).reshape(len(t),1) #p0
-        h10 = (t*t*t-2*t*t+t).reshape(len(t),1) #m0
-        h01 = (-2*t*t*t+3*t*t).reshape(len(t),1) #p1
-        h11 = (t*t*t-t*t).reshape(len(t),1) #m1
-
-        p0 = p0.reshape(1,2)
-        p1 = p1.reshape(1,2)
-        m0 = m0.reshape(1,2)
-        m1 = m1.reshape(1,2)
-
-        return np.matmul(h00,p0) + np.matmul(h10,m0) + np.matmul(h01,p1) + np.matmul(h11,m1)
+            # transfer to frenet
+            obs_ffstate = get_frenet_state(obs.state, ref_path, ref_path_tangets)
+            one_obs = (obs.state.pose.pose.position.x , obs.state.pose.pose.position.y , obs.state.twist.twist.linear.x , obs.state.twist.twist.linear.y , p4 , obs_ffstate.s , -obs_ffstate.d , obs_ffstate.vs , obs_ffstate.vd)
+            # if obs.ffstate.s > 0.01:
+            obs_tuples.append(one_obs)
+        
+        sorted_obs = sorted(obs_tuples, key=lambda obs: obs[4])   # sort by distance
+        i = 0
+        for obs in sorted_obs:
+            if i < num:
+                closest_obs.append(obs)
+                i = i + 1
+            else:
+                break
+        
+        return closest_obs

@@ -114,11 +114,7 @@ class ZZZCarlaEnv(gym.Env):
                 
                 if leave_current_mmap == 1:
                     done = True
-<<<<<<< HEAD
                     #reward = 250#+500
-=======
-                    reward = +1000
->>>>>>> zwt
                     print("+++++++++++++++++++++ successful pass intersection")
 
                 elif leave_current_mmap == 2:

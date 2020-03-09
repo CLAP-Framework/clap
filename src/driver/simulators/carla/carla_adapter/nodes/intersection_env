@@ -50,6 +50,8 @@ needed_generate = 0
 
 global first_goal
 first_goal = Transform()
+
+first_goal = Transform()
 first_goal.location.x = 32
 first_goal.location.y = -20
 first_goal.location.z = 0
@@ -554,7 +556,7 @@ def restart_ego_vehicle(carla_world, ego_vehicle):
         print("----> Restart: ego vehicle stucked")
     if not restart and ego_vehicle_outside_world(carla_world):
         # rospy.sleep(0.5)
-        restart = True
+        # restart = True
         print("----> Restart: ego vehicle out of range")
 
     if restart is True:
@@ -597,8 +599,8 @@ if __name__ == "__main__":
 
     # Setting simulation FPS
     settings = carla_world.get_settings()
-    settings.fixed_delta_seconds = 0.1
-    settings.no_rendering_mode = True # close render to make simulation faster
+    # settings.fixed_delta_seconds = 0.1
+    settings.no_rendering_mode = False # close render to make simulation faster
     carla_world.apply_settings(settings)
 
     # Publish and Subscribe messages

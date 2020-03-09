@@ -35,19 +35,23 @@
           name="put_buffer" output="screen" ns="/zzz/cognition">
         <param name="reference_path_topic" value="$(arg waypoint_topic)"/>
     </node>
-
+<!-- 
     <node pkg="zzz_planning_decision_continuous_models" type="rls_train" 
           name="rls_train" output="screen" ns="/zzz/planning">
-    </node>
-
-
-    <!-- <node pkg="zzz_planning_decision_continuous_models" type="continuous_utility"
-          name="continuous_utility" output="screen" ns="/zzz/planning">
     </node> -->
 
 
-    <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"  respawn="true"
+    <node pkg="zzz_planning_decision_continuous_models" type="continuous_utility"
+          name="continuous_utility" output="screen" ns="/zzz/planning">
+    </node>
+
+
+    <!-- <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"  respawn="true"
           name="idm_lane_utility" output="screen" ns="/zzz/planning">
+    </node> -->
+
+    <node pkg="zzz_planning_decision_lane_models" type="rls_train"  respawn="true"
+          name="rls_train" output="screen" ns="/zzz/planning">
     </node>
 
     <node pkg="zzz_planning_decision_safeguard" type="reachable_set"  respawn="true"

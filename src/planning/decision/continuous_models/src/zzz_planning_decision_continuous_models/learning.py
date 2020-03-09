@@ -78,9 +78,7 @@ class RLSPlanner(object):
 
     def werling_trajectory_update(self, dynamic_map):
         self._dynamic_map = dynamic_map
-        self._rule_based_trajectory_model_instance.update_dynamic_map(dynamic_map)        
         
-        #found closest obs
         reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
         
         ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)

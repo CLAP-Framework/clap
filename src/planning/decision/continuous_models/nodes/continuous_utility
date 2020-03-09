@@ -7,11 +7,9 @@ from zzz_cognition_msgs.msg import MapState
 from zzz_planning_decision_continuous_models.path_planner import Path_Planner
 from zzz_planning_decision_continuous_models.speed_decision import Speed_Decision
 from zzz_planning_decision_continuous_models import MainDecision
-from zzz_planning_decision_continuous_models.Werling_trajectory import Werling
-
+from zzz_planning_decision_continuous_models.Werling_planner import Werling
 from zzz_planning_msgs.msg import DecisionTrajectory
-
-from nav_msgs.msg import Path  #FIXME(Nanshan)
+from nav_msgs.msg import Path 
 
 class DecisionNode(object):
     def __init__(self):
@@ -24,19 +22,8 @@ class DecisionNode(object):
         )
         self._rate = rospy.Rate(params.hz)
 
-        #Use Trajectory Planner or Pathplanner+speed Decision?
-        self.decision_type = 0;
-
-        if self.decision_type == 0:
-            # Setting Trajectory planner for both path and speed
-            model_trajectory = Werling()
-            self._decision_instance = MainDecision(path_decision=model_trajectory, speed_decision=model_trajectory, Planning_type = 2)
-
-        else:
-            # Setting Path planner + Speed decision
-            model_path = Path_Planner()
-            model_speed = Speed_Decision()
-            self._decision_instance = MainDecision(path_decision=model_path, speed_decision=model_speed, Planning_type = 1)
+        model_trajectory = Werling()
+        self._decision_instance = MainDecision(trajectory_planner=model_trajectory)
 
         # ROS messages
         self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
@@ -50,7 +37,7 @@ class DecisionNode(object):
                 self._decision_trajectory_publisher.publish(publish_msg)
                 publish_msg2 = publish_msg.trajectory
                 self._rviz_decision_trajectory_publisher.publish(publish_msg2)
-                rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
+                print("PUBLISH: trajectory length = %d, desired_speed = %f", 
                     len(publish_msg.trajectory.poses), publish_msg.desired_speed)
             self._rate.sleep()
         
