@@ -6,10 +6,13 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   sensor_msgs
   nav_msgs
+  geodesy
   tf
   message_generation
   std_msgs
 )
+find_package(Eigen3 REQUIRED)
+
 ## Generate messages in the 'msg' folder
 #add_message_files(DIRECTORY msg FILES
 #RigidBodyState.msg
@@ -32,10 +35,11 @@ catkin_package(
 include_directories(
   ${catkin_INCLUDE_DIRS}
   $ENV{ZZZ_ROOT}/zzz/devel/include
+   ${EIGEN3_INCLUDE_DIRS}
 )
 
 add_executable(${PROJECT_NAME}_gps_node src/node.cpp)
-target_link_libraries(${PROJECT_NAME}_gps_node ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_gps_node ${catkin_LIBRARIES} )
 set_target_properties(${PROJECT_NAME}_gps_node PROPERTIES OUTPUT_NAME gps_node PREFIX "")
 
 install(TARGETS ${PROJECT_NAME}_gps_node

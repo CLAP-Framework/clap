@@ -27,7 +27,7 @@
 #include "xpmotors_can_msgs/AutoState.h"
 #include "xpmotors_can_msgs/ESCStatus.h"
 #include "xpmotors_can_msgs/EPSStatus.h"
-#include "xpmotors/DecisionTrajectory.h"
+#include "zzz_planning_msgs/DecisionTrajectory.h"
 
 #include <geographic_msgs/GeoPointStamped.h>
 #include <geodesy/utm.h>
@@ -105,7 +105,7 @@ void    callback_auto_state(const xpmotors_can_msgs::AutoState &msg);
 void    callback_esc(const xpmotors_can_msgs::ESCStatus &msg);
 void    callback_imu(const sensor_msgs::Imu &msg);
 void    callback_gpsfix(const sensor_msgs::NavSatFix &msg);
-void    callback_Path(const xpmotors::DecisionTrajectory &msg);
+void    callback_Path(const zzz_planning_msgs::DecisionTrajectory &msg);
 void    data_file_input();
 void    MySigintHandler(int sig);
 void    PID_init();
@@ -334,7 +334,7 @@ void pathdeal()
   cte_A=0-(ys-PI)/PI*180.0;
   SpeedReq=Waypoints[plo_i+1].v;  
 }
-void    callback_Path(const xpmotors::DecisionTrajectory &msg)
+void    callback_Path(const zzz_planning_msgs::DecisionTrajectory &msg)
 {
   for(int i=0;i<msg.trajectory.poses.size();i++)
   {
@@ -355,6 +355,14 @@ double qua_to_rpy(geometry_msgs::Quaternion posedata)
     float R = atan2((2*(w*x+y*z)),(1-2*(x*x+y*y)));
     float P = asin(2*(w*y-z*x));
     float Y = atan2((2*(w*z+x*y)),(1-2*(z*z+y*y)));
+        if(Y<0)
+    {
+        Y=-1*Y;
+    }
+    else if (Y>0)
+    {
+        Y=360-Y;
+    } 
     return Y/PI*180.0;
 }
 void callback_Config(const  xpmotors_can_msgs::AutoCtlReq &config)
@@ -412,22 +420,9 @@ void callback_imu(const sensor_msgs::Imu &msg)
     Imu_accX=msg.linear_acceleration.x;
     Imu_accY=msg.linear_acceleration.y;
     Imu_accZ=msg.linear_acceleration.z;
-    // w=msg.orientation.w;
-    // x=msg.orientation.x;
-    // y=msg.orientation.y;
-    // z=msg.orientation.z;
-    // Roll = (atan2((2*(w*x+y*z)),(1-2*(x*x+y*y))))/PI*180.0;
-    // Pitch = (asin(2*(w*y-z*x)))/PI*180;
-    // Yaw = (atan2((2*(w*z+x*y)),(1-2*(z*z+y*y))))/PI*180;  
+
     Yaw=qua_to_rpy(msg.orientation);
-    if(Yaw<0)
-    {
-        Yaw=-1*Yaw;
-    }
-    else if (Yaw>0)
-    {
-        Yaw=360-Yaw;
-    }  
+ 
     Current_Point.theta=Yaw;
     callback_imu_flag=true;
 }
@@ -451,29 +446,29 @@ void callback_gpsfix(const sensor_msgs::NavSatFix &msg)
     // scale[2] = A * 1.0 / 180.0 * PI;
     // Current_Point.x = (latitude - lon1) * scale[1]; //转换为坐标x
     // Current_Point.y = (longitude - lat1) * scale[2];
-    double f;
-    double a,b,e,N,M,H,A,B,C,T,FE,X,Y,k0,L,L0;
-    B=PI*latitude/180.0;
-    L=PI*longitude/180.0;
-    a=6378137;
-    b=6356752.3142;
-    k0=1;
-    H=20;
-    L0=PI*117/180.0;
-    f=sqrt((a/b)*(a/b)-1);
-    e=sqrt(1-(b/a)*(b/a));
-    N=(a*a/b)/sqrt(1+f*f*cos(B)*cos(B));
-    M=a*((1-e*e/4-3*pow(e,4)/64-5*pow(e,6)/256)*B-(3*e*e/8+3*pow(e,4)/32+45*pow(e,6)/1024)*sin(2*B)+(15*pow(e,4)/256+45*pow(e,6)/1024)*sin(4*B)-sin(6*B)*35*pow(e,6)/3072);
-    A=(L-L0)*cos(B);
-    C=f*f*cos(B)*cos(B);
-    T=tan(B)*tan(B);
-    FE=500000+H*1000000;
-    Y=k0*(M+N*tan(B)*(A*A/2+(5-T+9*C+4*pow(C,2))*pow(A,4)/24)+(61-58*T+T*T+270*C-330*T*C)*pow(A,6)/720);
-    X=FE+k0*N*(A+(1-T+C)*pow(A,3)/6+(5-18*T+T*T+14*C-58*T*C)*pow(A,5)/120);    
+    // double f;
+    // double a,b,e,N,M,H,A,B,C,T,FE,X,Y,k0,L,L0;
+    // B=PI*latitude/180.0;
+    // L=PI*longitude/180.0;
+    // a=6378137;
+    // b=6356752.3142;
+    // k0=1;
+    // H=20;
+    // L0=PI*117/180.0;
+    // f=sqrt((a/b)*(a/b)-1);
+    // e=sqrt(1-(b/a)*(b/a));
+    // N=(a*a/b)/sqrt(1+f*f*cos(B)*cos(B));
+    // M=a*((1-e*e/4-3*pow(e,4)/64-5*pow(e,6)/256)*B-(3*e*e/8+3*pow(e,4)/32+45*pow(e,6)/1024)*sin(2*B)+(15*pow(e,4)/256+45*pow(e,6)/1024)*sin(4*B)-sin(6*B)*35*pow(e,6)/3072);
+    // A=(L-L0)*cos(B);
+    // C=f*f*cos(B)*cos(B);
+    // T=tan(B)*tan(B);
+    // FE=500000+H*1000000;
+    // Y=k0*(M+N*tan(B)*(A*A/2+(5-T+9*C+4*pow(C,2))*pow(A,4)/24)+(61-58*T+T*T+270*C-330*T*C)*pow(A,6)/720);
+    // X=FE+k0*N*(A+(1-T+C)*pow(A,3)/6+(5-18*T+T*T+14*C-58*T*C)*pow(A,5)/120);    
 
-    //ximenjiayouzhan wei yuandian 
-    X=X-20441065.1238410;
-    Y=Y-4429649.9202231;
+    // //ximenjiayouzhan wei yuandian 
+    // X=X-20441065.1238410;
+    // Y=Y-4429649.9202231;
 
     // utm coordinates
     geographic_msgs::GeoPointStampedPtr gps_msg(new geographic_msgs::GeoPointStamped());
@@ -493,8 +488,8 @@ void callback_gpsfix(const sensor_msgs::NavSatFix &msg)
     Current_Point.x=utm.easting-442867;
     Current_Point.y=utm.northing-4427888;
 
-    Current_Point.x=X+0.3*sin(Yaw*PI/180);
-    Current_Point.y=Y+0.3*cos(Yaw*PI/180);
+    Current_Point.x=Current_Point.x+0.3*sin(Yaw*PI/180);
+    Current_Point.y=Current_Point.y+0.3*cos(Yaw*PI/180);
     //cout<<Current_Point.x<<"   kkkk   "<<Current_Point.y<<endl;
 
 }
@@ -506,35 +501,4 @@ void MySigintHandler(int sig)
 	ROS_INFO("shutting down!");
 	ros::shutdown();
 }
-void data_file_input()
-{
-    //读取采集到的路径点信息，车速和路面摩擦系数
-    //    
-    ifstream infile1;//定义读取文件流，相对于程序来说是in
-    infile1.open("/home/icv/vehicle/Vehicle data/Path.txt");//打开文件
-    
-    for (int i = 0; i < m; i++)//定义行循环
-    {
-      for (int j = 0; j < 5; j++)//定义列循环
-      {
-        switch (j)
-        {
-          case 0:
-            infile1 >> Waypoints[i].x;                       
-            break;
-          case 1:
-            infile1 >> Waypoints[i].y;            
-            break;
-          case 2:
-            infile1 >> Waypoints[i].theta;           
-            break;      
-          default:
-            break;
-        }
-        // infile >> Waypoints[i][j];//读取一个值（空格、制表符、换行隔开）就写入到矩阵中，行列不断循环进行
-      }
-        // cout<<Waypoints[i].x<<"    "<<Waypoints[i].y<<"    "<<Waypoints[i].theta<<endl;
 
-  }
-    infile1.close();//读取完成之后关闭文件
-}

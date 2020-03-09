@@ -50,7 +50,11 @@
 
 // Ethernet
 #include <arpa/inet.h>
-
+#include <geographic_msgs/GeoPointStamped.h>
+#include <geodesy/utm.h>
+#include <geodesy/wgs84.h>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 // UINT16_MAX is not defined by default in Ubuntu Saucy
 #ifndef UINT16_MAX
 #define UINT16_MAX (65535)
@@ -317,38 +321,28 @@ static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, r
     pub_odom.publish(msg_odom);
 
     /**egopose**/
-    double f;
-    double a,b,e,N,M,H,A,B,C,T,FE,X,Y,k0,L,L0;
-    double PI=3.141592654;
+    geographic_msgs::GeoPointStampedPtr gps_msg(new geographic_msgs::GeoPointStamped());
+    gps_msg->position.latitude = msg_fix.latitude;
+    gps_msg->position.longitude = msg_fix.longitude;
+    gps_msg->position.altitude = msg_fix.altitude;
 
-    B=PI*msg_fix.latitude/180.0;
-    L=PI*msg_fix.longitude/180.0;
-    a=6378137;
-    b=6356752.3142;
-    k0=1;
-    H=20;
-    L0=PI*117/180.0;
-    f=sqrt((a/b)*(a/b)-1);
-    e=sqrt(1-(b/a)*(b/a));
-    N=(a*a/b)/sqrt(1+f*f*cos(B)*cos(B));
-    M=a*((1-e*e/4-3*pow(e,4)/64-5*pow(e,6)/256)*B-(3*e*e/8+3*pow(e,4)/32+45*pow(e,6)/1024)*sin(2*B)+(15*pow(e,4)/256+45*pow(e,6)/1024)*sin(4*B)-sin(6*B)*35*pow(e,6)/3072);
-    A=(L-L0)*cos(B);
-    C=f*f*cos(B)*cos(B);
-    T=tan(B)*tan(B);
-    FE=500000+H*1000000;
-    Y=k0*(M+N*tan(B)*(A*A/2+(5-T+9*C+4*pow(C,2))*pow(A,4)/24)+(61-58*T+T*T+270*C-330*T*C)*pow(A,6)/720);
-    X=FE+k0*N*(A+(1-T+C)*pow(A,3)/6+(5-18*T+T*T+14*C-58*T*C)*pow(A,5)/120);    
+    geodesy::UTMPoint utm;
+    geodesy::fromMsg(gps_msg->position, utm);
+    Eigen::Vector3d xyz(utm.easting, utm.northing, utm.altitude);
 
-    //ximenjiayouzhan wei yuandian 
-    X=X-20441065.1238410;
-    Y=Y-4429649.9202231;
+
+    //442867,4427888)
+    double X=utm.easting-442867;
+    double Y=utm.northing-4427888;
+    // TODO fixme(zhangxiang trick)
+    
     zzz_driver_msgs::RigidBodyStateStamped state;
 
     /**pose**/
     state.state.child_frame_id="odom";
     state.state.pose.pose.position.x=X;
     state.state.pose.pose.position.y=Y;
-    state.state.pose.pose.position.z=msg_fix.altitude;
+    state.state.pose.pose.position.z=0.0;
     state.state.pose.pose.orientation=msg_imu.orientation;
     /*twist*/
     state.state.twist.twist.linear=msg_vel.twist.twist.linear;
