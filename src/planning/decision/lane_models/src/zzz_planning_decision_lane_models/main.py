@@ -71,7 +71,6 @@ class MainDecision(object):
             else:
                 wp_last = path[i-1]
                 yaw = math.atan2(wp[0]-wp_last[0], wp[1]-wp_last[1])
-            rospy.loginfo("++++++ yaw - {}".format(yaw))
             cy = math.cos(yaw*0.5)
             sy = math.sin(yaw*0.5)
             pose.pose.orientation.w = cy

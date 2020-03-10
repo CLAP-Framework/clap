@@ -65,7 +65,6 @@ class DrivingSpaceConstructor:
             '''
 
     def receive_object_list(self, object_list):
-        rospy.loginfo("$$$$$ object_list length - {}".format(len(object_list.targets)))
         assert type(object_list) == TrackingBoxArray
         with self._surrounding_object_list_lock:
             if self._ego_vehicle_state_buffer != None:
@@ -77,7 +76,7 @@ class DrivingSpaceConstructor:
         with self._ego_vehicle_state_lock:
             self._ego_vehicle_state_buffer = state
             #TODO: wrap ego vehicle just like wrapping obstacle
-        rospy.loginfo("!!!!! ego pose ")
+
 
     def receive_traffic_light_detection(self, detection):
         assert type(detection) == DetectionBoxArray
@@ -89,17 +88,12 @@ class DrivingSpaceConstructor:
     def update_driving_space(self):
 
         tstates = edict()
-
-        # rospy.loginfo("temp safe3...")
-
         # Skip if not ready
         if not self._ego_vehicle_state_buffer:
             return None
 
         with self._ego_vehicle_state_lock:
             tstates.ego_vehicle_state = copy.deepcopy(self._ego_vehicle_state_buffer) 
-
-        # rospy.loginfo("temp safe4...")
 
         # Update buffer information
         tstates.surrounding_object_list = copy.deepcopy(self._surrounding_object_list_buffer or [])
@@ -111,9 +105,6 @@ class DrivingSpaceConstructor:
         tstates.ego_lane_index = -1 #about to modify in the following steps
         tstates.ego_s = -1
         tstates.drivable_area = []
-
-        # rospy.loginfo("temp safe5...")
-        rospy.loginfo("------------------num of lanes: %d", len(tstates.static_map.lanes))
 
         # Update driving_space with tstate
         self._driving_space = DrivingSpace()
@@ -132,21 +123,13 @@ class DrivingSpaceConstructor:
 
         self._driving_space.header.frame_id = "map"
         self._driving_space.header.stamp = rospy.Time.now()
-
         self._driving_space.ego_state = tstates.ego_vehicle_state.state
-
-        #TODO: drivable area. It should be updated by obstacles. Only static drivable area is not OK.
-
-        self._driving_space.obstacles = tstates.obstacles
-   
+        self._driving_space.obstacles = tstates.obstacles   
         rospy.logdebug("len(self._static_map.lanes): %d", len(tstates.static_map.lanes))
 
-        rospy.loginfo("temp safe6...")
         #visualization
         #1. lanes
         self._lanes_markerarray = MarkerArray()
-
-        rospy.loginfo("------------------num of lanes: %d", len(tstates.static_map.lanes))
 
         count = 0
         if not (tstates.static_map.in_junction):
@@ -260,7 +243,6 @@ class DrivingSpaceConstructor:
         count = 0
         if tstates.surrounding_object_list is not None:
             for obs in tstates.surrounding_object_list:
-                rospy.loginfo("@@@@@@ {}-{} ".format(obs.state.pose.pose.position.x, obs.state.pose.pose.position.y))
                 dist_to_ego = math.sqrt(math.pow((obs.state.pose.pose.position.x - tstates.ego_vehicle_state.state.pose.pose.position.x),2) 
                     + math.pow((obs.state.pose.pose.position.y - tstates.ego_vehicle_state.state.pose.pose.position.y),2))
                 
@@ -449,7 +431,6 @@ class DrivingSpaceConstructor:
 
         count = 0
         if len(tstates.drivable_area) != 0:
-            
             tempmarker = Marker() #jxy: must be put inside since it is python
             tempmarker.header.frame_id = "map"
             tempmarker.header.stamp = rospy.Time.now()
@@ -477,10 +458,8 @@ class DrivingSpaceConstructor:
         self._traffic_lights_markerarray = MarkerArray()
 
         #TODO: now no lights are in. I'll check it when I run the codes.
-        
         #lights = self._traffic_light_detection.detections
         #rospy.loginfo("lights num: %d\n\n", len(lights))
-        
         rospy.logdebug("Updated driving space")
 
     # ========= For in lane =========
@@ -521,7 +500,6 @@ class DrivingSpaceConstructor:
             lane_anglediff = ffstate.psi
             lane_dist_s = ffstate.s
             return closest_lane, -1, -1, lane_anglediff, lane_dist_s
-        
         else:
             # Distance to lane considering the size of the object
             x = object.pose.pose.orientation.x

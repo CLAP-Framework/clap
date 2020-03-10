@@ -45,7 +45,6 @@ class DrivingSpaceNode(object):
     def loop(self):
         while not rospy.is_shutdown():
             self._rate.sleep() 
-            rospy.loginfo("######### DRIVE ########")
             self._driving_space.update_driving_space()
             self._driving_space_publisher.publish(self._driving_space.driving_space)
             self._obstacles_markerarray_publisher.publish(self._driving_space._obstacles_markerarray)

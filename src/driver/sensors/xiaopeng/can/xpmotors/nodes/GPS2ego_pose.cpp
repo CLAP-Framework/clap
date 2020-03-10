@@ -136,9 +136,9 @@ int main(int argc, char **argv)
     while(ros::ok())
     {
     
-    pub_ego_pose.publish(state);
-    ros::spinOnce();	
-    loop_rate.sleep();	//按前面设置的10Hz频率将程序挂起
+        pub_ego_pose.publish(state);
+        ros::spinOnce();	
+        loop_rate.sleep();	//按前面设置的10Hz频率将程序挂起
     }
 
     return 0;

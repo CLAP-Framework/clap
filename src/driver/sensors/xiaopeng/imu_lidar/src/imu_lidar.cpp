@@ -46,13 +46,11 @@ class imu_lidar{
 public:
     imu_lidar(const ros::NodeHandle& node_handle):nh(node_handle){R_ego << 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0; T_ego << 0.0,1.0,1.0;};
     void imu_callback(const sensor_msgs::NavSatFixConstPtr& navsat_msg, const sensor_msgs::ImuConstPtr& imu_msg){
-        ROS_INFO("--------------------imu_callback-------------------------");
+        // ROS_INFO("--------------------imu_callback-------------------------");
         const ros::Time& gps_stamp = navsat_msg->header.stamp;
         const ros::Time& imu_stamp = imu_msg->header.stamp;
 
-
         // ROS_INFO("Time Reference: %lf, %lf", gps_stamp.toSec(), imu_stamp.toSec());
-
         geographic_msgs::GeoPointStampedPtr gps_msg(new geographic_msgs::GeoPointStamped());
         gps_msg->header = navsat_msg->header;
         gps_msg->position.latitude = navsat_msg->latitude;
@@ -77,10 +75,7 @@ public:
 
         // std::cout<<"R_static:"<<std::endl<<R_static<<std::endl;
         // std::cout<<"T_static:"<<std::endl<<T_static<<std::endl;
-
-
         // imu_lidar::show(xyz.x(), xyz.y());
-
     }
 
     void gps_vel_callback(const geometry_msgs::TwistWithCovarianceStamped& vel_msg){
@@ -97,7 +92,7 @@ public:
 
 
     void obs_callback(const rs_perception::obstacle_set_ros_msg& obs_msg){
-        ROS_INFO("***** obs_callback %d", obs_msg.obstcles.size());
+        // ROS_INFO("***** obs_callback %d", obs_msg.obstcles.size());
         // std::cout << obs_msg.obstcles[1].geo_center.x<<std::endl;
         cv::Mat tmp_disp = cv::Mat(1200, 1200, CV_8UC3, cv::Scalar(255,255,255));
         obs_msg_static = obs_msg;
@@ -146,7 +141,7 @@ public:
             // cv::Point p3(int((obs_msg_static.obstcles[i].geo_center.x-442860)*5+600 + scale_vel*obs_msg_static.obstcles[i].geo_direction.x),int((obs_msg_static.obstcles[i].geo_center.y-4427880)*5 + 600+scale_vel*obs_msg_static.obstcles[i].geo_direction.y));
             // cv::Point p4(int((obs_msg_static.obstcles[i].geo_center.x-442860)*5+600 + scale_vel*obs_msg_static.obstcles[i].velocity.x),int((obs_msg_static.obstcles[i].geo_center.y-4427880)*5 + 600+scale_vel*obs_msg_static.obstcles[i].velocity.y));
 
-            // // cv::circle(tmp_disp, p1, 4, cv::Scalar(0, 0, 255), -1);
+            // //cv::circle(tmp_disp, p1, 4, cv::Scalar(0, 0, 255), -1);
             // cv::circle(tmp_disp, p2, 4, cv::Scalar(0, 0, 0), -1);
             // //cv::arrowedLine(tmp_disp, p2, p3, cv::Scalar(125, 125, 125));
             // cv::arrowedLine(tmp_disp, p2, p4, cv::Scalar(0, 0, 0), 2);
@@ -181,7 +176,7 @@ public:
 
             obs_array.targets.push_back(obs_box);
         }
-        ROS_INFO("##### obs_array length - %d", obs_array.targets.size());
+        // ROS_INFO("##### obs_array length - %d", obs_array.targets.size());
         obs_pub_.publish(obs_array);
         // cv::Point p3(int((T_static(0)-442860)*5+600),int((T_static(1)-4427880)*5+600));
         // cv::Point p5(int((T_static(0)-442860)*5+600+scale_vel*vel_static(0)),int((T_static(1)-4427880)*5+600+scale_vel*vel_static(1)));
@@ -189,28 +184,23 @@ public:
         // cv::arrowedLine(tmp_disp, p3, p5, cv::Scalar(0, 0, 0),2);
         // cv::imshow("disp", tmp_disp);
         // cv::waitKey(0);
-   
     }
 
-    void run(){
+    void run() {
         gps_fix_sub.reset(new message_filters::Subscriber<sensor_msgs::NavSatFix>(nh, "/gps/fix", 200));
         imu_sub.reset(new message_filters::Subscriber<sensor_msgs::Imu>(nh, "/imu/data", 200));
         sync.reset(new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10), *gps_fix_sub, *imu_sub));
         sync->registerCallback(boost::bind(&imu_lidar::imu_callback, this, _1, _2));
         obs_sub = nh.subscribe("/rs_obstacle", 1, &imu_lidar::obs_callback,this);
         gps_vel_sub = nh.subscribe("/gps/vel", 200, &imu_lidar::gps_vel_callback,this);
-        
         obs_pub_ = nh.advertise<zzz_perception_msgs::TrackingBoxArray>("zzz/perception/objects_tracked", 2);
-
-    
     }
 
-    void show(int x, int y){
+    void show(int x, int y) {
         cv::Point p(int(5*(x-442860+40)),int(5*(y-4427880+20)));
         cv::circle(disp, p, 1, cv::Scalar(255, 255, 255), -1);
         cv::imshow("disp", disp);
         cv::waitKey(0);
-
     }
 
     ros::NodeHandle nh;
@@ -222,7 +212,7 @@ public:
     std::unique_ptr<message_filters::Synchronizer<MySyncPolicy>> sync;
     ros::Subscriber obs_sub, gps_vel_sub;
 
-    // /zzz/perception/objects_tracked
+    // topic : /zzz/perception/objects_tracked
     ros::Publisher obs_pub_; 
 
     cv::Mat disp = cv::Mat::zeros(800, 800, CV_8UC3);
@@ -238,8 +228,6 @@ public:
     rs_perception::obstacle_set_ros_msg obs_msg_static;
 };
 
-
-
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "imu_gps");     
@@ -249,7 +237,6 @@ int main(int argc, char** argv)
     // il.show();
     // ros::Subscriber obs_sub = nh.subscribe("/rs_obstacle", 1, obs_callback);
 
-    
     ros::spin();
 
     return 0;
