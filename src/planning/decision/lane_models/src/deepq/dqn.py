@@ -14,6 +14,8 @@ from stable_baselines.deepq.policies import DQNPolicy
 from stable_baselines.a2c.utils import total_episode_reward_logger
 
 
+from RLS import RLS
+
 class DQN(OffPolicyRLModel):
     """
     The DQN model class.
@@ -100,6 +102,14 @@ class DQN(OffPolicyRLModel):
         self.params = None
         self.summary = None
         self.episode_reward = None
+
+        self.RLS = RLS(visited_times_thres = 30,   #FIXME(zhcao)
+                    is_training = True,
+                    debug = True,
+                    save_new_data = True,
+                    create_new_train_file = True,
+                    create_new_record_file = True,
+                    save_new_driving_data = True):
 
         if _init_setup_model:
             self.setup_model()
@@ -214,11 +224,14 @@ class DQN(OffPolicyRLModel):
                     kwargs['update_param_noise_scale'] = True
                 with self.sess.as_default():
                     action = self.act(np.array(obs)[None], update_eps=update_eps, **kwargs)[0]
-                env_action = action
+
+                env_action = self.RLS.act_train(obs, action)   #FIXME(zhcao)
+                # env_action = action
                 reset = False
                 new_obs, rew, done, info = self.env.step(env_action)
                 # Store transition in the replay buffer.
                 self.replay_buffer.add(obs, action, rew, new_obs, float(done))
+                self.RLS.add_data(obs, action, rew, new_obs, float(done))   #FIXME(zhcao)
                 obs = new_obs
 
                 if writer is not None:

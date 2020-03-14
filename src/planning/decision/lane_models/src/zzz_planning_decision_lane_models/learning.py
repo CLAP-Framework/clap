@@ -13,7 +13,7 @@ class RLSDecision(object):
     Parameter:
         mode: ZZZ TCP connection mode (client/server)
     """
-    def __init__(self, openai_server="127.0.0.2", port=2345, mode="client", recv_buffer=4096):
+    def __init__(self, openai_server="127.0.0.1", port=2345, mode="client", recv_buffer=4096):
         self._dynamic_map = None
         self._socket_connected = False
         self._rule_based_longitudinal_model_instance = IDM()
@@ -21,6 +21,9 @@ class RLSDecision(object):
         self._buffer_size = recv_buffer
         self._collision_signal = False
         self._collision_times = 0
+
+        self.inside_lane = None
+        self.outside_lane = None
 
 
         if mode == "client":
@@ -45,7 +48,7 @@ class RLSDecision(object):
             collision = int(self._collision_signal)
             self._collision_signal = False
             leave_current_mmap = 1
-            sent_RL_msg = [0,0,100,0,12,-100,0,0,100,1,12,-100,1,0]
+            sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0]
             sent_RL_msg.append(collision)
             sent_RL_msg.append(leave_current_mmap)
             self.sock.sendall(msgpack.packb(sent_RL_msg))
@@ -71,17 +74,28 @@ class RLSDecision(object):
 
     def wrap_state(self):
 
-        # ego state: ego_y(0), ego_v(1)
-        # lane 0 : fv_x(2), fv_y(3), fv_v(4), rv_x(5), rv_y(6), rv_v(7)
-        # lane 1 : fv_x(8), fv_y(9), fv_v(10), rv_x(11), rv_y(12), rv_v(13)
-        # lane 2:...
-        # State space = 2+6*lane_num
+        # ego state: r_ego, Carla_state.ego_speed,\
+                    #  Carla_state.front_vehicle_inside_distance,\
+                    #  Carla_state.front_vehicle_inside_direction,\
+                    #  Carla_state.front_vehicle_inside_speed,\
+                    #  Carla_state.front_vehicle_outside_distance,\
+                    #  Carla_state.front_vehicle_outside_direction,\
+                    #  Carla_state.front_vehicle_outside_speed,\
+                    #  Carla_state.behind_vehicle_inside_distance,\
+                    #  Carla_state.behind_vehicle_inside_speed,\
+                    #  Carla_state.behind_vehicle_outside_distance,\
+                    #  Carla_state.behind_vehicle_outside_speed
+        
+        self.inside_lane = 1
+        self.outside_lane = 0
 
         state = []
-        ego_y = self._dynamic_map.mmap.ego_ffstate.d
-        ego_v = self._dynamic_map.mmap.ego_ffstate.vx
-        state.append(ego_y)
-        state.append(ego_v)
+        r_ego = 0 #Fixme : what is rego
+        ego_speed = get_speed(self._dynamic_map.ego_state)
+        state.append(r_ego)
+        state.append(ego_speed)
+
+        
         
         # TODO(Tao): find the right information
         for i,lane in enumerate(self._dynamic_map.mmap.lanes):
@@ -89,12 +103,12 @@ class RLSDecision(object):
         for i,lane in enumerate(self._dynamic_map.mmap.lanes):
             self.get_state_from_lane_behind(lane,i,state)
 
-        return state
+        return [0,0,0,0,0,0,0,0,0,0,0,0]#state
 
     def RL_model_matching(self):
         pass
 
-    def get_decision_from_discrete_action(self, action, acc = 2, decision_dt = 0.75, hard_brake = 4):
+    def get_decision_from_discrete_action(self, action, acc = 2, decision_dt = 0.75, hard_brake = 10):
 
         # TODO(Zhong): check if action is reasonable
 
@@ -107,45 +121,27 @@ class RLSDecision(object):
 
         # Hard-brake action
         if action == 1:
-            return ego_y, current_speed-hard_brake*decision_dt
+            return ego_y, current_speed - hard_brake * decision_dt
 
         # ego lane action
         if action == 2:
-            return ego_y, current_speed+acc*decision_dt
+            return self.outside_lane, current_speed
 
         if action == 3:
-            return ego_y, current_speed
+            return self.inside_lane, current_speed
 
         if action == 4:
-            return ego_y, current_speed-acc*decision_dt
+            return self.outside_lane, current_speed + acc * decision_dt
 
-        # left lane action
-        left_lane_index = ego_y+1
-        if left_lane_index >= len(self._dynamic_map.mmap.lanes):
-            if action == 5 or action == 6 or action == 7:
-                return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
         if action == 5:
-            return left_lane_index, current_speed+acc*decision_dt
+            return self.inside_lane, current_speed + acc * decision_dt
 
         if action == 6:
-            return left_lane_index, current_speed
+            return self.outside_lane, current_speed - acc * decision_dt
 
         if action == 7:
-            return left_lane_index, current_speed-acc*decision_dt
+            return self.inside_lane, current_speed + acc * decision_dt
 
-        #right_lane_action
-        right_lane_index = ego_y-1
-        if right_lane_index < 0:
-            if action == 8 or action == 9 or action == 10:
-                return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
-        if action == 8:
-            return right_lane_index, current_speed+acc*decision_dt
-
-        if action == 9:
-            return right_lane_index, current_speed
-
-        if action == 10:
-            return right_lane_index, current_speed-acc*decision_dt
 
 
     def get_state_from_lane_front(self,lane,lane_index,state,

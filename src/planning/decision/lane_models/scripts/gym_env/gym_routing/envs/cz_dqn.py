@@ -27,7 +27,7 @@ from gym.utils import seeding
 
 ##########################################
 
-class ZZZCarlaEnv(gym.Env):
+class ZZZCarlaEnv_lane(gym.Env):
     metadata = {'render.modes': []}
     def __init__(self, zzz_client="127.0.0.1", port=2345, recv_buffer=4096):
 
@@ -54,7 +54,7 @@ class ZZZCarlaEnv(gym.Env):
         # self.state = []
         # self.steps = 1
         # self.collision_times = 0
-        self.state_dimention = 14
+        self.state_dimention = 12
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.bind((zzz_client, port))
         self.sock.listen()
