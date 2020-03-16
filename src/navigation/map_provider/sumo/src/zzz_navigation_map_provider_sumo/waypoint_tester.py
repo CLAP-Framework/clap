@@ -55,12 +55,12 @@ class CarlaToRosWaypointConverter(object):
         self.ego_vehicle = None
         self.role_name = 'ego_vehicle' 
 
-        self._ego_vehicle_x = 0.0
-        self._ego_vehicle_y = 0.0
+        self._ego_pose_x = 0.0
+        self._ego_pose_y = 0.0
 
-        self.current_route = np.loadtxt(
+        self.current_route = (np.loadtxt(
             os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/outer_loop.dat', 
-            delimiter=',')
+            delimiter=',')).tolist()
 
         self.waypoint_publisher = rospy.Publisher(
             '/carla/{}/waypoints'.format(self.role_name), Path, queue_size=1, latch=True)
@@ -72,25 +72,25 @@ class CarlaToRosWaypointConverter(object):
     def pose_callback(self, msg):
         # Note: Here we actually assume that pose is updating at highest frequency
         self._ego_pose_x, self._ego_pose_y = msg.state.pose.pose.position.x, msg.state.pose.pose.position.y
+        # rospy.loginfo('+++ {},{} +++'.format(self._ego_pose_x, self._ego_pose_y))
 
 
     def rebuild_routes(self):
 
-        central_path = self.current_route
-
         dist_list = np.linalg.norm(
-            central_path - [self._ego_vehicle_x, self._ego_vehicle_y],
+            np.array(self.current_route) - [self._ego_pose_x, self._ego_pose_y],
             axis = 1)
+
         max = np.argmax(dist_list)
-        
+
         new_route = []
-        for i in central_path[max : -1]:
+        for i in self.current_route[max : -1]:
             new_route.append(i)
              
-        for i in central_path[0: max-1]:
+        for i in self.current_route[0: max-1]:
             new_route.append(i)
 
-        rospy.loginfo('### {} ###'.format(len(new_route)))
+        rospy.loginfo('### {} ###'.format(new_route[0]))
         return new_route
 
 
@@ -98,10 +98,10 @@ class CarlaToRosWaypointConverter(object):
         while True:
             new_route = self.rebuild_routes()
             self.publish_waypoints(new_route)
-            time.sleep(10)
+            time.sleep(3)
 
 
-    def publish_waypoints(self, current_route):
+    def publish_waypoints(self, new_route):
         """
         Publish the ROS message containing the waypoints
         """
@@ -109,7 +109,7 @@ class CarlaToRosWaypointConverter(object):
         msg.header.frame_id = "map"
         msg.header.stamp = rospy.Time.now()
 
-        for wp in current_route:
+        for wp in new_route:
             pose = PoseStamped()
             pose.pose.position.x = wp[0]
             pose.pose.position.y = wp[1]
@@ -120,24 +120,7 @@ class CarlaToRosWaypointConverter(object):
         rospy.loginfo("Published {} waypoints.".format(len(msg.poses)))
 
 
-    def publish_ego_pose(self, x, y):
 
-        # Transformation from odom frame to map is static
-        state = RigidBodyStateStamped()
-        state.header.frame_id = "map"
-        state.state.child_frame_id = "odom"
-
-        state.state.pose.pose.position.x = x
-        state.state.pose.pose.position.y = y
-        state.state.pose.pose.position.z = 0.0
-        state.state.pose.pose.orientation.x = 0.0
-        state.state.pose.pose.orientation.y = 0.0
-        state.state.pose.pose.orientation.z = 0.0
-        state.state.pose.pose.orientation.w = 0.0
-
-        rospy.logdebug("Position: %.3f, %.3f", state.state.pose.pose.position.x, state.state.pose.pose.position.y)
-        
-        self._pose_publisher.publish(state)
 
 
 def main():
