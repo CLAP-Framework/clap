@@ -59,10 +59,9 @@ class DrivingSpaceConstructor:
             '''
             rospy.loginfo("!!!! Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
                 len(static_map.lanes), int(static_map.in_junction), static_map.target_lane_index)
-            rospy.loginfo("!!!! lane0 - {}, lane1 - {}".format(
-                static_map.lanes[0].central_path_points[2357], 
-                static_map.lanes[1].central_path_points[2188]))
             '''
+            #rospy.loginfo("!!!! lane0 - {} ".format(static_map.lanes[0]))
+            
 
     def receive_object_list(self, object_list):
         assert type(object_list) == TrackingBoxArray
@@ -146,13 +145,17 @@ class DrivingSpaceConstructor:
                 tempmarker.type = Marker.LINE_STRIP
                 tempmarker.action = Marker.ADD
                 tempmarker.scale.x = 0.12
-                tempmarker.color.r = 1.0
-                tempmarker.color.g = 0.0
+                tempmarker.color.r = 0.0
+                tempmarker.color.g = 1.0
                 tempmarker.color.b = 0.0
                 tempmarker.color.a = 0.5
                 tempmarker.lifetime = rospy.Duration(0.5)
 
+                i = 0
                 for lanepoint in lane.central_path_points:
+                    i = i+1
+                    if i < 40:
+                        continue
                     p = Point()
                     p.x = lanepoint.position.x
                     p.y = lanepoint.position.y

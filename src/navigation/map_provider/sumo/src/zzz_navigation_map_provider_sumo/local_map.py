@@ -21,7 +21,6 @@ if 'SUMO_HOME' in os.environ:
     sys.path.append(tools)
 else:   
     sys.exit("Please declare environment variable 'SUMO_HOME' (e.g. /usr/share/sumo)")
-    
 import sumolib
 
 class LocalMap(object):
@@ -39,6 +38,7 @@ class LocalMap(object):
         self._lane_search_radius = 4
 
         self._in_section_flag = None
+        self._near_section_flag = None
 
         client = carla.Client('localhost', 2000)
         client.set_timeout(10.0)
@@ -135,13 +135,14 @@ class LocalMap(object):
         self._ego_vehicle_x = self._ego_vehicle_x_buffer
         self._ego_vehicle_y = self._ego_vehicle_y_buffer
 
-        if self.should_update_static_map():
-            self.update_static_map()
+        update_mode = self.should_update_static_map()
+        if update_mode != 0:
+            self.update_static_map(update_mode)
             return self.static_local_map
         return None
 
 
-    def should_update_static_map(self):
+    def should_update_static_map(self, perception_range_demand = 10):
         '''
         Determine whether map updating is needed.
         '''
@@ -152,6 +153,7 @@ class LocalMap(object):
         lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self._lane_search_radius, includeJunctions=False)
         if len(lanes) > 0:
             self._in_section_flag = 0
+            self._near_section_flag = 0
 
             _, closestLane = min((dist, lane) for lane, dist in lanes)
             new_edge = closestLane.getEdge()
@@ -159,14 +161,23 @@ class LocalMap(object):
             rospy.logdebug("Found ego vehicle neighbor edge id = %s",new_edge.id)
             if self._current_edge_id is None or new_edge.id != self._current_edge_id:
                 rospy.loginfo("Should update static map, edge id %s -> %s", self._current_edge_id, new_edge.id)
-                return True
+                return 1
             else:
                 rospy.loginfo("We are in the road, edge id is not changed, edge id is %s", self._current_edge_id)
+                # if near the section, load the shape of the section
+                lane_tail_point = closestLane.getShape()[-1]
+                dist_to_lane_tail = math.sqrt(math.pow((map_x - lane_tail_point[0]), 2) + math.pow((map_y - lane_tail_point[1]), 2))
+                if dist_to_lane_tail < perception_range_demand:
+                    if self._near_section_flag == 0:
+                        self._near_section_flag = 1
+                        return 3
         if len(lanes) == 0:
             if self._in_section_flag == 0:
+                #just enter the section
+                self._near_section_flag = 0
                 self._in_section_flag = 1
-                return True
-        return False
+                return 2
+        return 0
 
     def init_static_map(self):
         '''
@@ -177,18 +188,25 @@ class LocalMap(object):
         init_static_map.target_lane_index = -1
         return init_static_map
 
-    def update_static_map(self):
+    def update_static_map(self, update_mode):
         ''' 
         Update information in the static map if current location changed dramatically
         '''
-        map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
         rospy.logdebug("Updating static map")
         self.static_local_map = self.init_static_map() ## Return this one
-        lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self._lane_search_radius, includeJunctions=False)
-        if len(lanes) > 0:
+        
+        # jxy: optimized repeated calculation
+        if update_mode == 1:
+
+            
             self.update_lane_list()
             self.update_target_lane()
-        else:
+        if update_mode == 3:
+            self.update_lane_list()
+            self.update_target_lane()
+            self.update_next_junction()
+            #TODO: check calculation time
+        if update_mode == 2:
             self.update_junction()
 
         if not self.static_local_map.in_junction:
@@ -218,7 +236,31 @@ class LocalMap(object):
             point.y = node_point[1]
 
             self.static_local_map.drivable_area.points.append(point)
+
+    def update_next_junction(self, closest_dist=100):
         
+        self.static_local_map.in_junction = True
+        map_x, map_y = self.convert_to_map_XY(self._ego_vehicle_x, self._ego_vehicle_y)
+        lanes = self._hdmap.getNeighboringLanes(map_x, map_y, self._lane_search_radius, includeJunctions=False)
+        _, closestLane = min((dist, lane) for lane, dist in lanes)
+        lane_tail_point = closestLane.getShape()[-1]
+        
+        self.static_local_map.drivable_area.points = []
+        nodes = self._hdmap.getNodes() #sumo style
+        node_id = 0
+        for i in range(len(nodes)):
+            e = nodes[i]
+            d = sumolib.geomhelper.distancePointToPolygon((lane_tail_point[0], lane_tail_point[1]), e.getShape())
+            if d < closest_dist:
+                node_id = i
+                closest_dist = d
+
+        for node_point in nodes[node_id].getShape():
+            point = Point32()
+            point.x = node_point[0]
+            point.y = node_point[1]
+
+            self.static_local_map.next_drivable_area.points.append(point)        
 
     def update_lane_list(self):
         '''

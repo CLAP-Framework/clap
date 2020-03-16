@@ -45,6 +45,10 @@ class NativeMap(object):
     def update(self):
         self._ego_vehicle_x = self._ego_vehicle_x_buffer
         self._ego_vehicle_y = self._ego_vehicle_y_buffer
+
+        self.rebuild_lane(self._lanes[0])
+        self.rebuild_lane(self._lanes[1])
+
         if self.should_update_static_map():
             self.update_static_map()
             return self.static_local_map
@@ -78,6 +82,40 @@ class NativeMap(object):
         self.update_lane_list()
         
 
+    def rebuild_lane(self, lane):
+
+        central_path = np.array(self.make_list(lane))
+        dist_list = np.linalg.norm(central_path - 
+                        np.array([self._ego_vehicle_x, self._ego_vehicle_y]),
+                        axis = 1)
+
+        max = np.argmax(dist_list)
+        lane.central_path_points = []
+        
+        i = max 
+        while i < len(central_path):
+            point = LanePoint()
+            point.position.x = central_path[i][0]
+            point.position.y = central_path[i][1]
+            lane.central_path_points.append(point)
+            i = i + 1
+
+        i = 0
+        while i < max:
+            point = LanePoint()
+            point.position.x = central_path[i][0]
+            point.position.y = central_path[i][1]
+            lane.central_path_points.append(point)
+            i = i + 1
+
+       
+    def make_list(self, lane):
+        points = []
+        for one in lane.central_path_points:
+            points.append([one.position.x, one.position.y])
+        return points
+
+        
     def update_lane_list(self):
         '''
         Update lanes when a new road is encountered
@@ -93,8 +131,8 @@ class NativeMap(object):
         #     self.static_local_map.lanes[1].central_path_points[2188]))
 
 
-    def get_lane(self, central_points): # outside
 
+    def get_lane(self, central_points): # outside
         lane_wrapped = Lane()
         for wp in central_points: # TODO Consider ego pose where is the start and end point.
             point = LanePoint()
