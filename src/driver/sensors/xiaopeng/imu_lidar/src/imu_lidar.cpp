@@ -135,6 +135,15 @@ public:
             obs_msg_static.obstcles[i].ave_velocity.y = new_ave_vel(1) + vel_static(1);
             obs_msg_static.obstcles[i].ave_velocity.z = new_ave_vel(2) + vel_static(2);
 
+
+            // add surrounding obstacles orientation information.
+            Eigen::Matrix3d old_geo_dir_matrix, new_geo_dir_matrix;
+            float cos_theta = old_geo_direction(0) / sqrt(old_geo_direction(0)*old_geo_direction(0) + old_geo_direction(1)*old_geo_direction(1));
+            float sin_theta = old_geo_direction(1) / sqrt(old_geo_direction(0)*old_geo_direction(0) + old_geo_direction(1)*old_geo_direction(1));
+            old_geo_dir_matrix << cos_theta, -sin_theta, 0, sin_theta, cos_theta, 0, 0, 0, 1;
+            new_geo_dir_matrix << R_static*R_ego*old_geo_dir_matrix;
+            Eigen::Quaterniond geo_dir_quat(new_geo_dir_matrix);
+
             // cv::Point p1(int(obs_msg.obstcles[i].geo_center.x*5+600),int(obs_msg.obstcles[i].geo_center.y*5+600));
             // cv::Point p2(int((obs_msg_static.obstcles[i].geo_center.x-442860)*5+600),int((obs_msg_static.obstcles[i].geo_center.y-4427880)*5+600));
             
@@ -160,11 +169,19 @@ public:
 
             obs_box.uid = obs_msg_static.obstcles[i].id;
             obs_box.confidence = 1.0;
+
             // pose
             // TODO (map origin for temp 442867, 4427888)
             obs_box.bbox.pose.pose.position.x = obs_msg_static.obstcles[i].geo_center.x - 442867;
             obs_box.bbox.pose.pose.position.y = obs_msg_static.obstcles[i].geo_center.y - 4427888;
             obs_box.bbox.pose.pose.position.z = obs_msg_static.obstcles[i].geo_center.z;
+            // orientation
+            obs_box.bbox.pose.pose.orientation.x = geo_dir_quat.x();
+            obs_box.bbox.pose.pose.orientation.y = geo_dir_quat.y();
+            obs_box.bbox.pose.pose.orientation.z = geo_dir_quat.z();
+            obs_box.bbox.pose.pose.orientation.w = geo_dir_quat.w();
+
+
             // TODO default value should be changed.
             obs_box.bbox.dimension.length_x = 4;
             obs_box.bbox.dimension.length_y = 2;
@@ -173,6 +190,7 @@ public:
             obs_box.twist.twist.linear.x = obs_msg_static.obstcles[i].velocity.x;
             obs_box.twist.twist.linear.y = obs_msg_static.obstcles[i].velocity.y;
             obs_box.twist.twist.linear.z = obs_msg_static.obstcles[i].velocity.z;
+
 
             obs_array.targets.push_back(obs_box);
         }
