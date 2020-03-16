@@ -96,7 +96,6 @@ class RLSDecision(object):
         state.append(ego_speed)
 
         
-        
         # TODO(Tao): find the right information
         for i,lane in enumerate(self._dynamic_map.mmap.lanes):
             self.get_state_from_lane_front(lane,i,state)
