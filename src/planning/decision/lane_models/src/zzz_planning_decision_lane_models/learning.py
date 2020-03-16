@@ -26,18 +26,21 @@ class RLSDecision(object):
         self.outside_lane = None
 
 
-        if mode == "client":
-            rospy.loginfo("Connecting to RL server...")
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((openai_server, port))
-            self._socket_connected = True
-            rospy.loginfo("Connected...")
-        else:
-            # TODO: Implement server mode to make multiple connection to this node.
-            #     In this mode, only rule based action is returned to system
-            raise NotImplementedError("Server mode is still wating to be implemented.")
+        # if mode == "client":
+        #     rospy.loginfo("Connecting to RL server...")
+        #     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #     self.sock.connect((openai_server, port))
+        #     self._socket_connected = True
+        #     rospy.loginfo("Connected...")
+        # else:
+        #     # TODO: Implement server mode to make multiple connection to this node.
+        #     #     In this mode, only rule based action is returned to system
+        #     raise NotImplementedError("Server mode is still wating to be implemented.")
 
     def lateral_decision(self, dynamic_map):
+
+
+        return -1, self._rule_based_longitudinal_model_instance.longitudinal_speed(-1)
 
         self._dynamic_map = dynamic_map
         self._rule_based_longitudinal_model_instance.update_dynamic_map(dynamic_map)

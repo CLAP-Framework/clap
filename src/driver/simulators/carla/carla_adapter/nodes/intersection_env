@@ -639,11 +639,11 @@ if __name__ == "__main__":
     # thread.start_new_thread(generate_remove_traffic,(carla_world, 2))
 
     #record vehicle nums
-    thread.start_new_thread(record_vehicle_states,(carla_world, 1))
+    # thread.start_new_thread(record_vehicle_states,(carla_world, 1))
 
     while not rospy.is_shutdown():
         # Record collision
-        record_collsion_to_txt(carla_world) #before restart,we should record
+        # record_collsion_to_txt(carla_world) #before restart,we should record
 
         # Restart ego when needed
         restart_ego_vehicle(carla_world, ego_vehicle)
