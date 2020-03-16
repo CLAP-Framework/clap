@@ -455,9 +455,9 @@ def stay_too_long_world(carla_world):
                 stay = 0
 
     if stay > 1000:
-        fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_collision.txt", 'a')   
-        fw.write("stay too long")
-        fw.close()   
+        # fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_collision.txt", 'a')   
+        # fw.write("stay too long")
+        # fw.close()   
         return True
 
     return False
@@ -600,7 +600,7 @@ if __name__ == "__main__":
     # Setting simulation FPS
     settings = carla_world.get_settings()
     # settings.fixed_delta_seconds = 0.1
-    settings.no_rendering_mode = False # close render to make simulation faster
+    settings.no_rendering_mode = True # close render to make simulation faster
     carla_world.apply_settings(settings)
 
     # Publish and Subscribe messages

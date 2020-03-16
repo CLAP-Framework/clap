@@ -54,15 +54,15 @@ class ZZZCarlaEnv_lane(gym.Env):
         # self.state = []
         # self.steps = 1
         # self.collision_times = 0
-        self.state_dimention = 12
+        self.state_dimention = 20
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.bind((zzz_client, port))
         self.sock.listen()
         self.sock_conn = None
         self.sock_buffer = recv_buffer
  
-        low  = np.array([18,  0,   0, -1,  0,   0,-1,  0,   0,  0,   0,  0])
-        high = np.array([40, 60, 200,  1, 36, 200, 1, 36, 200, 36, 200, 36])
+        low  = np.array([-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50])
+        high = np.array([50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50])
 
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
         self.seed()
@@ -82,8 +82,8 @@ class ZZZCarlaEnv_lane(gym.Env):
                 # wait next state
                 received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
                 print("-------------received msg in step")
-                self.state = received_msg[0:11]
-                collision = received_msg[12]
+                self.state = received_msg[0:19]
+                collision = received_msg[20]
 
                 # calculate reward
                 reward = 0

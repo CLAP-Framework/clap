@@ -11,14 +11,17 @@
 
 
 
-
+<!-- 
         
     </node>
     <node pkg="zzz_navigation_map_provider_sumo" type="local_map_generator" respawn="true"
           name="static_map_builder" output="screen" ns="/zzz/navigation">
+        <param name="reference_path_topic" value="$(arg waypoint_topic)"/> -->
+
+    </node>
+    <node pkg="zzz_navigation_map_provider_sumo" type="carla_map_generator" respawn="true"
+          name="carla_map_generator" output="screen" ns="/zzz/navigation">
         <param name="reference_path_topic" value="$(arg waypoint_topic)"/>
-
-
 
 
 

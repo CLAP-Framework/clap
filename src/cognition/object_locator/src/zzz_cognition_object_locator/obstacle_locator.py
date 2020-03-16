@@ -175,8 +175,13 @@ class NearestLocator:
             tstates.ego_state.state.pose.pose.position.x, tstates.ego_state.state.pose.pose.position.y,
             lane, return_end_distance=True)
             for lane in tstates.static_map_lane_path_array])  
+        print("tstates.ego_state.state.pose.pose.position.x=",tstates.ego_state.state.pose.pose.position.x)
+        print("tstates.ego_state.state.pose.pose.position.y=",tstates.ego_state.state.pose.pose.position.y)
+
         ego_lane_index = self.locate_object_in_lane(tstates.ego_state.state, tstates)
         ego_lane_index_rounded = int(round(ego_lane_index))
+
+        print("ego_lane_index=",ego_lane_index)
 
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
         self._ego_vehicle_distance_to_lane_tail = dist_list[:, 4]
