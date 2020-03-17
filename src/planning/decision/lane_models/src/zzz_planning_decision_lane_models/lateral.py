@@ -15,7 +15,7 @@ class LaneUtility(object):
 
         self.longitudinal_model_instance.update_dynamic_map(dynamic_map)
         self.dynamic_map = dynamic_map
-        return -1, self.longitudinal_model_instance.longitudinal_speed(-1)#FIXME(ksj)
+        # return -1, self.longitudinal_model_instance.longitudinal_speed(-1)#FIXME(ksj)
         # rospy.logdebug("map model is %d", dynamic_map.model)
         # Following reference path in junction
         if dynamic_map.model == MapState.MODEL_JUNCTION_MAP:
