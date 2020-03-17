@@ -327,7 +327,7 @@ void pathdeal()
     sgn=-1;
   }       
   cte_D=ctd*sgn;      
-  double ys=fmod(((Waypoints[plo_i+20].theta-Current_Point.theta)/180.0*PI+PI),(2*PI));
+  double ys=fmod(((Waypoints[plo_i+15].theta-Current_Point.theta)/180.0*PI+PI),(2*PI));
   if (ys<0)
   {
     ys=ys+2*PI;
@@ -401,6 +401,7 @@ void callback_esc(const xpmotors_can_msgs::ESCStatus &msg)
     LFWheelSpd=msg.LFWheelSpd;
     RFWheelSpd=msg.RFWheelSpd;
     LRWheelSpd=msg.LRWheelSpd;
+    Current_Point.v=RRWheelSpd;//ms/s
     callback_esc_flag=true;
  
 }
@@ -497,9 +498,14 @@ void callback_gpsfix(const sensor_msgs::NavSatFix &msg)
     //442867,4427888)
     Current_Point.x=utm.easting-442867;
     Current_Point.y=utm.northing-4427888;
-
-    Current_Point.x=Current_Point.x+0.3*sin(Yaw*PI/180);
-    Current_Point.y=Current_Point.y+0.3*cos(Yaw*PI/180);
+    double distance_pre;
+    distance_pre=Current_Point.v*2.8+0.7;
+    if(distance_pre>5)
+    {
+	distance_pre=5
+    }
+    Current_Point.x=Current_Point.x+distance_pre*sin(Yaw*PI/180);
+    Current_Point.y=Current_Point.y+distance_pre*cos(Yaw*PI/180);
     //cout<<Current_Point.x<<"   kkkk   "<<Current_Point.y<<endl;
 
 }
