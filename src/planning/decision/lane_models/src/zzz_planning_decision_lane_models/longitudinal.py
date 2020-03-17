@@ -10,7 +10,7 @@ class IDM(object):
 
     def __init__(self):
         self.T = 1.6
-        self.g0 = 7
+        self.g0 = 11 #7
         self.a = 2.73
         self.b = 1.65
         self.delta = 4
@@ -27,14 +27,22 @@ class IDM(object):
         if target_lane_index == -1:
             target_lane = self.dynamic_map.jmap.reference_path
 
-        for lane in self.dynamic_map.mmap.lanes:
-            if lane.map_lane.index == target_lane_index:
-                target_lane = lane
+        # for lane in self.dynamic_map.mmap.lanes:
+        #     if lane.map_lane.index == target_lane_index:
+        #         target_lane = lane
+        # rospy.logdebug("self.dynamic_map.mmap.lanes : %d, target lane index - %d", 
+        #     len(self.dynamic_map.mmap.lanes), target_lane_index)
+
+        target_lane = self.dynamic_map.mmap.lanes[target_lane_index]
 
         if target_lane is None:
+            rospy.logdebug("NOT FOUND LANE, target_lane_id : %d", target_lane_index)
             return 0
         else:
             idm_speed = self.IDM_speed_in_lane(target_lane)
+            return idm_speed
+            # TODO: no lane change avoidance
+
             # Response to front vehicle in left lane
             if target_lane_index < len(self.dynamic_map.mmap.lanes)-1:
                 left_lane = None

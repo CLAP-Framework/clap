@@ -59,6 +59,9 @@ class LaneUtility(object):
         rospy.logdebug("left_utility = %f, ego_utility = %f, right_utility = %f",
             left_lane_utility, current_lane_utility, right_lane_utility)
 
+        # rospy.logdebug("current_lane_id = %d, left_lane_id = %d, right_lane_id = %d",
+        #     ego_lane_index, ego_lane_index + 1, ego_lane_index - 1)
+
         if right_lane_utility > current_lane_utility and right_lane_utility >= left_lane_utility:
             return ego_lane_index -1
 
@@ -70,10 +73,11 @@ class LaneUtility(object):
     def lane_utility(self, lane_index):
 
         available_speed = self.longitudinal_model_instance.longitudinal_speed(lane_index)
+        rospy.logdebug("lane_index = %d, available_speed = %f", lane_index, available_speed)
         exit_lane_index = self.dynamic_map.mmap.target_lane_index
         distance_to_end = self.dynamic_map.mmap.distance_to_junction
         # XXX: Change 260 to a adjustable parameter?
-        utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(260-distance_to_end))
+        utility = available_speed # + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(260-distance_to_end))
         return utility
 
     def lane_change_safe(self, ego_lane_index, target_index):

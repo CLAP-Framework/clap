@@ -44,7 +44,15 @@
 
 class imu_lidar{
 public:
-    imu_lidar(const ros::NodeHandle& node_handle):nh(node_handle){R_ego << 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0; T_ego << 0.0,1.0,1.0;};
+    imu_lidar(const ros::NodeHandle& node_handle):nh(node_handle){
+        // R_ego << 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0; 
+        // T_ego << 0.0,1.0,1.0;
+
+        R_ego << -0.017574, -0.99975, -0.014068, 0.99985, 
+            -0.017572, -0.00024733, 0.0, -0.01407, 0.9999; 
+        T_ego << -0.20171, 0.90642, 1.4979;
+    };
+
     void imu_callback(const sensor_msgs::NavSatFixConstPtr& navsat_msg, const sensor_msgs::ImuConstPtr& imu_msg){
         // ROS_INFO("--------------------imu_callback-------------------------");
         const ros::Time& gps_stamp = navsat_msg->header.stamp;

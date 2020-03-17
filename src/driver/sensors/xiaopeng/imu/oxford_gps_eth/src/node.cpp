@@ -343,7 +343,39 @@ static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, r
     state.state.pose.pose.position.x=X;
     state.state.pose.pose.position.y=Y;
     state.state.pose.pose.position.z=0.0;
-    state.state.pose.pose.orientation=msg_imu.orientation;
+    float w=msg_imu.orientation.w;
+    float x=msg_imu.orientation.x;
+    float y=msg_imu.orientation.y;
+    float z=msg_imu.orientation.z;
+    float Roll = atan2((2*(w*x+y*z)),(1-2*(x*x+y*y)));
+    float Pitch = asin(2*(w*y-z*x));
+    float Yaw = atan2((2*(w*z+x*y)),(1-2*(z*z+y*y)));
+    Yaw=Yaw+3.141592654/2;
+    //Yaw=-Yaw;
+    if(Yaw < 0){
+        Yaw = Yaw + 2*3.1415927;
+    }
+    //std::cout << "New yaw = " << Yaw/3.1415927*180 << std::endl;
+    double cy = cos(Yaw * 0.5);
+    double sy = sin(Yaw * 0.5);
+    double cp = cos(Pitch * 0.5);
+    double sp = sin(Pitch * 0.5);
+    double cr = cos(Roll * 0.5);
+    double sr = sin(Roll * 0.5); 
+    float w1 = cy * cp * cr + sy * sp * sr;
+    float x1 = cy * cp * sr - sy * sp * cr;
+    float y1 = sy * cp * sr + cy * sp * cr;
+    float z1= sy * cp * cr - cy * sp * sr;
+    state.state.pose.pose.orientation.w=w1;
+    state.state.pose.pose.orientation.x=x1;
+    state.state.pose.pose.orientation.y=y1;
+    state.state.pose.pose.orientation.z=z1;
+    // state.state.pose.pose.orientation=msg_imu.orientation;
+
+
+
+
+
     /*twist*/
     state.state.twist.twist.linear=msg_vel.twist.twist.linear;
     state.state.twist.twist.angular=msg_imu.angular_velocity;

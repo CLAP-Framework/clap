@@ -156,7 +156,7 @@ int main(int argc, char **argv)
       ctrmsg.EPSAngleReq=steer_send;
       steer_send_old=steer_send;
       cout<<"steer1 "<<steer1<<"steer2 "<<steer2<<endl;
-      // cout<<"cte_d "<<cte_D<<"   cte_A  "<<cte_A<<"steer"<<steer_send<<endl;
+      cout<<"cte_d "<<cte_D<<"   cte_A  "<<cte_A<<"steer"<<steer_send<<endl;
       if(!CurDriveMode)
       {
 
@@ -341,7 +341,7 @@ void    callback_Path(const zzz_planning_msgs::DecisionTrajectory &msg)
   {
     Waypoints[i].x=msg.trajectory.poses[i].pose.position.x;
     Waypoints[i].y=msg.trajectory.poses[i].pose.position.y;
-    // cout<<"Waypoints.x= "<<Waypoints[i].x<<"Waypoints.y= "<<Waypoints[i].y<<endl;
+    cout<<"Waypoints.x= "<<Waypoints[i].x<<"Waypoints.y= "<<Waypoints[i].y<<endl;
     Waypoints[i].theta=qua_to_rpy(msg.trajectory.poses[i].pose.orientation); 
     if(Waypoints[i].theta<0)
     {
@@ -498,8 +498,8 @@ void callback_gpsfix(const sensor_msgs::NavSatFix &msg)
     Current_Point.x=utm.easting-442867;
     Current_Point.y=utm.northing-4427888;
 
-    Current_Point.x=Current_Point.x+0.3*sin(Yaw*PI/180);
-    Current_Point.y=Current_Point.y+0.3*cos(Yaw*PI/180);
+    Current_Point.x=Current_Point.x+1.3*sin(Yaw*PI/180);
+    Current_Point.y=Current_Point.y+1.3*cos(Yaw*PI/180);
     //cout<<Current_Point.x<<"   kkkk   "<<Current_Point.y<<endl;
 
 }

@@ -437,7 +437,7 @@ class MPCTrajectory(object):
         
 class PolylineTrajectory(object):
     def get_trajectory(self, dynamic_map, target_lane_index, desired_speed,
-                resolution=0.5, time_ahead=5, distance_ahead=10, rectify_thres=2,
+                resolution=0.2, time_ahead=5, distance_ahead=10, rectify_thres=2,
                 lc_dt = 1.5, lc_v = 2.67):
         # TODO: get smooth spline (write another module to generate spline)
         ego_x = dynamic_map.ego_state.pose.pose.position.x
@@ -461,12 +461,17 @@ class PolylineTrajectory(object):
                 rectify_dt = abs(dynamic_map.mmap.ego_lane_index - target_lane_index)*lc_dt
             else:
                 rectify_dt = nearest_dis/lc_v
+
             return self.generate_smoothen_lane_change_trajectory(dynamic_map, target_lane, rectify_dt, desired_speed)
         else:
             front_path = dense_centrol_path[nearest_idx:]
             dis_to_ego = np.cumsum(np.linalg.norm(np.diff(front_path, axis=0), axis = 1))
+
             trajectory = front_path[:np.searchsorted(dis_to_ego, desired_speed*time_ahead+distance_ahead)-1]
-            return trajectory
+            trajectory02 = dense_polyline2d(trajectory, 0.2)
+
+            # print('@@@@dist ', np.linalg.norm(trajectory02[0] - trajectory02[1]))
+            return trajectory02
 
     # TODO(zyxin): Add these to zzz_navigation_msgs.utils
     def convert_path_to_ndarray(self, path):
