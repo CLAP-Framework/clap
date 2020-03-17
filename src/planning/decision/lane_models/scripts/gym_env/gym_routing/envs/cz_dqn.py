@@ -71,8 +71,8 @@ class ZZZCarlaEnv_lane(gym.Env):
         print("ZZZ connected at {}".format(addr))
 
     def step(self, action):
-        action = action.astype(float)
-        action = action.tolist()
+        action = action.astype(int)
+        # action = action.tolist()
         # send action to zzz planning module
         print("-------------",type(action),action)
         while True:
@@ -123,11 +123,10 @@ class ZZZCarlaEnv_lane(gym.Env):
 
                 self.sock_conn.sendall(msgpack.packb(action))
                 received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
-                print("-------------received msg in reset")
+                print("-------------received msg in reset",received_msg)
 
-                received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
-                self.state = received_msg[0:11]
-                collision = received_msg[12]
+                self.state = received_msg[0:19]
+                collision = received_msg[20]
                 return np.array(self.state)
 
             except ValueError:

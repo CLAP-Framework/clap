@@ -19,7 +19,7 @@ class RLSNode(object):
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
             collision_topic="/carla/ego_vehicle/collision",
             RVIZ_decision_trajectory_topic="decision_trajectory_path", 
-            hz = 10,
+            hz = 1.33,
         )
 
         self._rate = rospy.Rate(params.hz)
@@ -51,10 +51,10 @@ class RLSNode(object):
 
     def dynamic_map_callback(self, msg, decision_dt = 0.75):
         # TODO: decision frequency
-        # current_time = rospy.Time.now().to_sec()
-        # if current_time - self._last_decision_time < decision_dt:
-        #     return
-        # self._last_decision_time = current_time
+        current_time = rospy.Time.now().to_sec()
+        if current_time - self._last_decision_time < decision_dt:
+            return
+        self._last_decision_time = current_time
 
         # rospy.logdebug("Current_time: %f",self._last_decision_time)
         publish_msg = self._decision_instance.generate_trajectory_with_speed(msg)
@@ -65,8 +65,8 @@ class RLSNode(object):
     
     def collision_callback(self, msg):
         # collision_id = msg.other_actor_id
-        self._decision_instance.lateral_model_instance.collision_signal = True
-        self._decision_instance.lateral_model_instance.collision_times += 1
+        self._decision_instance._lateral_model_instance.collision_signal = True
+        self._decision_instance._lateral_model_instance.collision_times += 1
 
 if __name__ == "__main__":
 

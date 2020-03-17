@@ -24,13 +24,13 @@ MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 10.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 5.0  # maximum curvature [1/m]
 MAX_ROAD_WIDTH = 4.0  # maximum road width [m] # related to RL action space
-D_ROAD_W = 2.0  # road width sampling length [m]
+D_ROAD_W = 4.0  # road width sampling length [m]
 DT = 0.15  # time tick [s]
 MAXT = 4.6  # max prediction time [m]
 MINT = 4.0  # min prediction time [m]
 TARGET_SPEED = 15.0 / 3.6  # target speed [m/s]
 D_T_S = 5.0 / 3.6  # target speed sampling length [m/s]
-N_S_SAMPLE = 2  # sampling number of target speed
+N_S_SAMPLE = 1  # sampling number of target speed
 ROBOT_RADIUS = 4.5  # robot radius [m]
 
 # Cost weights

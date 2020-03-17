@@ -25,17 +25,36 @@ class CarlaMap(object):
         self._ego_vehicle_y_buffer = 0.0
 
         self._reference_lane_list = deque(maxlen=20000)
-        self._lanes = []  # 0-inner, 1-outer
+        self._lanes_inside = []
+        self._lanes_outside = []
         self.load_lanes() # load lanes
 
     def load_lanes(self):
-        inner_path = os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/carla_data/inner_loop.dat'
-        outer_path = os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/carla_data/outer_loop.dat'
-        # inner 1, outer 0
-        self._lanes.append(self.get_lane(np.loadtxt(outer_path, delimiter=',')))
-        self._lanes.append(self.get_lane(np.loadtxt(inner_path, delimiter=',')))
-        
+        # inner_path = os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/carla_data/inner_loop.dat'
+        # outer_path = os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/carla_data/outer_loop.dat'
+        # # inner 1, outer 0
+        # self._lanes.append(self.get_lane(np.loadtxt(outer_path, delimiter=',')))
+        # self._lanes.append(self.get_lane(np.loadtxt(inner_path, delimiter=',')))
 
+        
+        self._lanes_inside.append(dense_polyline2d(np.array([[23.4,-91.234],[-36.214,-91.5]]),1))
+        self._lanes_inside.append(dense_polyline2d(np.array([[-50.942,-75.59],[-51.1,-12.56]]),1))
+        self._lanes_inside.append(dense_polyline2d(np.array([[-35.62,3.11],[23.72,3.37]]),1))
+        self._lanes_inside.append(dense_polyline2d(np.array([[31.8,-11.33],[33.52,-77.71]]),1))
+
+        self._lanes_outside.append(dense_polyline2d(np.array([[22.246,-94.584],[-37,-94.817]]),1))
+        self._lanes_outside.append(dense_polyline2d(np.array([[-55,-77.85],[-54.35,-12.114]]),1))
+        self._lanes_outside.append(dense_polyline2d(np.array([[-37.11,6.15],[19.03,6.16]]),1))
+        self._lanes_outside.append(dense_polyline2d(np.array([[34.76,-12.98],[36.53,-77.61]]),1))
+
+    def ego_road(self):
+
+        dist_list = np.array([dist_from_point_to_polyline2d(
+                self._ego_vehicle_x, -self._ego_vehicle_y,
+                lane) for lane in self._lanes_inside])
+        closest_lane, second_closest_lane = np.abs(dist_list[:, 0]).argsort()[:2]
+
+        return closest_lane
 
     def receive_new_pose(self, x, y):
         self._ego_vehicle_x_buffer = x
@@ -64,7 +83,7 @@ class CarlaMap(object):
         '''
         init_static_map = Map()
         init_static_map.in_junction = False
-        init_static_map.target_lane_index = 0
+        init_static_map.target_lane_index = 1
         return init_static_map
 
 
@@ -86,8 +105,9 @@ class CarlaMap(object):
         
         # Left is 0 
         self.static_local_map.in_junction = False # lane change
-        self.static_local_map.lanes.append(self._lanes[0])
-        self.static_local_map.lanes.append(self._lanes[1])
+        ego_road = self.ego_road()
+        self.static_local_map.lanes.append(self.get_lane(self._lanes_outside[ego_road]))
+        self.static_local_map.lanes.append(self.get_lane(self._lanes_inside[ego_road]))
         # rospy.loginfo("### native map update lane0 - {}, lane1 - {}".format(
         #     self.static_local_map.lanes[0].central_path_points[2357], 
         #     self.static_local_map.lanes[1].central_path_points[2188]))
@@ -101,7 +121,7 @@ class CarlaMap(object):
             x, y = wp[0], wp[1]   # Point XY
             #x, y = wp[1], wp[0]
             point.position.x = x
-            point.position.y = y
+            point.position.y = -y
             lane_wrapped.central_path_points.append(point)
 
         return lane_wrapped

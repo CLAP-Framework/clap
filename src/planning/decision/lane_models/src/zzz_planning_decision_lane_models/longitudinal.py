@@ -26,43 +26,42 @@ class IDM(object):
 
         if target_lane_index == -1:
             target_lane = self.dynamic_map.jmap.reference_path
+        
+        if target_lane_index > len(self.dynamic_map.mmap.lanes)-1:
+            rospy.logwarn("cannot find neighbor lane, lane_index: %d", target_lane_index)
+            return 0 
 
-        for lane in self.dynamic_map.mmap.lanes:
-            if lane.map_lane.index == target_lane_index:
-                target_lane = lane
+        target_lane = self.dynamic_map.mmap.lanes[target_lane_index]
 
-        if target_lane is None:
-            return 0
-        else:
-            idm_speed = self.IDM_speed_in_lane(target_lane)
-            # Response to front vehicle in left lane
-            if target_lane_index < len(self.dynamic_map.mmap.lanes)-1:
-                left_lane = None
-                for lane in self.dynamic_map.mmap.lanes:
-                    if lane.map_lane.index == target_lane_index+1:
-                        left_lane = lane
-                        break
-                if left_lane is not None and self.neighbor_vehicle_is_cutting_in(left_lane,target_lane):
-                    rospy.logwarn("response to left front vehicle(%d)",target_lane_index+1)
-                    left_idm_speed = self.IDM_speed_in_lane(left_lane)
-                    idm_speed = min(idm_speed,left_idm_speed)
+        idm_speed = self.IDM_speed_in_lane(target_lane)
+        # Response to front vehicle in left lane
+        if target_lane_index < len(self.dynamic_map.mmap.lanes)-1:
+            left_lane = None
+            for lane in self.dynamic_map.mmap.lanes:
+                if lane.map_lane.index == target_lane_index+1:
+                    left_lane = lane
+                    break
+            if left_lane is not None and self.neighbor_vehicle_is_cutting_in(left_lane,target_lane):
+                rospy.logwarn("response to left front vehicle(%d)",target_lane_index+1)
+                left_idm_speed = self.IDM_speed_in_lane(left_lane)
+                idm_speed = min(idm_speed,left_idm_speed)
 
-            # Response to front vehicle in right lane
-            if target_lane_index > 0:
-                for lane in self.dynamic_map.mmap.lanes:
-                    right_lane = None
-                    if lane.map_lane.index == target_lane_index-1:
-                        right_lane = lane
-                        break
-                if right_lane is not None and self.neighbor_vehicle_is_cutting_in(right_lane,target_lane):
-                    rospy.logwarn("response to right front vehicle(%d)",target_lane_index-1)
-                    right_idm_speed = self.IDM_speed_in_lane(right_lane)
-                    idm_speed = min(idm_speed,right_idm_speed)
+        # Response to front vehicle in right lane
+        if target_lane_index > 0:
+            for lane in self.dynamic_map.mmap.lanes:
+                right_lane = None
+                if lane.map_lane.index == target_lane_index-1:
+                    right_lane = lane
+                    break
+            if right_lane is not None and self.neighbor_vehicle_is_cutting_in(right_lane,target_lane):
+                rospy.logwarn("response to right front vehicle(%d)",target_lane_index-1)
+                right_idm_speed = self.IDM_speed_in_lane(right_lane)
+                idm_speed = min(idm_speed,right_idm_speed)
 
-            traffic_light_speed = float("inf")
-            if traffic_light:
-                traffic_light_speed = self.traffic_light_speed(target_lane)
-            return min(idm_speed, traffic_light_speed)
+        traffic_light_speed = float("inf")
+        if traffic_light:
+            traffic_light_speed = self.traffic_light_speed(target_lane)
+        return min(idm_speed, traffic_light_speed)
 
 
     def IDM_speed_in_lane(self, lane):

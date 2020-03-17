@@ -49,6 +49,9 @@ class MainDecision(object):
             changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
             if desired_speed < 0: # TODO: clean this
                 desired_speed = 0
+            print("changing_lane_index",changing_lane_index)
+            print("desired_speed*3.6",desired_speed*3.6)
+
             rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
             
             # TODO(Temps): Should seperate into continous models 

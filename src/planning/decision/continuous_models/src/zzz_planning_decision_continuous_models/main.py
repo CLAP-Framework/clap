@@ -79,6 +79,7 @@ class MainDecision(object):
             # Keep replanning
             self._trajectory_planner.clear_buff(dynamic_map)
             if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
+                print("dynamic map tell me its junction")
                 trajectory_msg = self._trajectory_planner.trajectory_update(dynamic_map)
                 return trajectory_msg
             elif dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:

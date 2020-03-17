@@ -158,49 +158,56 @@ def generate_traffic(carla_world, blueprints_ori, spawn_points_ori, delay = 0.05
         if min_d > 20:
             new_vehicle = carla_world.try_spawn_actor(blueprint, spawn_point)
             if new_vehicle:
-                if "vehicle" in new_vehicle.type_id:
-                    new_vehicle.set_autopilot(True)
-                    return
+                # if "vehicle" in new_vehicle.type_id:
+                new_vehicle.set_autopilot(True)
+                return
 
 def removed_stopped_vehicle(carla_world, stopped_time_thres = 20):
     # carla_world = ego_vehicle.get_world()
     global stopped_time
-    global circle_center
 
     actor_list = carla_world.get_actors()
     vehicle_list = actor_list.filter("*vehicle*")
-    
-    # what is too far
-    dist_range = 200.0 # 150 meters from traffic circle center
 
     for vehicle in vehicle_list:
+        
         if vehicle.attributes['role_name'] == "ego_vehicle":
-            pass
-        else:
-            velocity = vehicle.get_velocity()
-            dist_from_origin = vehicle.get_location().distance(circle_center)
-            if stopped_time[vehicle.id] >= 0:
-                if velocity.x < 0.02 and velocity.y < 0.02:
-                    stopped_time[vehicle.id] = stopped_time[vehicle.id] + 1
-                else:
-                    stopped_time[vehicle.id] = 0
+            continue
+        
+        if stopped_time[vehicle.id] < -100:
+            continue
 
-                if stopped_time[vehicle.id] > stopped_time_thres or dist_from_origin > dist_range:
-                    if vehicle.is_alive:# and carla_world.get_snapshot().find(vehicle.id) is not None:
-                        try:
-                            print("delete someone, vehicle.id=",vehicle.id)
-                            print("stopped_time[vehicle.id]=",stopped_time[vehicle.id])
-                            print("dist_from_origin=",dist_from_origin)
+        # if vehicle.is_alive() is False:
+        #     continue
+        
+        x_max = 100
+        x_min = -120
+        y_max = 70
+        y_min = -150
 
-                            stopped_time[vehicle.id] = -100000 # FIXME(zhcao): Otherwise some vehicle may be destroyed when generated with previous ID
+        v_loc = vehicle.get_location()
+        if (v_loc.x > x_max) or (v_loc.x < x_min) or (v_loc.y > y_max) or (v_loc.y < y_min):
+            print("delete vehicle move too far",v_loc.x, v_loc.y)
+            stopped_time[vehicle.id] = -100000
+            vehicle.destroy()
+            continue
+        
+        velocity = vehicle.get_velocity()
+        dist_from_origin = vehicle.get_location().distance(circle_center)
+        if stopped_time[vehicle.id] >= 0:
+            if velocity.x < 0.02 and velocity.y < 0.02:
+                stopped_time[vehicle.id] = stopped_time[vehicle.id] + 1
+            else:
+                stopped_time[vehicle.id] = 0
 
-                            vehicle.destroy()
-                            # destroy_veh = carla_world.get_actors(actor_ids=[vehicle.id])
-                            # carla_client.apply_batch(carla.command.DestroyActor(destroy_veh))
-                            # stopped_time[vehicle.id] = -100000
-                        except:
-                            pass# return
-                    # return
+        if stopped_time[vehicle.id] > stopped_time_thres:
+            print("delete vehicle stay too long")
+            stopped_time[vehicle.id] = -100000
+            vehicle.destroy()
+
+        # print("delete someone, vehicle.id=",vehicle.id)
+        # print("stopped_time[vehicle.id]=",stopped_time[vehicle.id])
+        # print("dist_from_origin=",dist_from_origin)
 
 def move_stopped_vehicle(carla_world, spawn_points_ori, stopped_time_thres = 20):
     # carla_world = ego_vehicle.get_world()
@@ -267,23 +274,27 @@ def move_stopped_vehicle(carla_world, spawn_points_ori, stopped_time_thres = 20)
 def generate_remove_traffic(carla_world, delay = 0.5):
     # traffic main function
     # generate surrounding vehicles
-    global needed_generate
+    # global needed_generate
     blueprints = carla_world.get_blueprint_library().filter('vehicle.*')
     spawn_points = carla_world.get_map().get_spawn_points()
-    # while not rospy.is_shutdown():
-    
-    if rospy.Time.now().to_sec() - needed_generate > 0.5:
-        # Generate surrounding vehicles
-        generate_traffic(carla_world, blueprints, spawn_points)  #0 for fix point, 1 for random
 
-        # Generate pedestrians
-        # generate_pedestrians(carla_world,carla_client,0)
-
-        # Remove traffic stop and too far
+    while not rospy.is_shutdown():
+        generate_traffic(carla_world, blueprints, spawn_points)
         removed_stopped_vehicle(carla_world, 20/delay)
-        # move_stopped_vehicle(carla_world, spawn_points, 10/delay)
-        # time.sleep(delay)
-        needed_generate = rospy.Time.now().to_sec()
+        time.sleep(delay)
+
+    # if rospy.Time.now().to_sec() - needed_generate > 0.5:
+    #     # Generate surrounding vehicles
+    #     generate_traffic(carla_world, blueprints, spawn_points)  #0 for fix point, 1 for random
+
+    #     # Generate pedestrians
+    #     # generate_pedestrians(carla_world,carla_client,0)
+
+    #     # Remove traffic stop and too far
+    #     removed_stopped_vehicle(carla_world, 20/delay)
+    #     # move_stopped_vehicle(carla_world, spawn_points, 10/delay)
+    #     # time.sleep(delay)
+    #     needed_generate = rospy.Time.now().to_sec()
 
 
 #######
@@ -599,7 +610,7 @@ if __name__ == "__main__":
 
     # Setting simulation FPS
     settings = carla_world.get_settings()
-    # settings.fixed_delta_seconds = 0.1
+    settings.fixed_delta_seconds = 0.05
     settings.no_rendering_mode = True # close render to make simulation faster
     carla_world.apply_settings(settings)
 
@@ -636,7 +647,7 @@ if __name__ == "__main__":
         else:
             count = count + 1
     # generate and remove vehicles
-    # thread.start_new_thread(generate_remove_traffic,(carla_world, 2))
+    thread.start_new_thread(generate_remove_traffic,(carla_world, 2))
 
     #record vehicle nums
     # thread.start_new_thread(record_vehicle_states,(carla_world, 1))
