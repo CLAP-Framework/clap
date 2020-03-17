@@ -50,7 +50,7 @@ public:
 
         R_ego << -0.017574, -0.99975, -0.014068, 0.99985, 
             -0.017572, -0.00024733, 0.0, -0.01407, 0.9999; 
-        T_ego << -0.20171, 0.90642, 1.4979;
+        T_ego << -0.2, 0.906, 1.4979;
     };
 
     void imu_callback(const sensor_msgs::NavSatFixConstPtr& navsat_msg, const sensor_msgs::ImuConstPtr& imu_msg){

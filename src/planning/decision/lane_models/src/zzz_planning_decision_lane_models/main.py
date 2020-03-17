@@ -65,12 +65,14 @@ class MainDecision(object):
             pose = PoseStamped()
             pose.pose.position.x = wp[0]
             pose.pose.position.y = wp[1]
-            if i < len(path)-1:
-                wp_next = path[i+1]
+            k = 5
+            if i < len(path)-k:
+                wp_next = path[i+k]
                 yaw = math.atan2(wp_next[0]-wp[0], wp_next[1]-wp[1])
             else:
-                wp_last = path[i-1]
+                wp_last = path[i-k]
                 yaw = math.atan2(wp[0]-wp_last[0], wp[1]-wp_last[1])
+
             cy = math.cos(yaw*0.5)
             sy = math.sin(yaw*0.5)
             pose.pose.orientation.w = cy
