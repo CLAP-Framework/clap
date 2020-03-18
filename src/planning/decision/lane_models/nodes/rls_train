@@ -19,7 +19,7 @@ class RLSNode(object):
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
             collision_topic="/carla/ego_vehicle/collision",
             RVIZ_decision_trajectory_topic="decision_trajectory_path", 
-            hz = 1.33,
+            hz = 20,
         )
 
         self._rate = rospy.Rate(params.hz)

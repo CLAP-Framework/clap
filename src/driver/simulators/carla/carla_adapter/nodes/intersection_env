@@ -106,11 +106,11 @@ def change_the_world(carla_world):
 def change_traffic_lights(carla_world):
     traffic_lights = carla_world.get_actors().filter('*traffic_light*')
     for tl in traffic_lights:
-        tl.set_state(carla.TrafficLightState.Green)
-        tl.freeze(1)
-        # tl.set_green_time(9.0)
-        # tl.set_yellow_time(0.01)
-        # tl.set_red_time(0.01)
+        # tl.set_state(carla.TrafficLightState.Green)
+        # tl.freeze(1)
+        tl.set_green_time(9.0)
+        tl.set_yellow_time(0.01)
+        tl.set_red_time(0.01)
 
 
 ##########
@@ -140,7 +140,7 @@ def generate_traffic_098(carla_world, blueprints_ori, spawn_points_ori, delay = 
     SpawnActor = carla.command.SpawnActor
     SetAutopilot = carla.command.SetAutopilot
     FutureActor = carla.command.FutureActor
-    synchronous_master = True
+    synchronous_master = False
 
     x_max = 100
     x_min = -120
@@ -176,9 +176,8 @@ def generate_traffic_098(carla_world, blueprints_ori, spawn_points_ori, delay = 
                 blueprint.set_attribute('driver_id', driver_id)
             blueprint.set_attribute('role_name', 'autopilot')
             batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
-
+        
         carla_client.apply_batch_sync(batch, synchronous_master)
-
 
 def generate_traffic(carla_world, blueprints_ori, spawn_points_ori, delay = 0.05):
     
@@ -259,66 +258,6 @@ def removed_stopped_vehicle(carla_world, stopped_time_thres = 20):
         # print("delete someone, vehicle.id=",vehicle.id)
         # print("stopped_time[vehicle.id]=",stopped_time[vehicle.id])
         # print("dist_from_origin=",dist_from_origin)
-
-def move_stopped_vehicle(carla_world, spawn_points_ori, stopped_time_thres = 20):
-    # carla_world = ego_vehicle.get_world()
-    global stopped_time
-    global circle_center
-
-    actor_list = carla_world.get_actors()
-    vehicle_list = actor_list.filter("*vehicle*")
-
-    spawn_points = list(spawn_points_ori)
-    
-    # what is too far
-    dist_range = randint(250,300) # 150 meters from traffic circle center
-    print("into moved function")
-
-    for vehicle in vehicle_list:
-        if vehicle.attributes['role_name'] == "ego_vehicle":
-            pass
-        else:
-            velocity = vehicle.get_velocity()
-            dist_from_origin = vehicle.get_location().distance(circle_center)
-
-            if velocity.x < 0.02 and velocity.y < 0.02:
-                stopped_time[vehicle.id] = stopped_time[vehicle.id] + 1
-            else:
-                stopped_time[vehicle.id] = 0
-
-            if (stopped_time[vehicle.id] > stopped_time_thres) or (dist_from_origin > dist_range):
-                random.shuffle(spawn_points)
-                print("into here")
-
-                for spawn_point in spawn_points:
-                    if -120 < spawn_point.location.x < 100 and -150 < spawn_point.location.y < 70:
-                        min_d = 800
-                        for check_vehicle in vehicle_list:
-                            d = check_vehicle.get_location().distance(spawn_point.location)
-                            if d < min_d:
-                                min_d = d
-                        if min_d > 5:
-                            print("moved someone, vehicle.id=",vehicle.id)
-                            print("stopped_time[vehicle.id]=",stopped_time[vehicle.id])
-                            # print("vehicle.get_location()=",vehicle.get_location().x)
-                            # print("vehicle.get_location()=",vehicle.get_location().y)
-                            # print("vehicle.get_location()=",vehicle.get_location().z)
-                            print("dist_from_origin=",dist_from_origin)
-                            # print("dist_from_origin=",vehicle.get_location().distance(circle_center))
-                            # print("dist_range=",dist_range)
-                            # print("stopped_time_thres=",stopped_time_thres)
-                            stopped_time[vehicle.id] = 0 # FIXME(zhcao): Otherwise some vehicle may be destroyed when generated with previous ID
-                            velocity = vehicle.get_velocity()
-                            velocity.x = 0
-                            velocity.y = 0
-                            velocity.z = 0
-                            vehicle.set_velocity(velocity)
-                            vehicle.set_transform(spawn_point)
-                            vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))
-                            # time.sleep(0.25)
-                            # vehicle.set_autopilot(True)
-
-                            return None
 
                     
 
@@ -656,8 +595,8 @@ if __name__ == "__main__":
     carla_world = carla_client.get_world()
     
     
-    # tm = carla_client.get_trafficmanager(8000)
-    # tm.set_global_distance_to_leading_vehicle(2.0)
+    tm = carla_client.get_trafficmanager(8000)
+    tm.set_global_distance_to_leading_vehicle(2.0)
     # tm.set_synchronous_mode()   # for synchoronous mode
 
     rospy.loginfo("Connected to Carla.")
@@ -702,7 +641,7 @@ if __name__ == "__main__":
         else:
             count = count + 1
     # generate and remove vehicles
-    # thread.start_new_thread(generate_remove_traffic,(carla_world, 2))
+    thread.start_new_thread(generate_remove_traffic,(carla_world, 20))
 
     #record vehicle nums
     # thread.start_new_thread(record_vehicle_states,(carla_world, 1))
