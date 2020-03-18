@@ -129,6 +129,57 @@ def collision_callback(msg):
 # Dynamic Traffic
 ##########
 
+def generate_traffic_098(carla_world, blueprints_ori, spawn_points_ori, delay = 0.05):
+    
+    blueprints = [x for x in blueprints_ori if int(x.get_attribute('number_of_wheels')) == 4]
+    blueprints = [x for x in blueprints if not x.id.endswith('isetta')]
+    blueprints = [x for x in blueprints if not x.id.endswith('carlacola')]
+    blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
+    blueprints = [x for x in blueprints if not x.id.endswith('t2')]
+
+    SpawnActor = carla.command.SpawnActor
+    SetAutopilot = carla.command.SetAutopilot
+    FutureActor = carla.command.FutureActor
+    synchronous_master = True
+
+    x_max = 100
+    x_min = -120
+    y_max = 70
+    y_min = -150
+    # --------------
+    # Spawn vehicles
+    # --------------
+    batch = []
+    max_agents = randint(40,50) #70
+
+    actor_list = carla_world.get_actors()
+    vehicle_list = actor_list.filter("*vehicle*")
+    num_agents = len(vehicle_list)
+    if num_agents < max_agents: 
+        for n, transform in enumerate(spawn_points_ori):
+            if (transform.location.x > x_max) or (transform.location.x < x_min) or (transform.location.y > y_max) or (transform.location.y < y_min):
+                continue
+            min_d = 100
+            for vehicle in vehicle_list:
+                d = vehicle.get_location().distance(transform.location)
+                if d < min_d:
+                    min_d = d
+            if min_d < 20:
+                continue
+
+            blueprint = random.choice(blueprints_ori)
+            if blueprint.has_attribute('color'):
+                color = random.choice(blueprint.get_attribute('color').recommended_values)
+                blueprint.set_attribute('color', color)
+            if blueprint.has_attribute('driver_id'):
+                driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
+                blueprint.set_attribute('driver_id', driver_id)
+            blueprint.set_attribute('role_name', 'autopilot')
+            batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
+
+        carla_client.apply_batch_sync(batch, synchronous_master)
+
+
 def generate_traffic(carla_world, blueprints_ori, spawn_points_ori, delay = 0.05):
     
     # generate surrounding vehicles   
@@ -140,7 +191,7 @@ def generate_traffic(carla_world, blueprints_ori, spawn_points_ori, delay = 0.05
     recommended_points = [1, 2, 3, 5, 7, 11, 12, 18, 20, 21, 22, 43, 44, 65, 71, 72, 75, 76, 77, 78, 83, 84, 102, 103, 110, 111, 118, 119, 124, 135, 136, 150, 158, 168, 173, 176, 203, 205, 238, 239, 249, 250, 274, 275]
 
     #set_ramdom_vehicle_number
-    max_agents = randint(20,50) #70
+    max_agents = randint(40,50) #70
 
     actor_list = carla_world.get_actors()
     vehicle_list = actor_list.filter("*vehicle*")
@@ -279,7 +330,7 @@ def generate_remove_traffic(carla_world, delay = 0.5):
     spawn_points = carla_world.get_map().get_spawn_points()
 
     while not rospy.is_shutdown():
-        generate_traffic(carla_world, blueprints, spawn_points)
+        generate_traffic_098(carla_world, blueprints, spawn_points)
         removed_stopped_vehicle(carla_world, 20/delay)
         time.sleep(delay)
 
@@ -603,7 +654,11 @@ if __name__ == "__main__":
     carla_client.set_timeout(10.0)
     # carla_world = carla_client.load_world('Town05') # this cause a lot of bugs
     carla_world = carla_client.get_world()
-
+    
+    
+    # tm = carla_client.get_trafficmanager(8000)
+    # tm.set_global_distance_to_leading_vehicle(2.0)
+    # tm.set_synchronous_mode()   # for synchoronous mode
 
     rospy.loginfo("Connected to Carla.")
     needed_generate = rospy.Time.now().to_sec()
@@ -611,7 +666,7 @@ if __name__ == "__main__":
     # Setting simulation FPS
     settings = carla_world.get_settings()
     settings.fixed_delta_seconds = 0.05
-    settings.no_rendering_mode = True # close render to make simulation faster
+    settings.no_rendering_mode = False # close render to make simulation faster
     carla_world.apply_settings(settings)
 
     # Publish and Subscribe messages
@@ -647,7 +702,7 @@ if __name__ == "__main__":
         else:
             count = count + 1
     # generate and remove vehicles
-    thread.start_new_thread(generate_remove_traffic,(carla_world, 2))
+    # thread.start_new_thread(generate_remove_traffic,(carla_world, 2))
 
     #record vehicle nums
     # thread.start_new_thread(record_vehicle_states,(carla_world, 1))
