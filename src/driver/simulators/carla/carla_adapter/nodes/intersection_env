@@ -596,7 +596,7 @@ if __name__ == "__main__":
     
     
     tm = carla_client.get_trafficmanager(8000)
-    tm.set_global_distance_to_leading_vehicle(2.0)
+    # tm.set_global_distance_to_leading_vehicle(2.0)
     # tm.set_synchronous_mode()   # for synchoronous mode
 
     rospy.loginfo("Connected to Carla.")
@@ -617,10 +617,10 @@ if __name__ == "__main__":
     _waypoint_publisher = rospy.Publisher('carla/{}/waypoints'.format(role_name), Path, queue_size=1, latch=True)
 
     # Change weather
-    change_the_world(carla_world)
+    # change_the_world(carla_world)
 
     # Change traffic lights
-    change_traffic_lights(carla_world)
+    # change_traffic_lights(carla_world)
    
     rate = rospy.Rate(20)
 

@@ -32,7 +32,9 @@ class RLSNode(object):
         # ROS messages
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
         self._collision_subscriber = rospy.Subscriber(params.collision_topic, CarlaCollisionEvent, self.collision_callback)
-        self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
+        self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self.dynamic_map_callback)
+
+        #self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
         self._rviz_decision_trajectory_publisher = rospy.Publisher(params.RVIZ_decision_trajectory_topic, Path, queue_size=1)
 
 
@@ -56,12 +58,15 @@ class RLSNode(object):
             return
         self._last_decision_time = current_time
 
-        # rospy.logdebug("Current_time: %f",self._last_decision_time)
-        publish_msg = self._decision_instance.generate_trajectory_with_speed(msg)
-        rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
-            len(publish_msg.trajectory.poses), publish_msg.desired_speed)
+        self._decision_instance.receive_dynamic_map()
 
-        self._decision_trajectory_publisher.publish(publish_msg)
+        publish_msg = self._decision_instance.update()
+        if publish_msg:
+            self._decision_trajectory_publisher.publish(publish_msg)
+            publish_msg2 = publish_msg.trajectory
+            self._rviz_decision_trajectory_publisher.publish(publish_msg2)
+            rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
+                len(publish_msg.trajectory.poses), publish_msg.desired_speed)
     
     def collision_callback(self, msg):
         # collision_id = msg.other_actor_id
@@ -72,5 +77,6 @@ if __name__ == "__main__":
 
     rospy.init_node("rls_node", log_level=rospy.DEBUG)
     node = RLSNode()
-    node.loop()
+    rospy.spin()
+    #node.loop()
 

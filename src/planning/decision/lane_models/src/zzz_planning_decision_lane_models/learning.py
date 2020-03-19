@@ -45,8 +45,6 @@ class RLSDecision(object):
 
     def lateral_decision(self, dynamic_map):
 
-
-
         self._dynamic_map = dynamic_map
         self._rule_based_longitudinal_model_instance.update_dynamic_map(dynamic_map)
         # return -1, self._rule_based_longitudinal_model_instance.longitudinal_speed(-1)
@@ -93,69 +91,55 @@ class RLSDecision(object):
 
     def wrap_state(self):     
 
-        reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
-        
-        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
-        ref_path = dense_polyline2d(ref_path_ori, 1)
-        ref_path_tangets = np.zeros(len(ref_path))
-        ffstate = get_frenet_state(self._dynamic_map.ego_state, ref_path, ref_path_tangets)
-
-
         state = [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
         
-        state[0] = ffstate.s
-        state[1] = ffstate.d
-        state[2] = ffstate.vs
-        state[3] = ffstate.vd
-
+        state[0] = 0
+        state[1] = self._dynamic_map.mmap.ego_lane_index
+        state[2] = self._dynamic_map.ego_ffstate.vs
+        state[3] = self._dynamic_map.ego_ffstate.vd
 
         i = 0
         j = 0
 
         for k, lane in enumerate(self._dynamic_map.mmap.lanes):
-            if i < 2:               
-                if len(lane.front_vehicles) > 0:
-                    fv = lane.front_vehicles[0]
-                    fv_id = fv.uid
-                    fv_s = fv.ffstate.s
-                    fv_d = fv.ffstate.d
-                    fv_vs = fv.ffstate.vs
-                    fv_vd = fv.ffstate.vd
-
-                else:
-                    fv_s = 50
-                    fv_d = k
-                    fv_vs = 50
-                    fv_vd = 0
-                
-                state[(i+1)*4+0] = fv_s
-                state[(i+1)*4+1] = fv_d
-                state[(i+1)*4+2] = fv_vs
-                state[(i+1)*4+3] = fv_vd
-                i = i+1
-
-            elif j < 2:               
-                if len(lane.rear_vehicles) > 0:
-                    rv = lane.rear_vehicles[0]
-                    rv_id = rv.uid
-                    rv_s = rv.ffstate.s
-                    rv_d = rv.ffstate.d
-                    rv_vs = rv.ffstate.vs
-                    rv_vd = rv.ffstate.vd
-                else:
-                    rv_s = -50
-                    rv_d = k
-                    rv_vs = 0
-                    rv_vd = 0
-                
-                state[(j+3)*4+0] = rv_s
-                state[(i+3)*4+1] = rv_d
-                state[(i+3)*4+2] = rv_vs
-                state[(i+3)*4+3] = rv_vd
-                j = j+1
-
+            if len(lane.front_vehicles) > 0:
+                fv = lane.front_vehicles[0]
+                fv_id = fv.uid
+                fv_s = fv.ffstate.s
+                fv_d = fv.ffstate.d
+                fv_vs = fv.ffstate.vs
+                fv_vd = fv.ffstate.vd
             else:
-                break
+                fv_s = 50
+                fv_d = k
+                fv_vs = 50
+                fv_vd = 0
+            
+            state[k*4+4] = fv_s
+            state[k*4+5] = fv_d
+            state[k*4+6] = fv_vs
+            state[k*4+7] = fv_vd
+
+        for k, lane in enumerate(self._dynamic_map.mmap.lanes):
+            
+            if len(lane.rear_vehicles) > 0:
+                rv = lane.rear_vehicles[0]
+                rv_id = rv.uid
+                rv_s = rv.ffstate.s
+                rv_d = rv.ffstate.d
+                rv_vs = rv.ffstate.vs
+                rv_vd = rv.ffstate.vd
+            else:
+                rv_s = -50
+                rv_d = k
+                rv_vs = 0
+                rv_vd = 0
+            
+            state[k*4+12] = rv_s
+            state[k*4+13] = rv_d
+            state[k*4+14] = rv_vs
+            state[k*4+15] = rv_vd
+
         
         # TODO(Tao): find the right information
         # for i,lane in enumerate(self._dynamic_map.mmap.lanes):
@@ -168,8 +152,7 @@ class RLSDecision(object):
     def RL_model_matching(self):
         pass
 
-    def get_decision_from_discrete_action(self, action, acc = 2, decision_dt = 0.75, hard_brake = 10):
-
+    def get_decision_from_discrete_action(self, action, acc = 2, decision_dt = 0.75, hard_brake = 4):
 
 
         # TODO(Zhong): check if action is reasonable
