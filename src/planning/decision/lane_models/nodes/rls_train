@@ -58,7 +58,7 @@ class RLSNode(object):
             return
         self._last_decision_time = current_time
 
-        self._decision_instance.receive_dynamic_map()
+        self._decision_instance.receive_dynamic_map(msg)
 
         publish_msg = self._decision_instance.update()
         if publish_msg:

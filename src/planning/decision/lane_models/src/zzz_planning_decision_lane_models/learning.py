@@ -25,8 +25,8 @@ class RLSDecision(object):
         self._rule_based_longitudinal_model_instance = IDM()
         self._rule_based_lateral_model_instance = LaneUtility(self._rule_based_longitudinal_model_instance)
         self._buffer_size = recv_buffer
-        self._collision_signal = False
-        self._collision_times = 0
+        self.collision_signal = False
+        self.collision_times = 0
 
         self.inside_lane = None
         self.outside_lane = None
@@ -52,8 +52,8 @@ class RLSDecision(object):
         # Following reference path in junction # TODO(Zhong):should be in cognition part
         if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or dynamic_map.mmap.target_lane_index == -1:
             # send done to OPENAI
-            collision = int(self._collision_signal)
-            self._collision_signal = False
+            collision = int(self.collision_signal)
+            self.collision_signal = False
             leave_current_mmap = 1
             sent_RL_msg = [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
             sent_RL_msg.append(collision)
@@ -72,8 +72,8 @@ class RLSDecision(object):
         # sent_RL_msg = [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
 
-        collision = int(self._collision_signal)
-        self._collision_signal = False
+        collision = int(self.collision_signal)
+        self.collision_signal = False
         leave_current_mmap = 0
         sent_RL_msg.append(collision)
         sent_RL_msg.append(leave_current_mmap)
@@ -98,21 +98,18 @@ class RLSDecision(object):
         state[2] = self._dynamic_map.ego_ffstate.vs
         state[3] = self._dynamic_map.ego_ffstate.vd
 
-        i = 0
-        j = 0
-
         for k, lane in enumerate(self._dynamic_map.mmap.lanes):
             if len(lane.front_vehicles) > 0:
                 fv = lane.front_vehicles[0]
                 fv_id = fv.uid
                 fv_s = fv.ffstate.s
-                fv_d = fv.ffstate.d
+                fv_d = fv.lane_index
                 fv_vs = fv.ffstate.vs
                 fv_vd = fv.ffstate.vd
             else:
                 fv_s = 50
                 fv_d = k
-                fv_vs = 50
+                fv_vs = 20
                 fv_vd = 0
             
             state[k*4+4] = fv_s
@@ -126,7 +123,7 @@ class RLSDecision(object):
                 rv = lane.rear_vehicles[0]
                 rv_id = rv.uid
                 rv_s = rv.ffstate.s
-                rv_d = rv.ffstate.d
+                rv_d = rv.lane_index
                 rv_vs = rv.ffstate.vs
                 rv_vd = rv.ffstate.vd
             else:

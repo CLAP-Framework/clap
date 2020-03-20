@@ -56,9 +56,9 @@
           name="rls_train" output="screen" ns="/zzz/planning">
     </node>
 
-    <node pkg="zzz_planning_decision_safeguard" type="reachable_set"  respawn="true"
+    <!-- <node pkg="zzz_planning_decision_safeguard" type="reachable_set"  respawn="true"
           name="safeguard" output="screen" ns="/zzz/planning">
-    </node>
+    </node> -->
     <node pkg="zzz_control_latlon_controllers" type="pure_persuit"  respawn="true"
           name="latlon_controller" output="screen" ns="/zzz/control">
     </node>

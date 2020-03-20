@@ -25,18 +25,19 @@ class DrivingSpaceNode(object):
 
         self._driving_space = DrivingSpaceConstructor()
 
-        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.pose_callback)
-        self._surrounding_vehicle_subscriber = rospy.Subscriber(params.objects_topic, TrackingBoxArray, self._driving_space.receive_object_list)
-        self._static_map_subscriber = rospy.Subscriber(params.map_input_topic, Map, self._driving_space.receive_static_map)
-        self._driving_space_publisher = rospy.Publisher(params.driving_space_topic, DrivingSpace, queue_size=1)
-        self._traffic_light_subscriber = rospy.Subscriber(params.traffic_light_topic, DetectionBoxArray,
-            self._driving_space.receive_traffic_light_detection)
-
         #visualization
         self._obstacles_markerarray_publisher = rospy.Publisher("obstacles_markerarray", MarkerArray, queue_size=1)
         self._lanes_markerarray_publisher = rospy.Publisher("lanes_markerarray", MarkerArray, queue_size=1)
         self._ego_markerarray_publisher = rospy.Publisher("ego_markerarray", MarkerArray, queue_size=1)
 
+        self._driving_space_publisher = rospy.Publisher(params.driving_space_topic, DrivingSpace, queue_size=1)
+        self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.pose_callback)
+        self._surrounding_vehicle_subscriber = rospy.Subscriber(params.objects_topic, TrackingBoxArray, self._driving_space.receive_object_list)
+        self._static_map_subscriber = rospy.Subscriber(params.map_input_topic, Map, self._driving_space.receive_static_map)
+        self._traffic_light_subscriber = rospy.Subscriber(params.traffic_light_topic, DetectionBoxArray,
+            self._driving_space.receive_traffic_light_detection)
+
+        
     def pose_callback(self, msg):
         self._driving_space.receive_ego_state(msg)
         self._driving_space.update_driving_space()

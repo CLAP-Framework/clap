@@ -170,7 +170,7 @@ class NearestLocator:
             tstates.dynamic_map.jmap.obstacles.append(obj)
 
     # TODO: adjust lane_end_dist_thres to class variable
-    def locate_ego_vehicle_in_lanes(self, tstates, lane_end_dist_thres=2, lane_dist_thres=5):
+    def locate_ego_vehicle_in_lanes(self, tstates, lane_end_dist_thres=0.9, lane_dist_thres=5):
         dist_list = np.array([dist_from_point_to_polyline2d(
             tstates.ego_state.state.pose.pose.position.x, tstates.ego_state.state.pose.pose.position.y,
             lane, return_end_distance=True)

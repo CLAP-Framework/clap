@@ -106,11 +106,11 @@ def change_the_world(carla_world):
 def change_traffic_lights(carla_world):
     traffic_lights = carla_world.get_actors().filter('*traffic_light*')
     for tl in traffic_lights:
-        # tl.set_state(carla.TrafficLightState.Green)
-        # tl.freeze(1)
-        tl.set_green_time(9.0)
-        tl.set_yellow_time(0.01)
-        tl.set_red_time(0.01)
+        tl.set_state(carla.TrafficLightState.Green)
+        tl.freeze(1)
+        # tl.set_green_time(9.0)
+        # tl.set_yellow_time(0.01)
+        # tl.set_red_time(0.01)
 
 
 ##########
@@ -142,32 +142,37 @@ def generate_traffic_098(carla_world, blueprints_ori, spawn_points_ori, delay = 
     FutureActor = carla.command.FutureActor
     synchronous_master = False
 
-    x_max = 100
-    x_min = -120
-    y_max = 70
-    y_min = -150
+    x_max = 80
+    x_min = -90
+    y_max = 40
+    y_min = -125
     # --------------
     # Spawn vehicles
     # --------------
     batch = []
     max_agents = randint(40,50) #70
-
+    recommended_points = [2,3,13,14,153,154,77,78,51,52,65,66,85,86,199,200,71,72,89,90,93,94,166,168,175,181,116,117]
     actor_list = carla_world.get_actors()
     vehicle_list = actor_list.filter("*vehicle*")
     num_agents = len(vehicle_list)
-    if num_agents < max_agents: 
-        for n, transform in enumerate(spawn_points_ori):
-            if (transform.location.x > x_max) or (transform.location.x < x_min) or (transform.location.y > y_max) or (transform.location.y < y_min):
-                continue
+    added_vehicle_num = max_agents - num_agents
+    if added_vehicle_num > 2:
+        added_vehicle_num = 0
+    if added_vehicle_num > 0:
+        for i in recommended_points:
+
+            transform = spawn_points_ori[i]
+
             min_d = 100
             for vehicle in vehicle_list:
                 d = vehicle.get_location().distance(transform.location)
                 if d < min_d:
                     min_d = d
+                if min_d < 20:
+                    break
             if min_d < 20:
                 continue
-
-            blueprint = random.choice(blueprints_ori)
+            blueprint = random.choice(blueprints)
             if blueprint.has_attribute('color'):
                 color = random.choice(blueprint.get_attribute('color').recommended_values)
                 blueprint.set_attribute('color', color)
@@ -176,6 +181,8 @@ def generate_traffic_098(carla_world, blueprints_ori, spawn_points_ori, delay = 
                 blueprint.set_attribute('driver_id', driver_id)
             blueprint.set_attribute('role_name', 'autopilot')
             batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
+            if len(batch) >= added_vehicle_num:
+                break
         
         carla_client.apply_batch_sync(batch, synchronous_master)
 
@@ -230,10 +237,10 @@ def removed_stopped_vehicle(carla_world, stopped_time_thres = 20):
         # if vehicle.is_alive() is False:
         #     continue
         
-        x_max = 100
-        x_min = -120
-        y_max = 70
-        y_min = -150
+        x_max = 80
+        x_min = -90
+        y_max = 40
+        y_min = -125
 
         v_loc = vehicle.get_location()
         if (v_loc.x > x_max) or (v_loc.x < x_min) or (v_loc.y > y_max) or (v_loc.y < y_min):
@@ -549,15 +556,15 @@ def restart_ego_vehicle(carla_world, ego_vehicle):
         restart = True
         collision_signal = False
         print("----> Restart: Collision")
-        print("----> egox",pose_buffer.state.pose.pose.position.x)
-        print("----> egoy",pose_buffer.state.pose.pose.position.y)
+        # print("----> egox",pose_buffer.state.pose.pose.position.x)
+        # print("----> egoy",pose_buffer.state.pose.pose.position.y)
     if not restart and stay_too_long_world(carla_world):
         # rospy.sleep(0.5)
         restart = True
         print("----> Restart: ego vehicle stucked")
     if not restart and ego_vehicle_outside_world(carla_world):
         # rospy.sleep(0.5)
-        # restart = True
+        restart = True
         print("----> Restart: ego vehicle out of range")
 
     if restart is True:
@@ -595,8 +602,9 @@ if __name__ == "__main__":
     carla_world = carla_client.get_world()
     
     
-    tm = carla_client.get_trafficmanager(8000)
-    # tm.set_global_distance_to_leading_vehicle(2.0)
+    # tm = carla_client.get_trafficmanager(8000)
+    # tm.set_global_distance_to_leading_vehicle(5.0)
+    # tm.global_percentage_speed_difference(50)
     # tm.set_synchronous_mode()   # for synchoronous mode
 
     rospy.loginfo("Connected to Carla.")
@@ -620,7 +628,7 @@ if __name__ == "__main__":
     # change_the_world(carla_world)
 
     # Change traffic lights
-    # change_traffic_lights(carla_world)
+    change_traffic_lights(carla_world)
    
     rate = rospy.Rate(20)
 
@@ -641,7 +649,7 @@ if __name__ == "__main__":
         else:
             count = count + 1
     # generate and remove vehicles
-    thread.start_new_thread(generate_remove_traffic,(carla_world, 20))
+    # thread.start_new_thread(generate_remove_traffic,(carla_world, 4))
 
     #record vehicle nums
     # thread.start_new_thread(record_vehicle_states,(carla_world, 1))
