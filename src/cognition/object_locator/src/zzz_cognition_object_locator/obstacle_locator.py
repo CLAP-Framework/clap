@@ -315,7 +315,26 @@ class NearestLocator:
         # Now we set the multilane speed limit as 40 km/h.
         total_lane_num = len(tstates.static_map.lanes)
         for i in range(total_lane_num):
-            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 15
+            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = self.temp_speed_limit(tstates)
+
+
+
+    def temp_speed_limit(self, tstates, straight_speed = 20, left_turn_speed = 10):
+        ego_x = tstates.ego_state.state.pose.pose.position.x
+        ego_y = tstates.ego_state.state.pose.pose.position.y
+
+        # using outside lane points
+        xs = [ 5 , 7 , 8 , 1 ] # four start point x
+        ys = [ 5 , 7 , 8 , 1 ] # four start point y
+        xe = [ 6 , 8 , 9 , 2 ] # four end point x
+        ye = [ 6 , 8 , 9 , 2 ] # four end point y
+
+        for i in range(4):
+            if ((ego_x - xs[i]) * (ego_x - xe[i])<0) and ((ego_y - ys[i]) * (ego_y - ye[i])<0):
+                return left_turn_speed
+
+        return straight_speed
+
 
     # TODO(zyxin): Move this function into separate prediction module
     def predict_vehicle_behavior(self, vehicle, tstates, lane_change_thres = 0.2):
