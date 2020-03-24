@@ -2,10 +2,17 @@
 import socket
 import msgpack
 import rospy
+import math
+import numpy as np
 
 from zzz_cognition_msgs.msg import MapState
 from zzz_planning_decision_continuous_models.Werling_trajectory import Werling
 from zzz_driver_msgs.utils import get_speed
+from carla import Location, Rotation, Transform
+from zzz_common.geometry import dense_polyline2d
+from zzz_common.kinematics import get_frenet_state
+
+
 
 class RLSPlanner(object):
     """
@@ -20,48 +27,90 @@ class RLSPlanner(object):
         self._collision_signal = False
         self._collision_times = 0
     
-        # if mode == "client":
-        #     rospy.loginfo("Connecting to RL server...")
-        #     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #     self.sock.connect((openai_server, port))
-        #     self._socket_connected = True
-        #     rospy.loginfo("Connected...")
-        # else:
-        #     # TODO: Implement server mode to make multiple connection to this node.
-        #     #     In this mode, only rule based action is returned to system
-        #     raise NotImplementedError("Server mode is still wating to be implemented.") 
+        if mode == "client":
+            rospy.loginfo("Connecting to RL server...")
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect((openai_server, port))
+            self._socket_connected = True
+            rospy.loginfo("Connected...")
+        else:
+            # TODO: Implement server mode to make multiple connection to this node.
+            #     In this mode, only rule based action is returned to system
+            raise NotImplementedError("Server mode is still wating to be implemented.") 
         
     def speed_update(self, trajectory, dynamic_map):
-            return 10   
+        return 10   
+
+    def something_in_lane(self, dynamic_map):
+        self._rule_based_trajectory_model_instance.last_trajectory_array = []
+        self._rule_based_trajectory_model_instance.last_trajectory = []
+        self._rule_based_trajectory_model_instance.last_trajectory_array_rule = []
+        self._rule_based_trajectory_model_instance.last_trajectory_rule = []
+        self._collision_signal = False
+
+        # # send done to OPENAI
+        collision = False
+
+        ego_x = dynamic_map.ego_state.pose.pose.position.x
+        ego_y = dynamic_map.ego_state.pose.pose.position.y
+        if math.pow((ego_x+10),2) + math.pow((ego_y-94),2) < 64:  # waiting too long and restart
+            leave_current_mmap = 2
+        else:  
+            leave_current_mmap = 1
+
+        sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        sent_RL_msg.append(collision)
+        sent_RL_msg.append(leave_current_mmap)
+        sent_RL_msg.append(5.0) # RL.point
+        sent_RL_msg.append(0.0)
+        sent_RL_msg.append(0.0)
+        sent_RL_msg.append(10000000)
+
+        # print("-----------------------------",sent_RL_msg)
+        self.sock.sendall(msgpack.packb(sent_RL_msg))
+
+        try:
+            RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
+        except:
+            pass
+
+        return None
+
+    def werling_trajectory_update(self, dynamic_map):
+        self._dynamic_map = dynamic_map
+        
+        reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
+        
+        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+        ref_path = dense_polyline2d(ref_path_ori, 1)
+        ref_path_tangets = np.zeros(len(ref_path))
+        print("into werling trajectory update")
+        closest_obs = self.found_closest_obstacles(3, self._dynamic_map)
+        trajectory_rule, desired_speed_rule, generated_trajectory_rule = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map, closest_obs)
+        return trajectory_rule, desired_speed_rule
+
 
     def trajectory_update(self, dynamic_map):
-
+        now1 = rospy.get_rostime()
         self._dynamic_map = dynamic_map
-        self._rule_based_trajectory_model_instance.update_dynamic_map(dynamic_map)
+        self._rule_based_trajectory_model_instance.update_dynamic_map(dynamic_map)        
+        closest_obs = []
+        threshold = 5
 
-        # Using Werling for rule-based trajectory planning
-        trajectory,desired_speed = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
-
-        return trajectory,desired_speed
-
-
-
-        # Following reference path in junction # TODO(Zhong):should be in cognition part
-        if dynamic_map.model == MapState.MODEL_JUNCTION_MAP or dynamic_map.mmap.target_lane_index == -1:
-            # send done to OPENAI
-            collision = int(self._collision_signal)
-            self._collision_signal = False
-            leave_current_mmap = 1
-            sent_RL_msg = [0,0,100,0,12,-100,0,0,100,1,12,-100,1,0]
-            sent_RL_msg.append(collision)
-            sent_RL_msg.append(leave_current_mmap)
-            self.sock.sendall(msgpack.packb(sent_RL_msg))
-
-            return -1, self._rule_based_longitudinal_model_instance.longitudinal_speed(-1)
-
-        RL_state = self.wrap_state()
-        rospy.logdebug("sending state: ego_y:%.1f, ego_v:%.1f", RL_state[0],RL_state[1])
+        #found closest obs
+        
+        closest_obs = self.found_closest_obstacles(3, self._dynamic_map)
+        RL_state = self.wrap_state(closest_obs)
         sent_RL_msg = RL_state
+
+        reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
+        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+        ref_path = dense_polyline2d(ref_path_ori, 1)
+        ref_path_tangets = np.zeros(len(ref_path))
+
+
+        ffstate = get_frenet_state(self._dynamic_map.ego_state, ref_path, ref_path_tangets)
+        ego_s = ffstate.s
 
         collision = int(self._collision_signal)
         self._collision_signal = False
@@ -69,15 +118,64 @@ class RLSPlanner(object):
         sent_RL_msg.append(collision)
         sent_RL_msg.append(leave_current_mmap)
 
+        # for teaching
+        try:
+            trajectory_rule, desired_speed_rule, generated_trajectory_rule = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map, closest_obs)
+            delta_T = 0.75
+            RLpoint = self.get_RL_point_from_trajectory(generated_trajectory_rule , delta_T)
+            sent_RL_msg.append(RLpoint.location.x)
+            sent_RL_msg.append(RLpoint.location.y)
+            sent_RL_msg.append(ego_s)
+            sent_RL_msg.append(threshold)
+
+        except:
+            sent_RL_msg.append(0.0) # RL.point
+            sent_RL_msg.append(0.0)
+            sent_RL_msg.append(ego_s)
+            sent_RL_msg.append(threshold)
+
+
+        now2 = rospy.get_rostime()
+        # print("-----------------------------rule-based time consume",now2.to_sec() - now1.to_sec())
+        print("-----------------------------",sent_RL_msg)
         self.sock.sendall(msgpack.packb(sent_RL_msg))
-        RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
-        # RLS_action = 0
-        rospy.logdebug("received action:%d", RLS_action)
 
-        # discretize action # TODO(Zhong): continous action
-        return self.get_decision_from_discrete_action(RLS_action)
+        try:
+            # received RL action and plan a RL trajectory
+            received_msg = msgpack.unpackb(self.sock.recv(self._buffer_size))
+            print("-----------------------------",received_msg)
 
-    def wrap_state(self):
+            rl_action = [received_msg[0], received_msg[1]]
+            q_value = received_msg[2]
+            rule_q = received_msg[3]
+            print("rl_action", rl_action[0], rl_action[1])
+            print("q_value", q_value)
+            print("rule_q", rule_q)
+
+            rospy.logdebug("received action:%f, %f", rl_action[0], rl_action[1])
+            now3 = rospy.get_rostime()
+
+
+            if q_value - rule_q > threshold:
+                rl_action[1] = rl_action[1] + 12.5/3.6
+                print("-+++++++++++++++++++++++++++++++++++++++++++befor-generated RL trajectory")
+                trajectory, desired_speed = self._rule_based_trajectory_model_instance.trajectory_update_withRL_second(dynamic_map, rl_action)
+                print("-+++++++++++++++++++++++++++++++++++++++++++-generated RL trajectory")
+                now4 = rospy.get_rostime()
+                print("-----------------------------rl planning time consume",now4.to_sec() - now3.to_sec())
+                # return trajectory_rule, desired_speed_rule
+                return trajectory, desired_speed 
+            else:
+                return trajectory_rule, desired_speed_rule
+
+            
+        except:
+            rospy.logerr("Continous RLS Model cannot receive an action")
+            return trajectory_rule, desired_speed_rule
+            # return [], 0
+            
+            
+    def wrap_state(self, closest_obs):
 
         # Set State space = 4+4*obs_num
 
@@ -85,120 +183,80 @@ class RLSPlanner(object):
             # obstacle 0 : x0(4), y0(5), vx0(6), vy0(7)
             # obstacle 1 : x0(8), y0(9), vx0(10), vy0(11)
             # obstacle 2 : x0(12), y0(13), vx0(14), vy0(15)
+        reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
+        
+        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+        ref_path = dense_polyline2d(ref_path_ori, 1)
+        ref_path_tangets = np.zeros(len(ref_path))
+        ffstate = get_frenet_state(self._dynamic_map.ego_state, ref_path, ref_path_tangets)
 
-        state = []
-        ego_x = self._dynamic_map.mmap.ego_state.pose.x
-        ego_y = self._dynamic_map.mmap.ego_state.pose.y
-
-
-        state.append(ego_y)
-        state.append(ego_v)
-        for i,lane in enumerate(self._dynamic_map.mmap.lanes):
-            self.get_state_from_lane(lane,i,state)
+        state = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        state[0] = ffstate.s
+        state[1] = -ffstate.d
+        state[2] = ffstate.vs
+        state[3] = ffstate.vd
+        
+        i = 0
+        for obs in closest_obs: 
+            if i < 3:               
+                state[(i+1)*4+0] = obs[5]
+                state[(i+1)*4+1] = obs[6]
+                state[(i+1)*4+2] = obs[7]
+                state[(i+1)*4+3] = obs[8]
+                i = i+1
+            else:
+                break
 
         return state
 
-    def RL_model_matching(self):
-        pass
+    def convert_path_to_ndarray(self, path):
+        point_list = [(point.position.x, point.position.y) for point in path]
+        return np.array(point_list)
 
-    def get_decision_from_discrete_action(self, action, acc = 2, decision_dt = 0.75, hard_brake = 4):
+    def found_closest_obstacles(self, num, dynamic_map):
+        closest_obs = []
+        obs_tuples = []
 
-        # TODO(Zhong): check if action is reasonable
-
-        # Rule-based action
-        if action == 0:
-            return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
-
-        current_speed = get_speed(self._dynamic_map.ego_state)
-        ego_y = self._dynamic_map.mmap.ego_lane_index
-
-        # Hard-brake action
-        if action == 1:
-            return ego_y, current_speed-hard_brake*decision_dt
-
-        # ego lane action
-        if action == 2:
-            return ego_y, current_speed+acc*decision_dt
-
-        if action == 3:
-            return ego_y, current_speed
-
-        if action == 4:
-            return ego_y, current_speed-acc*decision_dt
-
-        # left lane action
-        left_lane_index = ego_y+1
-        if left_lane_index >= len(self._dynamic_map.mmap.lanes):
-            if action == 5 or action == 6 or action == 7:
-                return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
-        if action == 5:
-            return left_lane_index, current_speed+acc*decision_dt
-
-        if action == 6:
-            return left_lane_index, current_speed
-
-        if action == 7:
-            return left_lane_index, current_speed-acc*decision_dt
-
-        #right_lane_action
-        right_lane_index = ego_y-1
-        if right_lane_index < 0:
-            if action == 8 or action == 9 or action == 10:
-                return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
-        if action == 8:
-            return right_lane_index, current_speed+acc*decision_dt
-
-        if action == 9:
-            return right_lane_index, current_speed
-
-        if action == 10:
-            return right_lane_index, current_speed-acc*decision_dt
-
-    def get_decision_from_continuous_action(self, action):
-        pass
-
-
-    def get_state_from_lane(self,lane,lane_index,state,
-                                range_x = 100,
-                                range_vx = 50/3.6
-                                ):
-        if len(lane.front_vehicles) > 0:
-            fv = lane.front_vehicles[0]
-            fv_id = fv.uid
-            fv_x = fv.ffstate.x
-            fv_y = fv.ffstate.y
-            fv_vx = fv.ffstate.vx
-            # fv_vy = fv.mmap_vy # FIXME(zhong): should consider lane change speed
+        reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
+        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+        if ref_path_ori is not None:
+            ref_path = dense_polyline2d(ref_path_ori, 1)
+            ref_path_tangets = np.zeros(len(ref_path))
         else:
-            # default fv # TODO(zhong): More reasonable default value
-            fv_id = 0
-            fv_x = range_x
-            fv_y = lane_index
-            fv_vx = range_vx
-            # fv_vy = 0
+            return None
+        
+        for obs in self._dynamic_map.jmap.obstacles: 
+            # calculate distance
+            p1 = np.array([self._dynamic_map.ego_state.pose.pose.position.x , self._dynamic_map.ego_state.pose.pose.position.y])
+            p2 = np.array([obs.state.pose.pose.position.x , obs.state.pose.pose.position.y])
+            p3 = p2 - p1
+            p4 = math.hypot(p3[0],p3[1])
 
-        state.append(fv_x)
-        state.append(fv_y)
-        state.append(fv_vx)
-        # state.append(fv_vy)
+            # transfer to frenet
+            obs_ffstate = get_frenet_state(obs.state, ref_path, ref_path_tangets)
+            one_obs = (obs.state.pose.pose.position.x , obs.state.pose.pose.position.y , obs.state.twist.twist.linear.x , obs.state.twist.twist.linear.y , p4 , obs_ffstate.s , -obs_ffstate.d , obs_ffstate.vs , obs_ffstate.vd)
+            # if obs.ffstate.s > 0.01:
+            obs_tuples.append(one_obs)
+        
+        sorted_obs = sorted(obs_tuples, key=lambda obs: obs[4])   # sort by distance
+        i = 0
+        for obs in sorted_obs:
+            if i < num:
+                closest_obs.append(obs)
+                i = i + 1
+            else:
+                break
+        
+        return closest_obs
 
-        if len(lane.rear_vehicles) > 0:
-            rv = lane.rear_vehicles[0]
-            rv_id = rv.uid
-            rv_x = fv.ffstate.x # negative value
-            rv_y = fv.ffstate.y
-            rv_vx = fv.ffstate.vx
-            # rv_vy = rv.mmap_vy # FIXME(zhong): should consider lane change speed
+
+    def get_RL_point_from_trajectory(self, generated_trajectory , delta_T):
+        RLpoint = Transform()
+   
+        if generated_trajectory is not None:
+            RLpoint.location.x = generated_trajectory.d[15] #only works when DT param of werling is 0.15
+            RLpoint.location.y = generated_trajectory.s_d[15]
         else:
-            rv_id = 0
-            rv_x = -range_x
-            rv_y = lane_index
-            rv_vx = 0
-            # rv_vy = 0
-        state.append(rv_x)
-        state.append(rv_y)
-        state.append(rv_vx)
-        # state.append(rv_vy)
-
-        rospy.logdebug("lane %d: (%d)fv_x:%.1f, fv_y:%.1f, fv_vx:%.1f,||(%d)rv_x:%.1f, rv_y:%.1f, rv_vx:%.1f", lane_index,
-                                        fv_id,fv_x,fv_y,fv_vx,rv_id,rv_x,rv_y,rv_vx)
+            RLpoint.location.x = 0
+            RLpoint.location.y = 0           
+        return RLpoint

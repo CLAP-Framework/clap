@@ -48,6 +48,10 @@
           name="idm_lane_utility" output="screen" ns="/zzz/planning">
     </node>
 
+    <!--<node pkg="zzz_planning_decision_lane_models" type="rls_train"
+          name="rls_train" output="screen" ns="/zzz/planning">
+    </node>-->
+
     <node pkg="imu_lidar" type="imu_lidar_node"
           name="imu_lidar" output="screen" >
     </node>

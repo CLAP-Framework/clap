@@ -324,10 +324,10 @@ class NearestLocator:
         ego_y = tstates.ego_state.state.pose.pose.position.y
 
         # using outside lane points
-        xs = [ 5 , 7 , 8 , 1 ] # four start point x
-        ys = [ 5 , 7 , 8 , 1 ] # four start point y
-        xe = [ 6 , 8 , 9 , 2 ] # four end point x
-        ye = [ 6 , 8 , 9 , 2 ] # four end point y
+        xs = [ -0.831381298776 , -94.2308302094, -138.179321156 , -34.2826003609 ] # four start point x
+        ys = [ 66.5153233064 , 95.5921675395 , 22.5298581934 ,-6.71398290247 ] # four start point y
+        xe = [ -17.4927126079 , -140.218473702 , -119.012291822 , 0.184996323485 ] # four end point x
+        ye = [ 98.7037232528 , 73.8257115977 , -9.48885849956 , 14.3186893491 ] # four end point y
 
         for i in range(4):
             if ((ego_x - xs[i]) * (ego_x - xe[i])<0) and ((ego_y - ys[i]) * (ego_y - ye[i])<0):

@@ -15,7 +15,7 @@ XUdp::Send (const char *IP, const unsigned short port, const void *buf,
 	    int len)
 {
 
-  st = socket (AF_INET, SOCK_DGRAM, 0);
+  // st = socket (AF_INET, SOCK_DGRAM, 0);
 
   struct sockaddr_in addr;
   memset (&addr, 0, sizeof (addr));

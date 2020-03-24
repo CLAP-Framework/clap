@@ -37,9 +37,10 @@ void icvCarlaControlNode::initForROS()
   else
   {
     /*小鹏实车调试使用*/
-    sub_imudata_ = nh_.subscribe("/imu/data", 10, &icvCarlaControlNode::callback_imu, this);
-    sub_gpsfix_ = nh_.subscribe("/gps/fix", 10, &icvCarlaControlNode::callback_gpsfix, this);
-    sub_gpsvel_ = nh_.subscribe("/gps/vel", 10, &icvCarlaControlNode::callback_gpsvel, this);
+    sub_zzz_eogpose_ = nh_.subscribe("/zzz/navigation/ego_pose", 10, &icvCarlaControlNode::callback_egopose, this);
+    // sub_imudata_ = nh_.subscribe("/imu/data", 10, &icvCarlaControlNode::callback_imu, this);
+    // sub_gpsfix_ = nh_.subscribe("/gps/fix", 10, &icvCarlaControlNode::callback_gpsfix, this);
+    // sub_gpsvel_ = nh_.subscribe("/gps/vel", 10, &icvCarlaControlNode::callback_gpsvel, this);
     sub_autostateex_ = nh_.subscribe("/xp/auto_state_ex", 10, &icvCarlaControlNode::callback_auto_state_ex, this);
     sub_autostate_ = nh_.subscribe("/xp/auto_state", 10, &icvCarlaControlNode::callback_auto_state, this);
     sub_esc_status_ = nh_.subscribe("/xp/esc_status", 10, &icvCarlaControlNode::callback_esc, this);
@@ -49,6 +50,7 @@ void icvCarlaControlNode::initForROS()
     pub_xp_ = nh_.advertise<xpmotors_can_msgs::AutoCtlReq>("/xp/auto_control", 1000);
   }
 }
+
 
 void icvCarlaControlNode::Noderun()
 {
@@ -90,7 +92,7 @@ void icvCarlaControlNode::Noderun()
         angle = angle * (180 / PI) * 15.7; //xp left +  right -
         ROS_INFO("XpMotors Vehicle SteerSend=  %lf", angle);
         ROS_INFO("XpMotors Vehicle target_speedxp=  %lf", target_speedxp);
-        CarconstructionPub(angle, 3.5); //发布小鹏的控制信息
+        CarconstructionPub(angle, target_speedxp); //发布小鹏的控制信息
       }
     }
     // for visualization with Rviz
@@ -128,7 +130,7 @@ void icvCarlaControlNode::CarconstructionPub(double steer_send, double SpeedReq)
 
   if (!CurDriveMode)
   {
-    cout<<"CurDriveMode "<<CurDriveMode<<endl;
+    // cout<<"CurDriveMode "<<CurDriveMode<<endl;
     ROS_INFO("Vehicle is Humanmode!!!");
     ctrmsg.EPSAngleReq = 0;
     ctrmsg.AutoMode = 1;
@@ -137,7 +139,7 @@ void icvCarlaControlNode::CarconstructionPub(double steer_send, double SpeedReq)
   }
   else if (EPBState)
   {
-    cout<<"EPBState   "<<EPBState<<endl;
+    // cout<<"EPBState   "<<EPBState<<endl;
     for (int i = 0; i < 40; i++)
     {
       ROS_INFO("EPB is hold!!!");
@@ -161,8 +163,8 @@ void icvCarlaControlNode::CarconstructionPub(double steer_send, double SpeedReq)
     ctrmsg.AutoMode = 1;
     ctrmsg.TarSpeedReq = SpeedReq; //m/s
   }
-  cout<<" ctrmsg.TarSpeedReq "<<ctrmsg.TarSpeedReq<<endl;//zx
-  cout<<" ctrmsg.EPSAngleReq "<<ctrmsg.EPSAngleReq<<endl;//zx
+  // cout<<" ctrmsg.TarSpeedReq "<<ctrmsg.TarSpeedReq<<endl;//zx
+  // cout<<" ctrmsg.EPSAngleReq "<<ctrmsg.EPSAngleReq<<endl;//zx
   pub_xp_.publish(ctrmsg);
 }
 //汇总整个类接口数据然后传递，车辆当前状态，定位，路径信息
@@ -306,6 +308,20 @@ void icvCarlaControlNode::data_file_input()
   zz.setWaypoints(Path_file);
 }
 
+void icvCarlaControlNode::callback_egopose(const zzz_driver_msgs::RigidBodyStateStamped &msg)
+{
+  XpPoint_rec.x= msg.state.pose.pose.position.x;
+  XpPoint_rec.y= msg.state.pose.pose.position.y;
+  double Yaw = qua_to_rpy(msg.state.pose.pose.orientation);
+  // Yaw += 90;
+  // if (Yaw < 0)
+  // {
+  //   Yaw += 360;
+  // }
+  XpPoint_rec.theta = Yaw; //参数传递
+
+  callback_imu_flag = true;
+}
 /**车辆驾驶模式反馈*/
 void icvCarlaControlNode::callback_auto_state_ex(const xpmotors_can_msgs::AutoStateEx &msg)
 {
@@ -344,55 +360,55 @@ void icvCarlaControlNode::callback_eps(const xpmotors_can_msgs::EPSStatus &msg)
   callback_eps_flag = true;
 }
 /*GPS速度*/
-void icvCarlaControlNode::callback_gpsvel(const geometry_msgs::TwistWithCovarianceStamped &msg)
-{
-  //  state.state.twist.twist.linear.x=msg.twist.twist.linear.x;
-  //  state.state.twist.twist.linear.y=msg.twist.twist.linear.y;
-  //  state.state.twist.twist.linear.z=0;
-}
+// void icvCarlaControlNode::callback_gpsvel(const geometry_msgs::TwistWithCovarianceStamped &msg)
+// {
+//   //  state.state.twist.twist.linear.x=msg.twist.twist.linear.x;
+//   //  state.state.twist.twist.linear.y=msg.twist.twist.linear.y;
+//   //  state.state.twist.twist.linear.z=0;
+// }
 
-/*IMU航向角*/
-void icvCarlaControlNode::callback_imu(const sensor_msgs::Imu &msg)
-{
-  double Yaw = 0;
-  double Imu_accX = 0;
-  double Imu_accY = 0;
-  double Imu_accZ = 0;
-  Imu_accX = msg.linear_acceleration.x;
-  Imu_accY = msg.linear_acceleration.y;
-  Imu_accZ = msg.linear_acceleration.z;
+// /*IMU航向角*/
+// void icvCarlaControlNode::callback_imu(const sensor_msgs::Imu &msg)
+// {
+//   double Yaw = 0;
+//   double Imu_accX = 0;
+//   double Imu_accY = 0;
+//   double Imu_accZ = 0;
+//   Imu_accX = msg.linear_acceleration.x;
+//   Imu_accY = msg.linear_acceleration.y;
+//   Imu_accZ = msg.linear_acceleration.z;
 
-  Yaw = qua_to_rpy(msg.orientation);
+//   Yaw = qua_to_rpy(msg.orientation);
 
-  Yaw += 90;
-  if (Yaw < 0)
-  {
-    Yaw += 360;
-  }
-  XpPoint_rec.theta = Yaw; //参数传递
+//   Yaw += 90;
+//   if (Yaw < 0)
+//   {
+//     Yaw += 360;
+//   }
+//   XpPoint_rec.theta = Yaw; //参数传递
 
-  callback_imu_flag = true;
-}
-/*GPS转xy*/
-void icvCarlaControlNode::callback_gpsfix(const sensor_msgs::NavSatFix &msg)
-{
+//   callback_imu_flag = true;
+// }
+// /*GPS转xy*/
+// void icvCarlaControlNode::callback_gpsfix(const sensor_msgs::NavSatFix &msg)
+// {
 
-  callback_gps_flag = true;
+//   callback_gps_flag = true;
 
-  geographic_msgs::GeoPointStampedPtr gps_msg(new geographic_msgs::GeoPointStamped());
-  gps_msg->position.latitude = msg.latitude;
-  gps_msg->position.longitude = msg.longitude;
-  gps_msg->position.altitude = msg.altitude;
+//   geographic_msgs::GeoPointStampedPtr gps_msg(new geographic_msgs::GeoPointStamped());
+//   gps_msg->position.latitude = msg.latitude;
+//   gps_msg->position.longitude = msg.longitude;
+//   gps_msg->position.altitude = msg.altitude;
 
-  geodesy::UTMPoint utm;
-  geodesy::fromMsg(gps_msg->position, utm);
-  Eigen::Vector3d xyz(utm.easting, utm.northing, utm.altitude);
+//   geodesy::UTMPoint utm;
+//   geodesy::fromMsg(gps_msg->position, utm);
+//   Eigen::Vector3d xyz(utm.easting, utm.northing, utm.altitude);
 
-  XpPoint_rec.x = utm.easting - 442867;
-  XpPoint_rec.y = utm.northing - 4427888;
+//   XpPoint_rec.x = utm.easting - 442867;
+//   XpPoint_rec.y = utm.northing - 4427888;
 
-  callback_gpsfix_flag = true;
-}
+//   callback_gpsfix_flag = true;
+// }
 /*四元素转航向角*/
 double icvCarlaControlNode::qua_to_rpy(geometry_msgs::Quaternion posedata)
 {

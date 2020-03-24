@@ -19,10 +19,10 @@ Controlparam:
  _delta_T: 0.05 #计算周期
  _t_preview: 2.0 #s 预瞄时间
  _P1_neg: -0.001498
- _P2_neg: -0.02241
+ _P2_neg: -0.01241
  _P3_neg: 14.99	
  _P1_post: -0.0008035
- _P2_post: -0.02031	
+ _P2_post: -0.01031	
  _P3_post: 15.33
  _dis_pre_max: 30
  _dis_pre_min: 2

@@ -26,6 +26,8 @@
 //carla shiyong
 // #include"CarlaEgoVehicleStatus.h"  //实车屏蔽
 // #include"CarlaEgoVehicleControl.h" //实车屏蔽
+#include <zzz_driver_msgs/RigidBodyState.h>
+#include <zzz_driver_msgs/RigidBodyStateStamped.h>
 
 #include"nav_msgs/Path.h" 
 #include <yaml-cpp/yaml.h>

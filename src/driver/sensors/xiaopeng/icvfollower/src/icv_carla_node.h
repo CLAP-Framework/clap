@@ -84,6 +84,11 @@ namespace icv
         // subscriber
         ros::Subscriber sub1_, sub2_, sub3_,sub_imudata_,sub_zzz_path_,sub_gpsvel_,sub_gpsfix_,sub_autostateex_,sub_autostate_,sub_esc_status_,sub_eps_status_;//车辆状态，gnss，waypoints。
 
+
+        ros::Subscriber sub_zzz_eogpose_ ;
+        
+        void  callback_egopose(const zzz_driver_msgs::RigidBodyStateStamped &msg);
+
         // constant
         const int LOOP_RATE_;  // processing frequency  
         // carla callbacks

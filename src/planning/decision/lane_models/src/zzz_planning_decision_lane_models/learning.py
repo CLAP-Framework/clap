@@ -105,6 +105,10 @@ class RLSDecision(object):
 
         # TODO(Zhong): check if action is reasonable
 
+        # always rule based for test!!!!!!!!!!!!!!!!!!!!
+        return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
+
+
         # Rule-based action
         if action == 0:
             return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)

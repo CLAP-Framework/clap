@@ -43,7 +43,7 @@ namespace icv
     void icvCarlaControl::controlInit()
     {
         //加载参数文件
-        YAML::Node dset_config = YAML::LoadFile("/home/icv/follow_carla/src/icvfollower/config/Controlconfig.yaml");
+        YAML::Node dset_config = YAML::LoadFile("/home/icv/zzz/src/driver/sensors/xiaopeng/icvfollower/config/Controlconfig.yaml");
         //Vehiclemodel,Controlparam two key_value
         YAML::Node Vehiclemodel=dset_config["Vehiclemodel"];
         YAML::Node Controlparam=dset_config["Controlparam"];        
@@ -217,7 +217,8 @@ namespace icv
             _Oss_tmp = _L_min;
  
         else
-            _Oss_tmp = -1.0 * _L_min;                       
+            _Oss_tmp = -1.0 * _L_min; 
+        cout<<"  Cte_d=  "<< _Oss_tmp<<endl;//zx                     
         return _Oss_tmp;
     } 
     /**计算公式系数值？？？*/   
@@ -396,7 +397,7 @@ namespace icv
     {
 
         ofstream out;
-        out.open("/home/icv/follow_carla/3.23test.txt");   
+        out.open("/home/icv/follow_carla/3.23test.txt",std::ios::out | std::ios::app);   
         pathdeal();       
         out<<setiosflags(ios::fixed)<<setprecision(3)<<ctedata[0]<<" "<<ctedata[1]<<" "<<ctedata[2]<<endl;     
       
