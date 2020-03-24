@@ -1,0 +1,10 @@
+<launch>
+  <node pkg="icvfollower" name="icv_carla_control"  type="icv_carla_control" output="screen">
+  <param name="~target_speedcarla" type="double" value="3"/>  
+  <param name="~carla_flag" type="int" value="1"/>
+  <param name="~_R_test" type="double" value="50"/>
+  <param name="~_delta_d" type="double" value="0.2"/>
+  </node> 
+
+  
+</launch>

@@ -18,6 +18,7 @@ class DecisionNode(object):
         params = parse_private_args(
             decision_trajectory_topic="decision_trajectory",
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
+            static_map_topic="/zzz/navigation/local_static_map",
             RVIZ_decision_trajectory_topic="decision_trajectory_path", 
             hz = 10,
         )

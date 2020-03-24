@@ -1,0 +1,21 @@
+<launch>
+  <node pkg="xpmotors" name="follower_cz"  type="follower_cz" output="screen">
+  <param name="~D_Kp" type="double" value="-30.0"/>
+  <param name="~D_Ki" type="double" value="0.0"/> 
+  <param name="~D_Kd" type="double" value="0.0"/>
+  <param name="~A_Kp" type="double" value="6.0"/>
+  <param name="~A_Ki" type="double" value="0.0"/>
+  <param name="~A_Kd" type="double" value="0.1"/>
+  <param name="~target_speed" type="double" value="3.0"/>
+  </node> 
+  <node pkg="xpmotors" name="auto_state"  type="auto_state_node" output="screen">
+
+  </node> 
+ <node pkg="xpmotors" name="auto_control"  type="auto_control_node" output="screen">
+  <rosparam file="$(find xpmotors)/conf.yaml"/>
+  </node> 
+ <!--<node pkg="oxford_gps_eth" name="gps_node"  type="gps_node" output="screen"> 
+
+  </node>-->
+  
+</launch>

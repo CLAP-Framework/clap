@@ -8,6 +8,8 @@ from zzz_planning_decision_lane_models.learning import RLSDecision
 from zzz_planning_decision_lane_models import MainDecision
 from zzz_planning_msgs.msg import DecisionTrajectory
 from carla_msgs.msg import CarlaCollisionEvent # FIXME: This is Carla related
+from nav_msgs.msg import Path 
+
 
 class RLSNode(object):
     def __init__(self):
@@ -15,17 +17,37 @@ class RLSNode(object):
         params = parse_private_args(
             decision_trajectory_topic="decision_trajectory",
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
-            collision_topic="/carla/ego_vehicle/collision"
+            collision_topic="/carla/ego_vehicle/collision",
+            RVIZ_decision_trajectory_topic="decision_trajectory_path", 
+            hz = 10,
         )
 
-        self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self.dynamic_map_callback)
-        self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
-        self._collision_subscriber = rospy.Subscriber(params.collision_topic, CarlaCollisionEvent, self.collision_callback)
+        self._rate = rospy.Rate(params.hz)
 
         model_lon = IDM()
         model_lat = RLSDecision()
         self._decision_instance = MainDecision(lon_decision=model_lon, lat_decision=model_lat)
         self._last_decision_time = 0
+
+        # ROS messages
+        self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
+        self._collision_subscriber = rospy.Subscriber(params.collision_topic, CarlaCollisionEvent, self.collision_callback)
+        self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
+        self._rviz_decision_trajectory_publisher = rospy.Publisher(params.RVIZ_decision_trajectory_topic, Path, queue_size=1)
+
+
+    def loop(self):
+        while not rospy.is_shutdown():
+
+            publish_msg = self._decision_instance.update()
+            if publish_msg:
+                self._decision_trajectory_publisher.publish(publish_msg)
+                publish_msg2 = publish_msg.trajectory
+                self._rviz_decision_trajectory_publisher.publish(publish_msg2)
+                rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
+                    len(publish_msg.trajectory.poses), publish_msg.desired_speed)
+            self._rate.sleep()
+            
 
     def dynamic_map_callback(self, msg, decision_dt = 0.75):
         # TODO: decision frequency
@@ -50,5 +72,5 @@ if __name__ == "__main__":
 
     rospy.init_node("rls_node", log_level=rospy.DEBUG)
     node = RLSNode()
-    rospy.spin()
+    node.loop()
 

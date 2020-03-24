@@ -1,0 +1,34 @@
+Vehiclemodel:
+ _lf: 1.56 #the distance from mass center to front wheel 
+ _lr: 1.5 #the distance from mass center to rear wheel 
+ _L:  3   #wheel base
+ _m: 1818.2 #the mass of vehicle
+ _Ccf: 66900 # fron tire side stiffness
+ _Ccr: 62700 # rear tire side stiffness
+ _Clf: 66900 # front longitudinal stiffness of tires
+ _Clr: 62700 # rear longitudinal stiffness of tires
+ _delta_f: 0 # front Side Angle of tyre
+ _Sf: 0.2    # Slip rate
+ _Sr: 0.2    # Slip rate
+ _I: 4175    # The moment of inertia
+ _g: 9.8     # G
+ _Rmin: 5.13 # Minimum turning radius
+ _K: 15.7    #Tire steering wheel ratio 
+Controlparam:
+ _distance_pre: 0.7  #车辆坐标向前迭代0.7s*v
+ _delta_T: 0.05 #计算周期
+ _t_preview: 2.0 #s 预瞄时间
+ _P1_neg: -0.001498
+ _P2_neg: -0.02241
+ _P3_neg: 14.99	
+ _P1_post: -0.0008035
+ _P2_post: -0.02031	
+ _P3_post: 15.33
+ _dis_pre_max: 30
+ _dis_pre_min: 2
+ _wheel_angle_degree_max: 510 #
+ _wheel_angle_degree_sec: 200  #
+ _v_pid.Kp: 0.15
+ _v_pid.Kd: 0
+ _v_pid.Ki: 0.01
+
