@@ -124,6 +124,7 @@ class NativeMap(object):
         
         # Left is 0 
         self.static_local_map.in_junction = False # lane change
+        self.static_local_map.target_lane_index = 0
         self.static_local_map.lanes.append(self._lanes[0])
         self.static_local_map.lanes.append(self._lanes[1])
         # rospy.loginfo("### native map update lane0 - {}, lane1 - {}".format(

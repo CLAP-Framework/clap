@@ -437,7 +437,7 @@ class MPCTrajectory(object):
         
 class PolylineTrajectory(object):
     def get_trajectory(self, dynamic_map, target_lane_index, desired_speed,
-                resolution=0.2, time_ahead=5, distance_ahead=10, rectify_thres=2,
+                resolution=0.2, time_ahead=7, distance_ahead=15, rectify_thres=2,
                 lc_dt = 1.5, lc_v = 2.67):
         # TODO: get smooth spline (write another module to generate spline)
         ego_x = dynamic_map.ego_state.pose.pose.position.x

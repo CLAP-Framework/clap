@@ -51,7 +51,7 @@ namespace icv
         double _delta_d=0;//路径点间隔m
         nav_msgs::Path testPath;//测试路径
         
-
+        vector <float> resultSet;//error 计算方差误差
         //切换carla和小鹏实车测试
         int carla_flag=0;
         //参数传递结构体
@@ -79,8 +79,9 @@ namespace icv
         ros::Publisher pub1_;//车辆控制指令
         ros::Publisher pub_xp_;//发布小鹏车指令
         ros::Publisher pub_vehi_pose = rviz_n.advertise<visualization_msgs::Marker>("/dobot_maker1",100);
-         ros::Publisher pub_pre_point = rviz_n.advertise<visualization_msgs::Marker>("/pre_point",100);
+        ros::Publisher pub_pre_point = rviz_n.advertise<visualization_msgs::Marker>("/pre_point",100);
         ros::Publisher pub_path = rviz_n.advertise<nav_msgs::Path>("trajectory",1, true); 
+        ros::Publisher pub_follow_error = rviz_n.advertise<geometry_msgs::Vector3>("/follow_error",1000);
         // subscriber
         ros::Subscriber sub1_, sub2_, sub3_,sub_imudata_,sub_zzz_path_,sub_gpsvel_,sub_gpsfix_,sub_autostateex_,sub_autostate_,sub_esc_status_,sub_eps_status_;//车辆状态，gnss，waypoints。
 
@@ -100,6 +101,7 @@ namespace icv
         void initForROS();
 
         // functions
+        
        
         void CarconstructionPub(double steer_send,double SpeedReq);
         void VehicelStatusSend();//类接口数据传输

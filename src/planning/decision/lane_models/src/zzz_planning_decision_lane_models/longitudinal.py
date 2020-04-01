@@ -14,7 +14,7 @@ class IDM(object):
         self.a = 2.73
         self.b = 1.65
         self.delta = 4
-        self.decision_dt = 0.75
+        self.decision_dt = 0.25
         self.dynamic_map = None
     
     def update_dynamic_map(self, dynamic_map):
@@ -79,7 +79,7 @@ class IDM(object):
                                          self.dynamic_map.ego_state.pose.pose.position.y])
 
         v = get_speed(self.dynamic_map.ego_state)
-        v0 = lane.map_lane.speed_limit/3.6
+        v0 = lane.map_lane.speed_limit/3.6        
         if v0 == 0: v0 = 5 # TODO: ensure this
         if v < 5:
             a = self.a + (5 - v)/5*2
@@ -107,8 +107,7 @@ class IDM(object):
 
         if g == 0 or v0 == 0:
             rospy.logerr("Front vehicle position: (%.3f, %.3f), ego vehicle position: (%.3f, %.3f)", f_v_location[0], f_v_location[1], ego_vehicle_location[0], ego_vehicle_location[1])
-        acc = a*(1 - pow(v/v0, delta) - (g1/g)*((g1/g)))
-
+        acc = a*(1 - pow(v/v0, delta) - (g1/g)*((g1/g)))   
         return max(0, v + acc*self.decision_dt)
 
 

@@ -17,7 +17,7 @@ Vehiclemodel:
 Controlparam:
  _distance_pre: 0.7  #车辆坐标向前迭代0.7s*v
  _delta_T: 0.05 #计算周期
- _t_preview: 2.0 #s 预瞄时间
+ _t_preview: 1.5 #s 预瞄时间
  _P1_neg: -0.001498
  _P2_neg: -0.01241
  _P3_neg: 14.99	

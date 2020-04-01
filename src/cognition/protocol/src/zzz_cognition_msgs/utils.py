@@ -54,6 +54,8 @@ def convert_tracking_box(array, pose):
         obstacle.state = abspose.state
         if len(obj.classes) > 0:
             obstacle.cls = obj.classes[0]
+            if obstacle.cls.classid == 0:
+                continue
         else:
             obstacle.cls.classid = ObjectClass.UNKNOWN
             obstacle.cls.score = 1

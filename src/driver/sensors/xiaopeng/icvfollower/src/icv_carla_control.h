@@ -233,12 +233,12 @@ namespace icv
             waypoints_flag=true;
         }  
         /*传输预瞄点坐标显示rviz*/
-        void sendXYpre(double *x,double *y)
+        void sendXYpre(double *x,double *y,float *error)
         {
             *x=_x_preview_rviz;
-            *y=_y_preview_rviz;                     
+            *y=_y_preview_rviz; 
+            *error=ctedata[0];//侧向误差                    
         }
-        
     };    
     
     

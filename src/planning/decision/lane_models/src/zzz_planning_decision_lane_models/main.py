@@ -53,9 +53,9 @@ class MainDecision(object):
             
             # TODO(Temps): Should seperate into continous models 
             if changing_lane_index == -1 :
-                trajectory = self._local_trajectory_instance_for_ref.get_trajectory(self._dynamic_map_buffer, changing_lane_index, desired_speed)#FIXME(ksj)
+                trajectory = self._local_trajectory_instance_for_ref.get_trajectory(dynamic_map, changing_lane_index, desired_speed)#FIXME(ksj)
             else:
-                trajectory = self._local_trajectory_instance.get_trajectory(self._dynamic_map_buffer, changing_lane_index, desired_speed)
+                trajectory = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
 
 
         msg = DecisionTrajectory()

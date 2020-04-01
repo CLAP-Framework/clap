@@ -115,11 +115,35 @@ void icvCarlaControlNode::pubVechilepose2rviz(VehicleStatus carpose)
   pub_vehi_pose.publish(Vehicle_msg);
 
   double x_pre, y_pre;
-  zz.sendXYpre(&x_pre, &y_pre);
+  float d_error;
+  zz.sendXYpre(&x_pre, &y_pre,&d_error);
   pre_point.position.x = x_pre;
   pre_point.position.y = y_pre;
 
+  if(resultSet.size()<10000)
+  {
+    resultSet.push_back(abs(d_error)) ;  
+  }
+  else
+  {
+    resultSet.clear();
+  }
+  double sum = std::accumulate(std::begin(resultSet), std::end(resultSet), 0.0);  
+  double mean =  sum / resultSet.size(); //均值    
+  double accum  = 0.0;  
+  std::for_each (std::begin(resultSet), std::end(resultSet), [&](const double d) 
+  {  
+  accum  += (d-mean)*(d-mean);  
+  });    
+  double stdev = sqrt(accum/(resultSet.size()-1)); //方差 
+
+  geometry_msgs::Vector3 error;
+  error.x=d_error;
+  error.y=mean;
+  error.z=stdev;
   visualization_msgs::Marker pre_point_msg = pubPrepointtoRviz(pre_point);
+
+  pub_follow_error.publish(error);
   pub_pre_point.publish(pre_point_msg);
 }
 void icvCarlaControlNode::CarconstructionPub(double steer_send, double SpeedReq)
@@ -163,8 +187,8 @@ void icvCarlaControlNode::CarconstructionPub(double steer_send, double SpeedReq)
     ctrmsg.AutoMode = 1;
     ctrmsg.TarSpeedReq = SpeedReq; //m/s
   }
-  // cout<<" ctrmsg.TarSpeedReq "<<ctrmsg.TarSpeedReq<<endl;//zx
-  // cout<<" ctrmsg.EPSAngleReq "<<ctrmsg.EPSAngleReq<<endl;//zx
+  cout<<" ctrmsg.TarSpeedReq "<<ctrmsg.TarSpeedReq<<endl;//zx
+  cout<<" ctrmsg.EPSAngleReq "<<ctrmsg.EPSAngleReq<<endl;//zx
   pub_xp_.publish(ctrmsg);
 }
 //汇总整个类接口数据然后传递，车辆当前状态，定位，路径信息

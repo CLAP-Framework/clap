@@ -168,12 +168,26 @@ public:
             zzz_perception_msgs::TrackingBox obs_box;
             // TODO 
             zzz_perception_msgs::ObjectClass t;
-            if (obs_msg_static.obstcles[i].type == 3 || 
-                obs_msg_static.obstcles[i].type == 4) {
-                t.classid = 1;
-            } else {
-                t.classid = 2;
+
+            switch (obs_msg_static.obstcles[i].type)
+            {
+                case 3: //vehicle
+                    t.classid = 1;
+                    break;
+                case 4: // truck
+                    t.classid = 1;
+                    break;
+                case 1: // Human
+                    t.classid = 2;
+                    break;
+                case 2: // Bicycle
+                    t.classid = 3;
+                    break;
+                default:
+                    t.classid = 0;
+                    break;
             }
+
             obs_box.classes.push_back(t);
             obs_box.classes[0].score = obs_msg_static.obstcles[i].type_confidence;
 

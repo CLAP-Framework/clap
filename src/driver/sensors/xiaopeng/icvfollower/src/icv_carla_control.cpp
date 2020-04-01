@@ -397,7 +397,7 @@ namespace icv
     {
 
         ofstream out;
-        out.open("/home/icv/follow_carla/3.23test.txt",std::ios::out | std::ios::app);   
+        out.open("/home/icv/follow_carla/3.26test.txt",std::ios::out | std::ios::app);   
         pathdeal();       
         out<<setiosflags(ios::fixed)<<setprecision(3)<<ctedata[0]<<" "<<ctedata[1]<<" "<<ctedata[2]<<endl;     
       
@@ -483,7 +483,7 @@ namespace icv
         int plo_i=0;//曲线拟合的索引点
         float ctd=100;   
         float dis_a=0;
-        int m=300;//轨迹点长度   
+        int m=_path_x.size();//轨迹点长度   
         float x_len=0;    
         float x_plo_start=0;
         float d_ditance=0;//x的离散补偿
