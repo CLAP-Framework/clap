@@ -18,7 +18,7 @@ class MainDecision(object):
         self._trajectory_planner = trajectory_planner
         self.solve = False
 
-        self.Planning_type = 3
+        self.Planning_type = 1
 
         
     def receive_dynamic_map(self, dynamic_map):
@@ -36,12 +36,16 @@ class MainDecision(object):
 
         if self.Planning_type == 1:
             # Only follow path
+            if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
+                return None
             trajectory = reference_path_from_map
-            desired_speed = self._trajectory_planner.speed_update(trajectory, dynamic_map)
+            desired_speed = 5#self._trajectory_planner.speed_update(trajectory, dynamic_map)
 
             # Process reference path
             if trajectory is not None:
                 send_trajectory = self.process_reference_path(trajectory,dynamic_map,desired_speed)
+            else:
+                return None
 
             # Convert to Message type
             if send_trajectory is not None:
