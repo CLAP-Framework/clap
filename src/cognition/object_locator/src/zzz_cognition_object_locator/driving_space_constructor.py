@@ -205,20 +205,24 @@ class DrivingSpaceConstructor:
 
         #quaternion transform for ego velocity
 
-        x = self._ego_vehicle_state.state.pose.pose.orientation.x
-        y = self._ego_vehicle_state.state.pose.pose.orientation.y
-        z = self._ego_vehicle_state.state.pose.pose.orientation.z
-        w = self._ego_vehicle_state.state.pose.pose.orientation.w
+        # x = self._ego_vehicle_state.state.pose.pose.orientation.x
+        # y = self._ego_vehicle_state.state.pose.pose.orientation.y
+        # z = self._ego_vehicle_state.state.pose.pose.orientation.z
+        # w = self._ego_vehicle_state.state.pose.pose.orientation.w
 
-        rotation_mat = np.array([[1-2*y*y-2*z*z, 2*x*y+2*w*z, 2*x*z-2*w*y], [2*x*y-2*w*z, 1-2*x*x-2*z*z, 2*y*z+2*w*x], [2*x*z+2*w*y, 2*y*z-2*w*x, 1-2*x*x-2*y*y]])
-        rotation_mat_inverse = np.linalg.inv(rotation_mat) #those are the correct way to deal with quaternion
+        # rotation_mat = np.array([[1-2*y*y-2*z*z, 2*x*y+2*w*z, 2*x*z-2*w*y], [2*x*y-2*w*z, 1-2*x*x-2*z*z, 2*y*z+2*w*x], [2*x*z+2*w*y, 2*y*z-2*w*x, 1-2*x*x-2*y*y]])
+        # rotation_mat_inverse = np.linalg.inv(rotation_mat) #those are the correct way to deal with quaternion
 
-        vel_self = np.array([[self._ego_vehicle_state.state.twist.twist.linear.x], [self._ego_vehicle_state.state.twist.twist.linear.y], [self._ego_vehicle_state.state.twist.twist.linear.z]])
-        vel_world = np.matmul(rotation_mat_inverse, vel_self)
-        #check if it should be reversed
-        ego_vx_world = vel_world[0]
-        ego_vy_world = vel_world[1]
-        ego_vz_world = vel_world[2]
+        # vel_self = np.array([[self._ego_vehicle_state.state.twist.twist.linear.x], [self._ego_vehicle_state.state.twist.twist.linear.y], [self._ego_vehicle_state.state.twist.twist.linear.z]])
+        # vel_world = np.matmul(rotation_mat_inverse, vel_self)
+        # #check if it should be reversed
+        # ego_vx_world = vel_world[0]
+        # ego_vy_world = vel_world[1]
+        # ego_vz_world = vel_world[2]
+
+        ego_vx_world = self._ego_vehicle_state.state.twist.twist.linear.x
+        ego_vy_world = self._ego_vehicle_state.state.twist.twist.linear.y
+        ego_vz_world = self._ego_vehicle_state.state.twist.twist.linear.z
 
         tempmarker = Marker()
         tempmarker.header.frame_id = "map"

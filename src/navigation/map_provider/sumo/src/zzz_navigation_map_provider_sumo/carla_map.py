@@ -38,14 +38,14 @@ class CarlaMap(object):
 
         
         self._lanes_inside.append(dense_polyline2d(np.array([[23.4,-91.234],[-36.214,-91.5]]),1))
-        self._lanes_inside.append(dense_polyline2d(np.array([[-50.942,-75.59],[-51.1,-12.56]]),1))
-        self._lanes_inside.append(dense_polyline2d(np.array([[-35.62,3.11],[23.72,3.37]]),1))
-        self._lanes_inside.append(dense_polyline2d(np.array([[31.8,-11.33],[33.52,-77.71]]),1))
+        self._lanes_inside.append(dense_polyline2d(np.array([[-50.942,-71.59],[-51.1,-10.56]]),1))
+        self._lanes_inside.append(dense_polyline2d(np.array([[-37.62,3.11],[15.03,3.37]]),1))
+        self._lanes_inside.append(dense_polyline2d(np.array([[31.8,-14.33],[33.52,-74.71]]),1))
 
         self._lanes_outside.append(dense_polyline2d(np.array([[22.246,-94.584],[-37,-94.817]]),1))
-        self._lanes_outside.append(dense_polyline2d(np.array([[-55,-77.85],[-54.35,-12.114]]),1))
-        self._lanes_outside.append(dense_polyline2d(np.array([[-37.11,6.15],[19.03,6.16]]),1))
-        self._lanes_outside.append(dense_polyline2d(np.array([[34.76,-12.98],[36.53,-77.61]]),1))
+        self._lanes_outside.append(dense_polyline2d(np.array([[-55,-71.85],[-54.35,-10.114]]),1))
+        self._lanes_outside.append(dense_polyline2d(np.array([[-37.11,6.15],[15.03,6.16]]),1))
+        self._lanes_outside.append(dense_polyline2d(np.array([[34.76,-14.98],[36.53,-74.61]]),1))
 
     def ego_road(self):
 

@@ -10,6 +10,8 @@ from zzz_planning_decision_continuous_models import MainDecision
 from zzz_planning_decision_continuous_models.Werling_planner import Werling
 from zzz_planning_msgs.msg import DecisionTrajectory
 from nav_msgs.msg import Path 
+from visualization_msgs.msg import Marker, MarkerArray
+
 
 class DecisionNode(object):
     def __init__(self):
@@ -18,7 +20,9 @@ class DecisionNode(object):
             decision_trajectory_topic="decision_trajectory",
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
             RVIZ_decision_trajectory_topic="decision_trajectory_path", 
-            hz = 20,
+            RVIZ_all_trajectory_topic="all_trajectory_path", 
+            RVIZ_predi_trajectory_topic="predi_trajectory_path", 
+            hz = 10,
         )
         self._rate = rospy.Rate(params.hz)
 
@@ -29,16 +33,25 @@ class DecisionNode(object):
         self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
         self._rviz_decision_trajectory_publisher = rospy.Publisher(params.RVIZ_decision_trajectory_topic, Path, queue_size=1)
+        self._rviz_all_trajectory_publisher = rospy.Publisher(params.RVIZ_all_trajectory_topic, MarkerArray, queue_size=1)
+        self._rviz_predi_trajectory_publisher = rospy.Publisher(params.RVIZ_predi_trajectory_topic, MarkerArray, queue_size=1)
 
     def loop(self):
         while not rospy.is_shutdown():
             publish_msg = self._decision_instance.update_trajectory()
+            all_trajectory = self._decision_instance.get_all_trajectry()
+            obs_paths = self._decision_instance.get_predi_trajectory()
             if publish_msg:
                 self._decision_trajectory_publisher.publish(publish_msg)
                 publish_msg2 = publish_msg.trajectory
                 self._rviz_decision_trajectory_publisher.publish(publish_msg2)
                 print("PUBLISH: trajectory length = %d, desired_speed = %f", 
                     len(publish_msg.trajectory.poses), publish_msg.desired_speed)
+            if all_trajectory:
+                self._rviz_all_trajectory_publisher.publish(all_trajectory)
+            if obs_paths:
+                self._rviz_predi_trajectory_publisher.publish(obs_paths)
+                
             self._rate.sleep()
         
 

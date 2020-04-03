@@ -11,6 +11,7 @@ from zzz_driver_msgs.utils import get_speed, get_yaw
 
 
 
+
 class MainDecision(object):
     def __init__(self, trajectory_planner=None):
         self._dynamic_map_buffer = None
@@ -20,6 +21,8 @@ class MainDecision(object):
 
         self.Planning_type = 3
 
+        self.all_trajectory = None
+        self.obs_paths = None
         
     def receive_dynamic_map(self, dynamic_map):
         self._dynamic_map_buffer = dynamic_map
@@ -36,12 +39,16 @@ class MainDecision(object):
 
         if self.Planning_type == 1:
             # Only follow path
+            if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
+                return None
             trajectory = reference_path_from_map
-            desired_speed = self._trajectory_planner.speed_update(trajectory, dynamic_map)
+            desired_speed = 5#self._trajectory_planner.speed_update(trajectory, dynamic_map)
 
             # Process reference path
             if trajectory is not None:
                 send_trajectory = self.process_reference_path(trajectory,dynamic_map,desired_speed)
+            else:
+                return None
 
             # Convert to Message type
             if send_trajectory is not None:
@@ -80,12 +87,18 @@ class MainDecision(object):
             self._trajectory_planner.clear_buff(dynamic_map)
             if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
                 print("dynamic map tell me its junction")
-                trajectory_msg = self._trajectory_planner.trajectory_update(dynamic_map)
+                trajectory_msg, self.all_trajectory, self.obs_paths = self._trajectory_planner.trajectory_update(dynamic_map)
                 return trajectory_msg
             elif dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
+                self.all_trajectory = None
+                self.obs_paths = None
                 return None
 
-            
+    def get_all_trajectry(self):        
+        return self.all_trajectory
+
+    def get_predi_trajectory(self):
+        return self.obs_paths
 
 
     def convert_XY_to_pathmsg(self,XX,YY,path_id = 'map'):

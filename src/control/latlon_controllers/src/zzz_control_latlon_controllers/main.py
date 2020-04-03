@@ -33,7 +33,7 @@ class MainController():
     def update_pose(self, pose):
         with self._ego_state_lock:
             self.ego_state = pose.state
-
+           
     def ready_for_control(self, short_distance_thres = 2):
         if self.desired_trajectory is None or len(self.desired_trajectory.poses) == 0:
             rospy.logdebug("Haven't recevied trajectory")

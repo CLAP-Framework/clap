@@ -170,7 +170,7 @@ class NearestLocator:
             tstates.dynamic_map.jmap.obstacles.append(obj)
 
     # TODO: adjust lane_end_dist_thres to class variable
-    def locate_ego_vehicle_in_lanes(self, tstates, lane_end_dist_thres=0.9, lane_dist_thres=5):
+    def locate_ego_vehicle_in_lanes(self, tstates, lane_end_dist_thres=1.5, lane_dist_thres=5):
         dist_list = np.array([dist_from_point_to_polyline2d(
             tstates.ego_state.state.pose.pose.position.x, tstates.ego_state.state.pose.pose.position.y,
             lane, return_end_distance=True)
@@ -318,7 +318,7 @@ class NearestLocator:
         # Now we set the multilane speed limit as 40 km/h.
         total_lane_num = len(tstates.static_map.lanes)
         for i in range(total_lane_num):
-            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 20
+            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 30
 
     # TODO(zyxin): Move this function into separate prediction module
     def predict_vehicle_behavior(self, vehicle, tstates, lane_change_thres = 0.2):
