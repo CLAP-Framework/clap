@@ -319,13 +319,13 @@ class NearestLocator:
 
 
 
-    def temp_speed_limit(self, tstates, straight_speed = 20, left_turn_speed = 10):
+    def temp_speed_limit(self, tstates, straight_speed = 15, left_turn_speed = 10):
         ego_x = tstates.ego_state.state.pose.pose.position.x
         ego_y = tstates.ego_state.state.pose.pose.position.y
 
         # using outside lane points
-        xs = [ -0.831381298776 , -94.2308302094, -138.179321156 , -34.2826003609 ] # four start point x
-        ys = [ 66.5153233064 , 95.5921675395 , 22.5298581934 ,-6.71398290247 ] # four start point y
+        xs = [ -0.831381298776 , -94.2308302094, -138.179321156 , -30.152690624 ] # four start point x
+        ys = [ 66.5153233064 , 95.5921675395 , 22.5298581934 ,-9.34686440229 ] # four start point y
         xe = [ -17.4927126079 , -140.218473702 , -119.012291822 , 0.184996323485 ] # four end point x
         ye = [ 98.7037232528 , 73.8257115977 , -9.48885849956 , 14.3186893491 ] # four end point y
 

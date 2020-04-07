@@ -49,7 +49,7 @@ void BuildCanFrame(int16 steeringAngle, int16 wheelSpeed, uint8 controMode,
  * @param light_level
  */
 void
-SendCanFrame (int16 steeringAngleIn, int16 wheelspeedIn, uint8 control_mode,
+SendCanFrame (double steeringAngleIn, double wheelspeedIn, uint8 control_mode,
 	      uint8 alarm_level, uint8 light_level)
 {
 

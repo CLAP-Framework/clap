@@ -82,7 +82,7 @@ class LaneUtility(object):
         utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1)*target_lane_driving_motivation
         return utility
 
-    def lane_change_safe(self, ego_lane_index, target_index, min_dis = 15):
+    def lane_change_safe(self, ego_lane_index, target_index, min_dis = 20):
 
         if target_index < 0 or target_index > len(self.dynamic_map.mmap.lanes)-1:
             return False
