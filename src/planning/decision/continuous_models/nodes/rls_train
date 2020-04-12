@@ -4,14 +4,13 @@ import rospy
 from zzz_common.params import parse_private_args
 from zzz_cognition_msgs.msg import MapState
 
-from zzz_planning_decision_continuous_models.path_planner import Path_Planner
-from zzz_planning_decision_continuous_models.speed_decision import Speed_Decision
-from zzz_planning_decision_continuous_models.learning import RLSPlanner
+from zzz_planning_decision_continuous_models.VEG_ITSC.VEG_planner import VEG_Planner
 from zzz_planning_decision_continuous_models import MainDecision
 
 from nav_msgs.msg import Path
 from zzz_planning_msgs.msg import DecisionTrajectory
 from carla_msgs.msg import CarlaCollisionEvent 
+
 
 class RLSNode(object):
     def __init__(self):
@@ -24,7 +23,8 @@ class RLSNode(object):
             hz = 20,
         )
         self._rate = rospy.Rate(params.hz)
-        model_trajectory = RLSPlanner()
+        
+        model_trajectory = VEG_Planner()
         self._decision_instance = MainDecision(trajectory_planner=model_trajectory)
 
         # ROS messages
@@ -36,10 +36,6 @@ class RLSNode(object):
 
     def loop(self):
         while not rospy.is_shutdown():
-            # try:
-            #     publish_msg = self._decision_instance.update_trajectory()
-            # except:
-            #     pass
             publish_msg = self._decision_instance.update_trajectory()
             if publish_msg:
                 self._decision_trajectory_publisher.publish(publish_msg)
@@ -51,7 +47,7 @@ class RLSNode(object):
 
 
     def collision_callback(self, msg):
-        self._decision_instance._path_model_instance._collision_signal = True
+        self._decision_instance._trajectory_planner._collision_signal = True
 
 if __name__ == "__main__":
 

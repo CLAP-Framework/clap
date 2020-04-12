@@ -22,6 +22,7 @@ import numpy as np
 import gym
 from gym import core, error, spaces, utils
 from gym.utils import seeding
+
 # from carla import Location, Rotation, Transform
 
 ##########################################
@@ -77,7 +78,7 @@ class ZZZCarlaEnv(gym.Env):
         action = action.astype(float)
         action = action.tolist()
 
-
+        
         print("-------------",type(action),action)
         while True:
             try:
@@ -125,7 +126,7 @@ class ZZZCarlaEnv(gym.Env):
                 # print("RLpointy=",RLpointy - 12.5/3.6)
 
         
-                self.record_rl_intxt(action, q_value, RLpointx, RLpointy, rule_q, collision, leave_current_mmap, ego_s, threshold)
+                # self.record_rl_intxt(action, q_value, RLpointx, RLpointy, rule_q, collision, leave_current_mmap, ego_s, threshold)
 
                 return np.array(self.state), reward, done,  {}, np.array(self.rule_based_action)
 
