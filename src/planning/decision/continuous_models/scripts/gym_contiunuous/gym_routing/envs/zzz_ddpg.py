@@ -49,18 +49,10 @@ class ZZZCarlaEnv(gym.Env):
         self.rule_based_action = []
         print("ZZZ connected at {}".format(addr))
 
-
         # Set action space
-        low_action = np.array([-2.5,-12.5/3.6]) # di - ROAD_WIDTH, tv - TARGET_SPEED - D_T_S * N_S_SAMPLE
-        high_action = np.array([2.5, 12.5/3.6])  #Should be symmetry for DDPG
+        low_action = np.array([-4.0,-15/3.6]) # di - ROAD_WIDTH, tv - TARGET_SPEED - D_T_S * N_S_SAMPLE
+        high_action = np.array([4.0, 15/3.6])  #Should be symmetry for DDPG
         self.action_space = spaces.Box(low=low_action, high=high_action, dtype=np.float32)
-
-        # Set State space = 4+4*obs_num
-
-        # ego state: ego_x(0), ego_y(1), ego_vx(2), ego_vy(3)    
-            # obstacle 0 : x0(4), y0(5), vx0(6), vy0(7)
-            # obstacle 1 : x0(8), y0(9), vx0(10), vy0(11)
-            # obstacle 2 : x0(12), y0(13), vx0(14), vy0(15)
 
         self.state_dimention = 16
 
@@ -77,31 +69,27 @@ class ZZZCarlaEnv(gym.Env):
         
         action = action.astype(float)
         action = action.tolist()
-
-        
         print("-------------",type(action),action)
         while True:
             try:
                 send_action = action
-
                 send_action.append(q_value)
                 send_action.append(rule_q)                
                 self.sock_conn.sendall(msgpack.packb(send_action))
-                
+
                 # wait next state
                 received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
                 print("-------------received msg in step")
                 self.state = received_msg[0:16]
                 collision = received_msg[16]
                 leave_current_mmap = received_msg[17]
-                RLpointx = received_msg[18]
-                RLpointy = received_msg[19]
-                ego_s = received_msg[20]
-                threshold = received_msg[21]
-                self.rule_based_action = [(RLpointx, RLpointy - 12.5/3.6)]
+                threshold = received_msg[18]
+                RLpointx = received_msg[19]
+                RLpointy = received_msg[20]
+                self.rule_based_action = [(RLpointx, RLpointy)]
 
                 # calculate reward
-                reward = 50 - (abs(action[0] - RLpointx) + abs(action[1] - (RLpointy - 12.5/3.6))) #+ 0.5 * ego_s
+                reward = 50 - (abs(action[0] - RLpointx) + abs(action[1] - (RLpointy))) #+ 0.5 * ego_s
               
                 # judge if finish
                 done = False
@@ -109,9 +97,7 @@ class ZZZCarlaEnv(gym.Env):
                 if collision:
                     done = True
                     reward = -1500#-1000
-
                     print("+++++++++++++++++++++ received collision")
-
                 
                 if leave_current_mmap == 1:
                     done = True
@@ -122,12 +108,7 @@ class ZZZCarlaEnv(gym.Env):
                     done = True
                     print("+++++++++++++++++++++ restart by code")
                 
-                # print("RLpointx=",RLpointx)
-                # print("RLpointy=",RLpointy - 12.5/3.6)
-
-        
                 # self.record_rl_intxt(action, q_value, RLpointx, RLpointy, rule_q, collision, leave_current_mmap, ego_s, threshold)
-
                 return np.array(self.state), reward, done,  {}, np.array(self.rule_based_action)
 
             except:
@@ -162,15 +143,13 @@ class ZZZCarlaEnv(gym.Env):
         fw.write("\n")
         fw.close()
 
-
     def reset(self, **kargs):
        
         # receive state
         # if the received information meets requirements
         while True:
-
             try:
-                action = [(2333,2333),0,0,0]
+                action = [2333,2333,0,0]
                 print("-------------",type(action),action)
 
                 self.sock_conn.sendall(msgpack.packb(action))
@@ -199,7 +178,6 @@ class ZZZCarlaEnv(gym.Env):
 
                 return np.array(self.state), np.array(self.rule_based_action)
 
-  
         return np.array(self.state), np.array(self.rule_based_action)
 
 

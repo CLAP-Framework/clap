@@ -1,4 +1,5 @@
 import time
+from collections import deque
 
 import gym
 import numpy as np
@@ -8,27 +9,9 @@ from stable_baselines import logger
 from stable_baselines.common import explained_variance, tf_util, ActorCriticRLModel, SetVerbosity, TensorboardWriter
 from stable_baselines.common.policies import ActorCriticPolicy, RecurrentActorCriticPolicy
 from stable_baselines.common.runners import AbstractEnvRunner
-from stable_baselines.common.schedules import Scheduler
-from stable_baselines.common.tf_util import mse, total_episode_reward_logger
-from stable_baselines.common.math_util import safe_mean
-
-
-def discount_with_dones(rewards, dones, gamma):
-    """
-    Apply the discount value to the reward, where the environment is not done
-
-    :param rewards: ([float]) The rewards
-    :param dones: ([bool]) Whether an environment is done or not
-    :param gamma: (float) The discount value
-    :return: ([float]) The discounted rewards
-    """
-    discounted = []
-    ret = 0  # Return: discounted reward
-    for reward, done in zip(rewards[::-1], dones[::-1]):
-        ret = reward + gamma * ret * (1. - done)  # fixed off by one bug
-        discounted.append(ret)
-    return discounted[::-1]
-
+from stable_baselines.a2c.utils import discount_with_dones, Scheduler, mse, \
+    total_episode_reward_logger
+from stable_baselines.ppo2.ppo2 import safe_mean
 
 class A2C(ActorCriticRLModel):
     """
@@ -67,6 +50,10 @@ class A2C(ActorCriticRLModel):
                  tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
                  full_tensorboard_log=False, seed=None, n_cpu_tf_sess=None):
 
+        super(A2C, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
+                                  _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs,
+                                  seed=seed, n_cpu_tf_sess=n_cpu_tf_sess)
+
         self.n_steps = n_steps
         self.gamma = gamma
         self.vf_coef = vf_coef
@@ -79,6 +66,8 @@ class A2C(ActorCriticRLModel):
         self.tensorboard_log = tensorboard_log
         self.full_tensorboard_log = full_tensorboard_log
 
+        self.graph = None
+        self.sess = None
         self.learning_rate_ph = None
         self.n_batch = None
         self.actions_ph = None
@@ -87,25 +76,21 @@ class A2C(ActorCriticRLModel):
         self.pg_loss = None
         self.vf_loss = None
         self.entropy = None
+        self.params = None
         self.apply_backprop = None
         self.train_model = None
         self.step_model = None
+        self.step = None
         self.proba_step = None
         self.value = None
         self.initial_state = None
         self.learning_rate_schedule = None
         self.summary = None
-
-        super(A2C, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
-                                  _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs,
-                                  seed=seed, n_cpu_tf_sess=n_cpu_tf_sess)
+        self.episode_reward = None
 
         # if we are loading, it is possible the environment is not known, however the obs and action space are known
         if _init_setup_model:
             self.setup_model()
-
-    def _make_runner(self) -> AbstractEnvRunner:
-        return A2CRunner(self.env, self, n_steps=self.n_steps, gamma=self.gamma)
 
     def _get_pretrain_placeholders(self):
         policy = self.train_model
@@ -243,7 +228,6 @@ class A2C(ActorCriticRLModel):
               reset_num_timesteps=True):
 
         new_tb_log = self._init_num_timesteps(reset_num_timesteps)
-        callback = self._init_callback(callback)
 
         with SetVerbosity(self.verbose), TensorboardWriter(self.graph, self.tensorboard_log, tb_log_name, new_tb_log) \
                 as writer:
@@ -251,35 +235,34 @@ class A2C(ActorCriticRLModel):
             self.learning_rate_schedule = Scheduler(initial_value=self.learning_rate, n_values=total_timesteps,
                                                     schedule=self.lr_schedule)
 
+            runner = A2CRunner(self.env, self, n_steps=self.n_steps, gamma=self.gamma)
+            self.episode_reward = np.zeros((self.n_envs,))
+            # Training stats (when using Monitor wrapper)
+            ep_info_buf = deque(maxlen=100)
+
             t_start = time.time()
-            callback.on_training_start(locals(), globals())
-
             for update in range(1, total_timesteps // self.n_batch + 1):
-
-                callback.on_rollout_start()
                 # true_reward is the reward without discount
-                rollout = self.runner.run(callback)
-                # unpack
-                obs, states, rewards, masks, actions, values, ep_infos, true_reward = rollout
-
-                callback.on_rollout_end()
-
-                # Early stopping due to the callback
-                if not self.runner.continue_training:
-                    break
-
-                self.ep_info_buf.extend(ep_infos)
+                obs, states, rewards, masks, actions, values, ep_infos, true_reward = runner.run()
+                ep_info_buf.extend(ep_infos)
                 _, value_loss, policy_entropy = self._train_step(obs, states, rewards, masks, actions, values,
                                                                  self.num_timesteps // self.n_batch, writer)
                 n_seconds = time.time() - t_start
                 fps = int((update * self.n_batch) / n_seconds)
 
                 if writer is not None:
-                    total_episode_reward_logger(self.episode_reward,
-                                                true_reward.reshape((self.n_envs, self.n_steps)),
-                                                masks.reshape((self.n_envs, self.n_steps)),
-                                                writer, self.num_timesteps)
+                    self.episode_reward = total_episode_reward_logger(self.episode_reward,
+                                                                      true_reward.reshape((self.n_envs, self.n_steps)),
+                                                                      masks.reshape((self.n_envs, self.n_steps)),
+                                                                      writer, self.num_timesteps)
 
+                self.num_timesteps += self.n_batch
+
+                if callback is not None:
+                    # Only stop training if return value is False, not when it is None. This is for backwards
+                    # compatibility with callbacks that have no return statement.
+                    if callback(locals(), globals()) is False:
+                        break
 
                 if self.verbose >= 1 and (update % log_interval == 0 or update == 1):
                     explained_var = explained_variance(values, rewards)
@@ -289,12 +272,11 @@ class A2C(ActorCriticRLModel):
                     logger.record_tabular("policy_entropy", float(policy_entropy))
                     logger.record_tabular("value_loss", float(value_loss))
                     logger.record_tabular("explained_variance", float(explained_var))
-                    if len(self.ep_info_buf) > 0 and len(self.ep_info_buf[0]) > 0:
-                        logger.logkv('ep_reward_mean', safe_mean([ep_info['r'] for ep_info in self.ep_info_buf]))
-                        logger.logkv('ep_len_mean', safe_mean([ep_info['l'] for ep_info in self.ep_info_buf]))
+                    if len(ep_info_buf) > 0 and len(ep_info_buf[0]) > 0:
+                        logger.logkv('ep_reward_mean', safe_mean([ep_info['r'] for ep_info in ep_info_buf]))
+                        logger.logkv('ep_len_mean', safe_mean([ep_info['l'] for ep_info in ep_info_buf]))
                     logger.dump_tabular()
 
-        callback.on_training_end()
         return self
 
     def save(self, save_path, cloudpickle=False):
@@ -337,7 +319,7 @@ class A2CRunner(AbstractEnvRunner):
         super(A2CRunner, self).__init__(env=env, model=model, n_steps=n_steps)
         self.gamma = gamma
 
-    def _run(self):
+    def run(self):
         """
         Run a learning step of the model
 
@@ -358,16 +340,6 @@ class A2CRunner(AbstractEnvRunner):
             if isinstance(self.env.action_space, gym.spaces.Box):
                 clipped_actions = np.clip(actions, self.env.action_space.low, self.env.action_space.high)
             obs, rewards, dones, infos = self.env.step(clipped_actions)
-
-            self.model.num_timesteps += self.n_envs
-
-            if self.callback is not None:
-                # Abort training early
-                if self.callback.on_step() is False:
-                    self.continue_training = False
-                    # Return dummy values
-                    return [None] * 8
-
             for info in infos:
                 maybe_ep_info = info.get('episode')
                 if maybe_ep_info is not None:

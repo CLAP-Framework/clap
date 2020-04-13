@@ -16,7 +16,7 @@ from zzz_planning_decision_continuous_models.VEG_ITSC.Werling_trajectory import 
 from zzz_planning_decision_continuous_models.common import rviz_display, convert_ndarray_to_pathmsg, convert_path_to_ndarray
 from zzz_planning_decision_continuous_models.predict import predict
 
-class VEG_Planner(object):
+class VEG_Planner_ITSC(object):
     """
     Parameter:
         mode: ZZZ TCP connection mode (client/server)

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import copy
 import math
 
-from cubic_spline_planner import Spline2D
+from zzz_planning_decision_continuous_models.Werling.cubic_spline_planner import Spline2D
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 
@@ -32,8 +32,12 @@ TARGET_SPEED = 15.0 / 3.6  # target speed [m/s]
 D_T_S = 5.0 / 3.6  # target speed sampling length [m/s]
 N_S_SAMPLE = 2  # sampling number of target speed
 
+# RL paramter
+MIN_SPEED_RL = 3/3.6 # min speed for rl planning [m/s]
+KICK_IN_TIME = 2.25 # kick in time for rl action [s]
+
 # collision check
-OBSTACLES_CONSIDERED = 5
+OBSTACLES_CONSIDERED = 3
 ROBOT_RADIUS = 3.5  # robot radius [m]
 RADIUS_SPEED_RATIO = 0.25 # higher speed, bigger circle
 MOVE_GAP = 1.0
@@ -46,11 +50,9 @@ KD = 1.0
 KLAT = 1.0
 KLON = 1.0
 
-
 class Werling(object):
 
     def __init__(self):
-
         self.last_trajectory_array = np.c_[0, 0]
         self.last_trajectory = Frenet_path()
         self.last_trajectory_array_rule = np.c_[0, 0]
@@ -81,8 +83,7 @@ class Werling(object):
         return None
     
     def trajectory_update(self, dynamic_map):
-        if self.initialize(dynamic_map):
-            
+        if self.initialize(dynamic_map):  
             start_state = self.calculate_start_state(dynamic_map)
             generated_trajectory = self.frenet_optimal_planning(self.csp, self.c_speed, start_state)
 
@@ -116,6 +117,52 @@ class Werling(object):
         else:
             return None
 
+    def trajectory_update_RL_kick(self, dynamic_map, RLS_action):
+        
+        # emergency stop
+        if RLS_action[1] < MIN_SPEED_RL:
+            msg = DecisionTrajectory()
+            msg.trajectory = convert_ndarray_to_pathmsg(self.last_trajectory_array)
+            msg.desired_speed = 0
+            return msg
+        
+        if self.initialize(dynamic_map):
+            # rl kick in trajectory generated
+            start_state = self.calculate_start_state(dynamic_map)
+            rl_trajectory = self.frenet_optimal_planning_withRL(self.csp, self.c_speed, start_state, RLS_action)
+
+            # upcoming trajectory generated
+            middle_state = Frenet_state()
+            middle_state.s0 = rl_trajectory.s[-1]    # current course position
+            middle_state.c_d = rl_trajectory.d[-1]    # current lateral position [m]
+            middle_state.c_d_d = 0 #rl_trajectory.d_d[-1]  # current lateral speed [m/s]
+            middle_state.c_d_dd = 0 #rl_trajectory.d_dd[-1]   # current latral acceleration [m/s]
+            c_speed_s = rl_trajectory.s_d[-1]       # current speed [m/s]
+            upcoming_trajectory = self.frenet_optimal_planning(self.csp, c_speed_s, middle_state)
+
+            if upcoming_trajectory is not None:
+                connect_x = np.r_[rl_trajectory.x, upcoming_trajectory.x]
+                connect_y = np.r_[rl_trajectory.y, upcoming_trajectory.y]
+                trajectory_array_ori = np.c_[connect_x, connect_y]          
+                trajectory_array = dense_polyline2d(trajectory_array_ori,1)
+                desired_speed = RLS_action[1] #rl_trajectory.s_d[-1] 
+                self.last_trajectory_array = trajectory_array
+                self.last_trajectory = upcoming_trajectory       
+                print("----> VEG: Full Planning")
+
+            else:
+                trajectory_array_ori = np.c_[rl_trajectory.x, rl_trajectory.y]
+                trajectory_array = dense_polyline2d(trajectory_array_ori, 1)
+                desired_speed = RLS_action[1] #rl_trajectory.s_d[-1] 
+                print("----> VEG: First Segment Planning")
+                
+            msg = DecisionTrajectory()
+            msg.trajectory = convert_ndarray_to_pathmsg(trajectory_array)
+            msg.desired_speed = desired_speed
+            return msg
+        else:
+            return None
+
     def initialize(self, dynamic_map):
         self._dynamic_map = dynamic_map
         try:
@@ -129,6 +176,7 @@ class Werling(object):
                 Frenetrefx = self.ref_path[:,0]
                 Frenetrefy = self.ref_path[:,1]
                 tx, ty, tyaw, tc, self.csp = self.generate_target_course(Frenetrefx,Frenetrefy)
+
             # initialize prediction module
             self.obs_prediction = predict(dynamic_map, OBSTACLES_CONSIDERED, MAXT, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
                                         get_speed(dynamic_map.ego_state))
@@ -193,6 +241,51 @@ class Werling(object):
                 mincost = fp.cf
                 bestpath = fp
         return bestpath
+
+    def frenet_optimal_planning_withRL(self, csp, c_speed, start_state, RLS_action):
+        # this function use rl point to plan a first segment trajectory
+        s0 = start_state.s0
+        c_d = start_state.c_d
+        c_d_d = start_state.c_d_d
+        c_d_dd = start_state.c_d_dd
+
+        Ti = KICK_IN_TIME
+        print("rls_action")
+        di = RLS_action[0]
+        tv = RLS_action[1]
+        print("rls_action",RLS_action[0],RLS_action[1])
+
+        # calculate the only trajectory
+        fplist = []
+        fp = Frenet_path()
+        lat_qp = quintic_polynomial(c_d, c_d_d, c_d_dd, di, 0.0, 0.0, Ti) 
+        fp.t = [t for t in np.arange(0.0, Ti, DT)]
+        fp.d = [lat_qp.calc_point(t) for t in fp.t]                        
+        fp.d_d = [lat_qp.calc_first_derivative(t) for t in fp.t]
+        fp.d_dd = [lat_qp.calc_second_derivative(t) for t in fp.t]
+        fp.d_ddd = [lat_qp.calc_third_derivative(t) for t in fp.t]
+
+        tfp = copy.deepcopy(fp)
+        lon_qp = quartic_polynomial(s0, c_speed, 0.0, tv, 0.0, Ti)
+        tfp.s = [lon_qp.calc_point(t) for t in fp.t]
+        tfp.s_d = [lon_qp.calc_first_derivative(t) for t in fp.t]
+        tfp.s_dd = [lon_qp.calc_second_derivative(t) for t in fp.t]
+        tfp.s_ddd = [lon_qp.calc_third_derivative(t) for t in fp.t]
+
+        Jp = sum(np.power(tfp.d_ddd, 2))  # square of jerk
+        Js = sum(np.power(tfp.s_ddd, 2))  # square of jerk
+
+        # square of diff from target speed
+        ds = (TARGET_SPEED - tfp.s_d[-1])**2
+        tfp.cd = KJ * Jp + KT * Ti + KD * tfp.d[-1]**2
+        tfp.cv = KJ * Js + KT * Ti + KD * ds
+        tfp.cf = KLAT * tfp.cd + KLON * tfp.cv
+        fplist.append(tfp)    
+        
+        # convert to global
+        fplist = self.calc_global_paths(fplist, csp)
+
+        return fplist[0]
 
     def generate_target_course(self, x, y):
         csp = Spline2D(x, y)
@@ -314,7 +407,7 @@ class Werling(object):
             if not self.obs_prediction.check_collision(fplist[i]):
                 continue
 
-            okind.append(i)
+        okind.append(i)
 
         return [fplist[i] for i in okind]
 
@@ -457,4 +550,3 @@ class Frenet_state:
         self.ds = 0.0
         self.c = 0.0
 
-        

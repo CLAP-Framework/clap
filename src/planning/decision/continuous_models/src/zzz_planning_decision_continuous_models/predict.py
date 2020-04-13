@@ -6,6 +6,7 @@ import math
 
 from Werling.trajectory_structure import Frenet_path, Frenet_state
 from zzz_common.kinematics import get_frenet_state
+from zzz_driver_msgs.utils import get_speed, get_yaw
 from common import rviz_display, convert_ndarray_to_pathmsg, convert_path_to_ndarray
 from zzz_common.geometry import dense_polyline2d
 
@@ -39,7 +40,7 @@ class predict():
         
         
     def check_collision(self, fp):
-        if len(self.obs_paths) == 0 :
+        if len(self.obs_paths) == 0 or len(fp.t) < 2 :
             print("not checking collision")
             return True
             
@@ -48,14 +49,10 @@ class predict():
         fp_back = copy.deepcopy(fp)
 
         for t in range(len(fp.t)):
-            # print("fp",fp.x[t],fp.y[t],math.cos(fp.yaw[t]),math.sin(fp.yaw[t]))
             fp_front.x[t] = fp.x[t] + math.cos(fp.yaw[t]) * self.move_gap
             fp_front.y[t] = fp.y[t] + math.sin(fp.yaw[t]) * self.move_gap
-            # print("fp_front",fp_front.x[t],fp_front.y[t],fp.x[t],fp.y[t])
             fp_back.x[t] = fp.x[t] - math.cos(fp.yaw[t]) * self.move_gap
             fp_back.y[t] = fp.y[t] - math.sin(fp.yaw[t]) * self.move_gap
-            # print("fp_back",fp_back.x[t],fp_back.y[t],math.cos(fp.yaw[t]) * self.move_gap,math.sin(fp.yaw[t]) * self.move_gap)
-
 
         for obsp in self.obs_paths:
             for t in range(len(fp.t)):
@@ -66,7 +63,7 @@ class predict():
                 if d <= self.check_radius**2: 
                     return False
 
-        self.rviz_collision_checking_circle = self.rivz_element.draw_circles(fp_front, fp_back, self.check_radius)
+        # self.rviz_collision_checking_circle = self.rivz_element.draw_circles(fp_front, fp_back, self.check_radius)
         return True
 
     def found_closest_obstacles(self):
@@ -74,14 +71,17 @@ class predict():
         obs_tuples = []
         
         for obs in self.dynamic_map.jmap.obstacles: 
+            # distance
             p1 = np.array([self.dynamic_map.ego_state.pose.pose.position.x , self.dynamic_map.ego_state.pose.pose.position.y])
             p2 = np.array([obs.state.pose.pose.position.x , obs.state.pose.pose.position.y])
             p3 = p2 - p1
             p4 = math.hypot(p3[0],p3[1])
 
             obs_ffstate = get_frenet_state(obs.state, self.ref_path, self.ref_path_tangets)
-            
-            one_obs = (obs.state.pose.pose.position.x , obs.state.pose.pose.position.y , obs.state.twist.twist.linear.x , obs.state.twist.twist.linear.y , p4 , obs.state.accel.accel.linear.x, obs.state.accel.accel.linear.y)
+            obs_yaw = get_yaw(obs.state)
+            one_obs = (obs.state.pose.pose.position.x , obs.state.pose.pose.position.y , obs.state.twist.twist.linear.x ,
+                     obs.state.twist.twist.linear.y , p4 , obs_ffstate.s , -obs_ffstate.d , obs_ffstate.vs, obs_ffstate.vd, 
+                     obs.state.accel.accel.linear.x, obs.state.accel.accel.linear.y, obs_yaw)
             obs_tuples.append(one_obs)
         
         #sorted by distance
@@ -105,13 +105,13 @@ class predict():
             obsp_back = Frenet_path()
             obsp_front.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
             obsp_back.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
-            ax = 0#one_ob[5]
-            ay = 0#one_ob[6]
+            ax = 0#one_ob[9]
+            ay = 0#one_ob[10]
 
             for i in range(len(obsp_front.t)):
                 vx = one_ob[2] + ax * delta_t * i
                 vy = one_ob[3] + ax * delta_t * i
-                yaw = math.atan2(vy, vx)   #only for constant prediction
+                yaw = one_ob[11]   #only for constant prediction
 
                 obspx = one_ob[0] + i * delta_t * vx
                 obspy = one_ob[1] + i * delta_t * vy
@@ -123,6 +123,8 @@ class predict():
                 
             obs_paths.append(obsp_front)
             obs_paths.append(obsp_back)
+        self.rviz_collision_checking_circle = self.rivz_element.draw_obs_circles(obs_paths, self.check_radius)
+
 
         return obs_paths
 

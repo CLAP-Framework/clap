@@ -94,6 +94,59 @@ class rviz_display():
 
         return tempmarkerarray
 
+    def draw_obs_circles(self, fplist, radius):
+        if fplist is None:
+            return None
+        tempmarkerarray = MarkerArray()
+        count = 0
+
+        for fp in fplist:
+            tempmarker = Marker() 
+            tempmarker.header.frame_id = "map"
+            tempmarker.header.stamp = rospy.Time.now()
+            tempmarker.ns = "zzz/decision"
+            tempmarker.id = count
+            tempmarker.type = Marker.CYLINDER
+            tempmarker.action = Marker.ADD
+            tempmarker.scale.x = radius
+            tempmarker.scale.y = radius
+            tempmarker.scale.z = radius
+            tempmarker.color.r = 1.0
+            tempmarker.color.g = 0.0
+            tempmarker.color.b = 0.5
+            tempmarker.color.a = 0.5
+            tempmarker.lifetime = rospy.Duration(1.0)
+            tempmarker.lifetime = rospy.Duration(1.0)
+            for t in range(len(fp.t)):
+                tempmarker.pose.position.x = fp.x[0]
+                tempmarker.pose.position.y = fp.y[0]
+                tempmarkerarray.markers.append(tempmarker)
+            count = count + 1
+        return tempmarkerarray
+    
+    def draw_kick_in_circles(self, x, y, radius):
+        tempmarkerarray = MarkerArray()
+
+        tempmarker = Marker() 
+        tempmarker.header.frame_id = "map"
+        tempmarker.header.stamp = rospy.Time.now()
+        tempmarker.ns = "zzz/decision"
+        tempmarker.id = 1
+        tempmarker.type = Marker.CYLINDER
+        tempmarker.action = Marker.ADD
+        tempmarker.scale.x = radius
+        tempmarker.scale.y = radius
+        tempmarker.scale.z = radius
+        tempmarker.color.r = 1.0
+        tempmarker.color.g = 0.0
+        tempmarker.color.b = 0.0
+        tempmarker.color.a = 0.0
+        tempmarker.lifetime = rospy.Duration(1.0)
+        tempmarker.lifetime = rospy.Duration(1.0)
+        tempmarker.pose.position.x = x
+        tempmarker.pose.position.y = y
+        tempmarkerarray.markers.append(tempmarker)
+        return tempmarkerarray
 
 # common used functions
 

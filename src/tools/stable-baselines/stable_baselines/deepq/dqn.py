@@ -11,10 +11,8 @@ from stable_baselines.common.schedules import LinearSchedule
 from stable_baselines.deepq.build_graph import build_train
 from stable_baselines.deepq.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
 from stable_baselines.deepq.policies import DQNPolicy
-#from stable_baselines.a2c.utils import total_episode_reward_logger
+from stable_baselines.a2c.utils import total_episode_reward_logger
 
-
-from stable_baselines.deepq.RLS import RLS
 
 class DQN(OffPolicyRLModel):
     """
@@ -58,7 +56,7 @@ class DQN(OffPolicyRLModel):
         If None, the number of cpu of the current machine will be used.
     """
     def __init__(self, policy, env, gamma=0.99, learning_rate=5e-4, buffer_size=50000, exploration_fraction=0.1,
-                 exploration_final_eps=0.02, exploration_initial_eps=1.0, train_freq=1, batch_size=16, double_q=True,
+                 exploration_final_eps=0.02, exploration_initial_eps=1.0, train_freq=1, batch_size=32, double_q=True,
                  learning_starts=1000, target_network_update_freq=500, prioritized_replay=False,
                  prioritized_replay_alpha=0.6, prioritized_replay_beta0=0.4, prioritized_replay_beta_iters=None,
                  prioritized_replay_eps=1e-6, param_noise=False,
@@ -102,14 +100,6 @@ class DQN(OffPolicyRLModel):
         self.params = None
         self.summary = None
         self.episode_reward = None
-
-        self.RLS = RLS(visited_times_thres = 30,   #FIXME(zhcao)
-                    is_training = True,
-                    debug = True,
-                    save_new_data = True,
-                    create_new_train_file = True,
-                    create_new_record_file = True,
-                    save_new_driving_data = True)
 
         if _init_setup_model:
             self.setup_model()
@@ -224,16 +214,11 @@ class DQN(OffPolicyRLModel):
                     kwargs['update_param_noise_scale'] = True
                 with self.sess.as_default():
                     action = self.act(np.array(obs)[None], update_eps=update_eps, **kwargs)[0]
-
-                env_action = self.RLS.act_train(obs, action)   #FIXME(zhcao)
-                
-                # print("--------action", env_action)
-                # env_action = action
+                env_action = action
                 reset = False
                 new_obs, rew, done, info = self.env.step(env_action)
                 # Store transition in the replay buffer.
-                self.replay_buffer.add(obs, env_action, rew, new_obs, float(done))  # FIXME(zhcao) The env_action was action. Maybe Type is different 
-                self.RLS.add_data(obs, env_action, rew, new_obs, float(done))   #FIXME(zhcao)
+                self.replay_buffer.add(obs, action, rew, new_obs, float(done))
                 obs = new_obs
 
                 if writer is not None:
@@ -244,9 +229,9 @@ class DQN(OffPolicyRLModel):
 
                 episode_rewards[-1] += rew
                 if done:
-                    # maybe_is_success = info.get('is_success')
-                    # if maybe_is_success is not None:
-                    #     episode_successes.append(float(maybe_is_success))
+                    maybe_is_success = info.get('is_success')
+                    if maybe_is_success is not None:
+                        episode_successes.append(float(maybe_is_success))
                     if not isinstance(self.env, VecEnv):
                         obs = self.env.reset()
                     episode_rewards.append(0.0)
@@ -315,9 +300,6 @@ class DQN(OffPolicyRLModel):
                     logger.dump_tabular()
 
                 self.num_timesteps += 1
-
-                if self.num_timesteps % 30000 == 0:
-                    self.save("cz_deepq_0318")
 
         return self
 

@@ -1,17 +1,29 @@
 import sys
 import time
+from collections import deque
 import warnings
 
 import numpy as np
 import tensorflow as tf
 
+from stable_baselines.a2c.utils import total_episode_reward_logger
 from stable_baselines.common import tf_util, OffPolicyRLModel, SetVerbosity, TensorboardWriter
 from stable_baselines.common.vec_env import VecEnv
-from stable_baselines.common.math_util import safe_mean, unscale_action, scale_action
-from stable_baselines.common.schedules import get_schedule_fn
-from stable_baselines.common.buffers import ReplayBuffer
+from stable_baselines.common.math_util import unscale_action, scale_action
+from stable_baselines.deepq.replay_buffer import ReplayBuffer
+from stable_baselines.ppo2.ppo2 import safe_mean, get_schedule_fn
 from stable_baselines.sac.policies import SACPolicy
 from stable_baselines import logger
+
+
+def get_vars(scope):
+    """
+    Alias for get_trainable_vars
+
+    :param scope: (str)
+    :return: [tf Variable]
+    """
+    return tf_util.get_trainable_vars(scope)
 
 
 class SAC(OffPolicyRLModel):
@@ -93,6 +105,7 @@ class SAC(OffPolicyRLModel):
         self.value_fn = None
         self.graph = None
         self.replay_buffer = None
+        self.episode_reward = None
         self.sess = None
         self.tensorboard_log = tensorboard_log
         self.verbose = verbose
@@ -254,14 +267,14 @@ class SAC(OffPolicyRLModel):
                     # Policy train op
                     # (has to be separate from value train op, because min_qf_pi appears in policy_loss)
                     policy_optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_ph)
-                    policy_train_op = policy_optimizer.minimize(policy_loss, var_list=tf_util.get_trainable_vars('model/pi'))
+                    policy_train_op = policy_optimizer.minimize(policy_loss, var_list=get_vars('model/pi'))
 
                     # Value train op
                     value_optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_ph)
-                    values_params = tf_util.get_trainable_vars('model/values_fn')
+                    values_params = get_vars('model/values_fn')
 
-                    source_params = tf_util.get_trainable_vars("model/values_fn/vf")
-                    target_params = tf_util.get_trainable_vars("target/values_fn/vf")
+                    source_params = get_vars("model/values_fn/vf")
+                    target_params = get_vars("target/values_fn/vf")
 
                     # Polyak averaging for target variables
                     self.target_update_op = [
@@ -305,8 +318,8 @@ class SAC(OffPolicyRLModel):
                     tf.summary.scalar('learning_rate', tf.reduce_mean(self.learning_rate_ph))
 
                 # Retrieve parameters that must be saved
-                self.params = tf_util.get_trainable_vars("model")
-                self.target_params = tf_util.get_trainable_vars("target/values_fn/vf")
+                self.params = get_vars("model")
+                self.target_params = get_vars("target/values_fn/vf")
 
                 # Initialize Variables and target network
                 with self.sess.as_default():
@@ -317,7 +330,7 @@ class SAC(OffPolicyRLModel):
 
     def _train_step(self, step, writer, learning_rate):
         # Sample a batch from the replay buffer
-        batch = self.replay_buffer.sample(self.batch_size, env=self._vec_normalize_env)
+        batch = self.replay_buffer.sample(self.batch_size)
         batch_obs, batch_actions, batch_rewards, batch_next_obs, batch_dones = batch
 
         feed_dict = {
@@ -357,7 +370,6 @@ class SAC(OffPolicyRLModel):
               log_interval=4, tb_log_name="SAC", reset_num_timesteps=True, replay_wrapper=None):
 
         new_tb_log = self._init_num_timesteps(reset_num_timesteps)
-        callback = self._init_callback(callback)
 
         if replay_wrapper is not None:
             self.replay_buffer = replay_wrapper(self.replay_buffer)
@@ -378,17 +390,18 @@ class SAC(OffPolicyRLModel):
             if self.action_noise is not None:
                 self.action_noise.reset()
             obs = self.env.reset()
-            # Retrieve unnormalized observation for saving into the buffer
-            if self._vec_normalize_env is not None:
-                obs_ = self._vec_normalize_env.get_original_obs().squeeze()
-
+            self.episode_reward = np.zeros((1,))
+            ep_info_buf = deque(maxlen=100)
             n_updates = 0
             infos_values = []
 
-            callback.on_training_start(locals(), globals())
-            callback.on_rollout_start()
-
             for step in range(total_timesteps):
+                if callback is not None:
+                    # Only stop training if return value is False, not when it is None. This is for backwards
+                    # compatibility with callbacks that have no return statement.
+                    if callback(locals(), globals()) is False:
+                        break
+
                 # Before training starts, randomly sample actions
                 # from a uniform distribution for better exploration.
                 # Afterwards, use the learned policy
@@ -411,43 +424,23 @@ class SAC(OffPolicyRLModel):
 
                 new_obs, reward, done, info = self.env.step(unscaled_action)
 
-                self.num_timesteps += 1
-
-                # Only stop training if return value is False, not when it is None. This is for backwards
-                # compatibility with callbacks that have no return statement.
-                if callback.on_step() is False:
-                    break
-
-                # Store only the unnormalized version
-                if self._vec_normalize_env is not None:
-                    new_obs_ = self._vec_normalize_env.get_original_obs().squeeze()
-                    reward_ = self._vec_normalize_env.get_original_reward().squeeze()
-                else:
-                    # Avoid changing the original ones
-                    obs_, new_obs_, reward_ = obs, new_obs, reward
-
                 # Store transition in the replay buffer.
-                self.replay_buffer.add(obs_, action, reward_, new_obs_, float(done))
+                self.replay_buffer.add(obs, action, reward, new_obs, float(done))
                 obs = new_obs
-                # Save the unnormalized observation
-                if self._vec_normalize_env is not None:
-                    obs_ = new_obs_
 
                 # Retrieve reward and episode length if using Monitor wrapper
                 maybe_ep_info = info.get('episode')
                 if maybe_ep_info is not None:
-                    self.ep_info_buf.extend([maybe_ep_info])
+                    ep_info_buf.extend([maybe_ep_info])
 
                 if writer is not None:
                     # Write reward per episode to tensorboard
-                    ep_reward = np.array([reward_]).reshape((1, -1))
+                    ep_reward = np.array([reward]).reshape((1, -1))
                     ep_done = np.array([done]).reshape((1, -1))
-                    tf_util.total_episode_reward_logger(self.episode_reward, ep_reward,
-                                                        ep_done, writer, self.num_timesteps)
+                    self.episode_reward = total_episode_reward_logger(self.episode_reward, ep_reward,
+                                                                      ep_done, writer, self.num_timesteps)
 
                 if step % self.train_freq == 0:
-                    callback.on_rollout_end()
-
                     mb_infos_vals = []
                     # Update policy, critics and target networks
                     for grad_step in range(self.gradient_steps):
@@ -470,9 +463,7 @@ class SAC(OffPolicyRLModel):
                     if len(mb_infos_vals) > 0:
                         infos_values = np.mean(mb_infos_vals, axis=0)
 
-                    callback.on_rollout_start()
-
-                episode_rewards[-1] += reward_
+                episode_rewards[-1] += reward
                 if done:
                     if self.action_noise is not None:
                         self.action_noise.reset()
@@ -490,14 +481,15 @@ class SAC(OffPolicyRLModel):
                     mean_reward = round(float(np.mean(episode_rewards[-101:-1])), 1)
 
                 num_episodes = len(episode_rewards)
+                self.num_timesteps += 1
                 # Display training infos
                 if self.verbose >= 1 and done and log_interval is not None and len(episode_rewards) % log_interval == 0:
                     fps = int(step / (time.time() - start_time))
                     logger.logkv("episodes", num_episodes)
                     logger.logkv("mean 100 episode reward", mean_reward)
-                    if len(self.ep_info_buf) > 0 and len(self.ep_info_buf[0]) > 0:
-                        logger.logkv('ep_rewmean', safe_mean([ep_info['r'] for ep_info in self.ep_info_buf]))
-                        logger.logkv('eplenmean', safe_mean([ep_info['l'] for ep_info in self.ep_info_buf]))
+                    if len(ep_info_buf) > 0 and len(ep_info_buf[0]) > 0:
+                        logger.logkv('ep_rewmean', safe_mean([ep_info['r'] for ep_info in ep_info_buf]))
+                        logger.logkv('eplenmean', safe_mean([ep_info['l'] for ep_info in ep_info_buf]))
                     logger.logkv("n_updates", n_updates)
                     logger.logkv("current_lr", current_lr)
                     logger.logkv("fps", fps)
@@ -511,7 +503,6 @@ class SAC(OffPolicyRLModel):
                     logger.dumpkvs()
                     # Reset infos:
                     infos_values = []
-            callback.on_training_end()
             return self
 
     def action_probability(self, observation, state=None, mask=None, actions=None, logp=False):

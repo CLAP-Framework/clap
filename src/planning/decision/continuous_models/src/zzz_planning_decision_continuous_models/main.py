@@ -10,20 +10,11 @@ from zzz_driver_msgs.utils import get_speed, get_yaw
 
 from predict import predict
 
-
-
-
-
 class MainDecision(object):
     def __init__(self, trajectory_planner=None):
         self._dynamic_map_buffer = None
         self._trajectory_planner = trajectory_planner
 
-        self.solve = False
-        self.Planning_type = 1
-
-
-        
     def receive_dynamic_map(self, dynamic_map):
         self._dynamic_map_buffer = dynamic_map
 
@@ -36,33 +27,11 @@ class MainDecision(object):
             return None
         dynamic_map = self._dynamic_map_buffer
 
-        # if self.Planning_type == 1:
         if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
             self._trajectory_planner.clear_buff(dynamic_map)
             return None
         else:
             return self._trajectory_planner.trajectory_update(dynamic_map)
-
-        # elif self.Planning_type == 2:            
-        #     # Should use lane model
-        #     if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
-        #         if self.solve == False:
-        #             self._trajectory_planner.clear_buff(dynamic_map)
-        #             self.solve = True
-        #         return None
-        #     elif dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
-        #         self.solve = False
-        #         try:
-        #             trajectory, desired_speed = self._trajectory_planner.trajectory_update(dynamic_map)
-        #             if trajectory is not None:
-        #                 msg = DecisionTrajectory()
-        #                 msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory)
-        #                 msg.desired_speed = desired_speed
-        #                 return msg
-        #             else:
-        #                 return None
-        #         except:
-        #             return None
 
         
 

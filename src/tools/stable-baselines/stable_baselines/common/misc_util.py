@@ -55,13 +55,3 @@ def mpi_rank_or_zero():
         return mpi4py.MPI.COMM_WORLD.Get_rank()
     except ImportError:
         return 0
-
-
-def flatten_lists(listoflists):
-    """
-    Flatten a python list of list
-
-    :param listoflists: (list(list))
-    :return: (list)
-    """
-    return [el for list_ in listoflists for el in list_]
