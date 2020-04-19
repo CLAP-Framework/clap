@@ -67,18 +67,18 @@ class MainController():
         
         ego_pose = self.ego_state.pose.pose
 
-        with self._trajectory_lock:
-            target_speed = self.desired_speed
-            trajectory = self.desired_trajectory
-            current_speed = get_speed(self.ego_state)
+        # with self._trajectory_lock:
+        target_speed = self.desired_speed
+        trajectory = self.desired_trajectory
+        current_speed = get_speed(self.ego_state)
 
-            accel = self._lon_controller.run_step(target_speed, current_speed)
-            steer = self._lat_controller.run_step(ego_pose, trajectory, current_speed)
+        accel = self._lon_controller.run_step(target_speed, current_speed)
+        steer = self._lat_controller.run_step(ego_pose, trajectory, current_speed)
 
-            rospy.logdebug("accel = %f, steer = %f ***", accel, steer)
+        rospy.logdebug("accel = %f, steer = %f ***", accel, steer)
 
-            control_msg = ControlCommand()
-            control_msg.accel = accel
-            control_msg.steer = steer
+        control_msg = ControlCommand()
+        control_msg.accel = accel
+        control_msg.steer = steer
 
-            return control_msg
+        return control_msg

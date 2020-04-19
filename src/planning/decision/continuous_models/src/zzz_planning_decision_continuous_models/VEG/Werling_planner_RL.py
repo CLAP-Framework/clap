@@ -90,7 +90,7 @@ class Werling(object):
             if generated_trajectory is not None:
                 desired_speed = generated_trajectory.s_d[-1]
                 trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
-                trajectory_array = dense_polyline2d(trajectory_array_ori,1)
+                trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori,1)
                 self.last_trajectory_array_rule = trajectory_array
                 self.last_trajectory_rule = generated_trajectory              
                 print("----> Werling: Successful Planning")
@@ -122,8 +122,12 @@ class Werling(object):
         # emergency stop
         if RLS_action[1] < MIN_SPEED_RL:
             msg = DecisionTrajectory()
-            msg.trajectory = convert_ndarray_to_pathmsg(self.last_trajectory_array)
-            msg.desired_speed = 0
+            if len(self.last_trajectory_array) > 5:
+                msg.trajectory = convert_ndarray_to_pathmsg(self.last_trajectory_array)
+                msg.desired_speed = 0
+            else:
+                msg.trajectory = convert_ndarray_to_pathmsg(self.ref_path)
+                msg.desired_speed = 0
             return msg
         
         if self.initialize(dynamic_map):
@@ -144,7 +148,7 @@ class Werling(object):
                 connect_x = np.r_[rl_trajectory.x, upcoming_trajectory.x]
                 connect_y = np.r_[rl_trajectory.y, upcoming_trajectory.y]
                 trajectory_array_ori = np.c_[connect_x, connect_y]          
-                trajectory_array = dense_polyline2d(trajectory_array_ori,1)
+                trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori,1)
                 desired_speed = RLS_action[1] #rl_trajectory.s_d[-1] 
                 self.last_trajectory_array = trajectory_array
                 self.last_trajectory = upcoming_trajectory       
@@ -152,7 +156,7 @@ class Werling(object):
 
             else:
                 trajectory_array_ori = np.c_[rl_trajectory.x, rl_trajectory.y]
-                trajectory_array = dense_polyline2d(trajectory_array_ori, 1)
+                trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori, 1)
                 desired_speed = RLS_action[1] #rl_trajectory.s_d[-1] 
                 print("----> VEG: First Segment Planning")
                 
@@ -407,7 +411,7 @@ class Werling(object):
             if not self.obs_prediction.check_collision(fplist[i]):
                 continue
 
-        okind.append(i)
+            okind.append(i)
 
         return [fplist[i] for i in okind]
 

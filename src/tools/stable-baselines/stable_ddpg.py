@@ -7,9 +7,9 @@ from stable_baselines.ddpg.policies import MlpPolicy
 from stable_baselines.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise, AdaptiveParamNoiseSpec
 from stable_baselines import DDPG
 
-log_path="/home/zwt/zzz/data/veg/log/ddpg_0416"
-load_path="/home/zwt/zzz/data/veg/models/ddpg_0416"
-save_path="/home/zwt/zzz/data/veg/models/ddpg_0416"
+log_path="/home/zwt/zzz/data/veg/log/ddpg_0419"
+load_path="/home/zwt/zzz/data/veg/models/ddpg_0419"
+save_path="/home/zwt/zzz/data/veg/models/ddpg_0419"
 
 
 

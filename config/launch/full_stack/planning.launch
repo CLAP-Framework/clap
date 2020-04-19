@@ -29,23 +29,23 @@
           name="nearest_locator" output="screen" ns="/zzz/cognition">
         <param name="objects_topic" value="$(arg objects_topic)"/>
     </node>
-    <node pkg="zzz_cognition_object_locator" type="driving_space"  respawn="true"
+    <!-- <node pkg="zzz_cognition_object_locator" type="driving_space"  respawn="true"
           name="driving_space" output="screen" ns="/zzz/cognition">
         <param name="objects_topic" value="$(arg objects_topic)"/>
-    </node>
+    </node> -->
     <node pkg="zzz_cognition_object_locator" type="put_buffer"  respawn="true"
           name="put_buffer" output="screen" ns="/zzz/cognition">
         <param name="reference_path_topic" value="$(arg waypoint_topic)"/>
     </node>
 
-    <!-- <node pkg="zzz_planning_decision_continuous_models" type="rls_train" 
+    <node pkg="zzz_planning_decision_continuous_models" type="rls_train" 
           name="rls_train" output="screen" ns="/zzz/planning">
-    </node> -->
-
-
-    <node pkg="zzz_planning_decision_continuous_models" type="continuous_utility" respawn="true"
-          name="continuous_utility" output="screen" ns="/zzz/planning">
     </node>
+
+
+    <!-- <node pkg="zzz_planning_decision_continuous_models" type="continuous_utility" respawn="true"
+          name="continuous_utility" output="screen" ns="/zzz/planning">
+    </node> -->
 
 
     <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"  respawn="true"

@@ -214,7 +214,7 @@ class VEG_Planner(object):
         print("rl_q", rl_q)
         print("rule_q", rule_q)
 
-        if rl_q - rule_q > THRESHOLD:
+        if rl_q - rule_q > THRESHOLD and rl_action[0] < 2333 and rl_action[1] < 2333:
             rl_action[1] = rl_action[1] + ACTION_SPACE_SYMMERTY
             self.kick_in_signal = self.rivz_element.draw_kick_in_circles(self._dynamic_map.ego_state.pose.pose.position.x,
                         self._dynamic_map.ego_state.pose.pose.position.y, 3.5)

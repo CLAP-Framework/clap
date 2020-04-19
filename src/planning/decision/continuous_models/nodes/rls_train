@@ -26,7 +26,7 @@ class RLSNode(object):
             RVIZ_predi_trajectory_topic="predi_trajectory_path", 
             RVIZ_collision_circle_topic="collision_circle", 
             RVIZ_kick_in_signal_topic="kick_in_signal",
-            hz = 5,
+            hz = 2,
         )
         self._rate = rospy.Rate(params.hz)
         

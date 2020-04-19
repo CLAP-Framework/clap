@@ -89,7 +89,7 @@ class Werling(object):
             if generated_trajectory is not None:
                 desired_speed = generated_trajectory.s_d[-1]
                 trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
-                trajectory_array = dense_polyline2d(trajectory_array_ori,1)
+                trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori,1)
                 self.last_trajectory_array_rule = trajectory_array
                 self.last_trajectory_rule = generated_trajectory              
                 print("----> Werling: Successful Planning")

@@ -47,21 +47,23 @@ class predict():
         # two circles for a vehicle
         fp_front = copy.deepcopy(fp)
         fp_back = copy.deepcopy(fp)
+        try:
+            for t in range(len(fp.yaw)):
+                fp_front.x[t] = fp.x[t] + math.cos(fp.yaw[t]) * self.move_gap
+                fp_front.y[t] = fp.y[t] + math.sin(fp.yaw[t]) * self.move_gap
+                fp_back.x[t] = fp.x[t] - math.cos(fp.yaw[t]) * self.move_gap
+                fp_back.y[t] = fp.y[t] - math.sin(fp.yaw[t]) * self.move_gap
 
-        for t in range(len(fp.t)):
-            fp_front.x[t] = fp.x[t] + math.cos(fp.yaw[t]) * self.move_gap
-            fp_front.y[t] = fp.y[t] + math.sin(fp.yaw[t]) * self.move_gap
-            fp_back.x[t] = fp.x[t] - math.cos(fp.yaw[t]) * self.move_gap
-            fp_back.y[t] = fp.y[t] - math.sin(fp.yaw[t]) * self.move_gap
-
-        for obsp in self.obs_paths:
-            for t in range(len(fp.t)):
-                d = (obsp.x[t] - fp_front.x[t])**2 + (obsp.y[t] - fp_front.y[t])**2
-                if d <= self.check_radius**2: 
-                    return False
-                d = (obsp.x[t] - fp_back.x[t])**2 + (obsp.y[t] - fp_back.y[t])**2
-                if d <= self.check_radius**2: 
-                    return False
+            for obsp in self.obs_paths:
+                for t in range(len(fp.t)):
+                    d = (obsp.x[t] - fp_front.x[t])**2 + (obsp.y[t] - fp_front.y[t])**2
+                    if d <= self.check_radius**2: 
+                        return False
+                    d = (obsp.x[t] - fp_back.x[t])**2 + (obsp.y[t] - fp_back.y[t])**2
+                    if d <= self.check_radius**2: 
+                        return False
+        except:
+            print("collision check fail",len(fp.yaw),len(fp_back.x),len(fp_front.x))
 
         # self.rviz_collision_checking_circle = self.rivz_element.draw_circles(fp_front, fp_back, self.check_radius)
         return True
