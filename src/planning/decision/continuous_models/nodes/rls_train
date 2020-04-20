@@ -57,7 +57,7 @@ class RLSNode(object):
             try:
                 self.pub_rviz()
             except:
-                print("rviz_display failed")
+                rospy.logdebug("rviz_display failed")
                 
             self._rate.sleep()
         

@@ -64,7 +64,7 @@ class VEG_Planner(object):
             self.ref_path_tangets = np.zeros(len(self.ref_path))
             return True
         except:
-            print("------> VEG: Initialize fail ")
+            rospy.logdebug("------> VEG: Initialize fail ")
             return False
 
     def clear_buff(self, dynamic_map):

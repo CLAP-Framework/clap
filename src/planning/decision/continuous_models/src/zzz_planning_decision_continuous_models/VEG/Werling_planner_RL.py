@@ -93,18 +93,18 @@ class Werling(object):
                 trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori,1)
                 self.last_trajectory_array_rule = trajectory_array
                 self.last_trajectory_rule = generated_trajectory              
-                print("----> Werling: Successful Planning")
+                rospy.logdebug("----> Werling: Successful Planning")
             
             elif len(self.last_trajectory_array_rule) > 5 and self.c_speed > 1:
                 trajectory_array = self.last_trajectory_array_rule
                 generated_trajectory = self.last_trajectory_rule
                 desired_speed =  0 
-                print("----> Werling: Fail to find a solution")
+                rospy.logdebug("----> Werling: Fail to find a solution")
 
             else:
                 trajectory_array =  self.ref_path
                 desired_speed = 0
-                print("----> Werling: Output ref path")           
+                rospy.logdebug("----> Werling: Output ref path")           
             
             msg = DecisionTrajectory()
             msg.trajectory = convert_ndarray_to_pathmsg(trajectory_array)
@@ -152,13 +152,13 @@ class Werling(object):
                 desired_speed = RLS_action[1] #rl_trajectory.s_d[-1] 
                 self.last_trajectory_array = trajectory_array
                 self.last_trajectory = upcoming_trajectory       
-                print("----> VEG: Full Planning")
+                rospy.logdebug("----> VEG: Full Planning")
 
             else:
                 trajectory_array_ori = np.c_[rl_trajectory.x, rl_trajectory.y]
                 trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori, 1)
                 desired_speed = RLS_action[1] #rl_trajectory.s_d[-1] 
-                print("----> VEG: First Segment Planning")
+                rospy.logdebug("----> VEG: First Segment Planning")
                 
             msg = DecisionTrajectory()
             msg.trajectory = convert_ndarray_to_pathmsg(trajectory_array)
@@ -187,7 +187,7 @@ class Werling(object):
             return True
 
         except:
-            print("------> Werling: Initialize fail ")
+            rospy.logdebug("------> Werling: Initialize fail ")
             return False
 
     def calculate_start_state(self, dynamic_map):
@@ -220,22 +220,30 @@ class Werling(object):
         return start_state
 
     def frenet_optimal_planning(self, csp, c_speed, start_state):
-        now00 = rospy.get_rostime()
+        t0 = rospy.get_rostime().to_sec()
+
 
         fplist = self.calc_frenet_paths(c_speed, start_state)
-        now0 = rospy.get_rostime()
-        print("-----------------------------frenet time consume inside111",now0.to_sec() - now00.to_sec())
-        print("-----------------------------fplist",len(fplist))
+        t1 = rospy.get_rostime().to_sec()
+        time_consume1 = t1 - t0
+        candidate_len1 = len(fplist)
+
+
         fplist = self.calc_global_paths(fplist, csp)
-        now1 = rospy.get_rostime()
-        print("-----------------------------frenet time consume inside222",now1.to_sec() - now0.to_sec())
-        print("-----------------------------fplist",len(fplist))
+        t2 = rospy.get_rostime().to_sec()
+        time_consume2 = t2 - t1
+        candidate_len2 = len(fplist)
+
 
         fplist = self.check_paths(fplist)
-        now2 = rospy.get_rostime()
-        print("-----------------------------frenet time consume inside333",now2.to_sec() - now1.to_sec())
-        print("-----------------------------fplist",len(fplist))
-        self.all_trajectory = fplist
+        t3 = rospy.get_rostime().to_sec()
+        time_consume3 = t3 - t2
+        candidate_len3 = len(fplist)
+
+        rospy.logdebug("frenet time consume step1: %.1f(candidate: %d), step2: %.1f(candidate: %d), step3: %.1f(candidate: %d)",
+                                            time_consume1, candidate_len1,
+                                            time_consume2, candidate_len2,
+                                            time_consume3, candidate_len3)
 
         # find minimum cost path
         mincost = float("inf")
@@ -254,7 +262,6 @@ class Werling(object):
         c_d_dd = start_state.c_d_dd
 
         Ti = KICK_IN_TIME
-        print("rls_action")
         di = RLS_action[0]
         tv = RLS_action[1]
         print("rls_action",RLS_action[0],RLS_action[1])
@@ -400,13 +407,13 @@ class Werling(object):
         for i, _ in enumerate(fplist):
 
             if any([v > MAX_SPEED for v in fplist[i].s_d]):  # Max speed check
-                print("exceeding max speed")
+                # rospy.logdebug("exceeding max speed")
                 continue
             elif any([abs(a) > MAX_ACCEL for a in fplist[i].s_dd]):  # Max accel check
-                print("exceeding max accel")
+                # rospy.logdebug("exceeding max accel")
                 continue
             elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
-                print("exceeding max curvature")
+                # rospy.logdebug("exceeding max curvature")
                 continue
             if not self.obs_prediction.check_collision(fplist[i]):
                 continue
