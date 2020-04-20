@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import copy
 import math
 
-from Werling import cubic_spline_planner
+from zzz_planning_decision_continuous_models.Werling import cubic_spline_planner
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 

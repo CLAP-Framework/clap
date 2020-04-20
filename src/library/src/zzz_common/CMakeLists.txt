@@ -5,6 +5,7 @@ find_package(PythonExtensions REQUIRED)
 find_package(Cython REQUIRED)
 find_package(NumPy REQUIRED)
 
+
 include_directories(${NumPy_INCLUDE_DIR})
 add_cython_target(geometry CXX)
 add_library(geometry MODULE ${geometry})

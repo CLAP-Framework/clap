@@ -4,33 +4,14 @@ import warnings
 import numpy as np
 import tensorflow as tf
 from gym.spaces import Discrete, Box
-from collections import deque
 
 from stable_baselines import logger
-from stable_baselines.common.schedules import Scheduler
-from stable_baselines.common.tf_util import batch_to_seq, seq_to_batch, \
-    check_shape, avg_norm, gradient_add, q_explained_variance, total_episode_reward_logger
+from stable_baselines.a2c.utils import batch_to_seq, seq_to_batch, Scheduler, EpisodeStats, \
+    get_by_index, check_shape, avg_norm, gradient_add, q_explained_variance, total_episode_reward_logger
 from stable_baselines.acer.buffer import Buffer
 from stable_baselines.common import ActorCriticRLModel, tf_util, SetVerbosity, TensorboardWriter
 from stable_baselines.common.runners import AbstractEnvRunner
 from stable_baselines.common.policies import ActorCriticPolicy, RecurrentActorCriticPolicy
-
-
-# For ACER
-def get_by_index(input_tensor, idx):
-    """
-    Return the input tensor, offset by a certain value
-
-    :param input_tensor: (TensorFlow Tensor) The input tensor
-    :param idx: (int) The index offset
-    :return: (TensorFlow Tensor) the offset tensor
-    """
-    assert len(input_tensor.get_shape()) == 2
-    assert len(idx.get_shape()) == 1
-    idx_flattened = tf.range(0, input_tensor.shape[0], dtype=tf.int64) * input_tensor.shape[1] + idx
-    offset_tensor = tf.gather(tf.reshape(input_tensor, [-1]),  # flatten input
-                              idx_flattened)  # use flattened indices
-    return offset_tensor
 
 
 def strip(var, n_envs, n_steps, flat=False):
@@ -77,64 +58,6 @@ def q_retrace(rewards, dones, q_i, values, rho_i, n_envs, n_steps, gamma):
     qrets = qrets[::-1]
     qret = seq_to_batch(qrets, flat=True)
     return qret
-
-
-class EpisodeStats:
-    def __init__(self, n_steps, n_envs):
-        """
-        Calculates the episode statistics
-
-        :param n_steps: (int) The number of steps to run for each environment
-        :param n_envs: (int) The number of environments
-        """
-        self.episode_rewards = []
-        for _ in range(n_envs):
-            self.episode_rewards.append([])
-        self.len_buffer = deque(maxlen=40)  # rolling buffer for episode lengths
-        self.rewbuffer = deque(maxlen=40)  # rolling buffer for episode rewards
-        self.n_steps = n_steps
-        self.n_envs = n_envs
-
-    def feed(self, rewards, masks):
-        """
-        Update the latest reward and mask
-
-        :param rewards: ([float]) The new rewards for the new step
-        :param masks: ([float]) The new masks for the new step
-        """
-        rewards = np.reshape(rewards, [self.n_envs, self.n_steps])
-        masks = np.reshape(masks, [self.n_envs, self.n_steps])
-        for i in range(0, self.n_envs):
-            for j in range(0, self.n_steps):
-                self.episode_rewards[i].append(rewards[i][j])
-                if masks[i][j]:
-                    reward_length = len(self.episode_rewards[i])
-                    reward_sum = sum(self.episode_rewards[i])
-                    self.len_buffer.append(reward_length)
-                    self.rewbuffer.append(reward_sum)
-                    self.episode_rewards[i] = []
-
-    def mean_length(self):
-        """
-        Returns the average length of each episode
-
-        :return: (float)
-        """
-        if self.len_buffer:
-            return np.mean(self.len_buffer)
-        else:
-            return 0  # on the first params dump, no episodes are finished
-
-    def mean_reward(self):
-        """
-        Returns the average reward of each episode
-
-        :return: (float)
-        """
-        if self.rewbuffer:
-            return np.mean(self.rewbuffer)
-        else:
-            return 0
 
 
 class ACER(ActorCriticRLModel):
@@ -189,10 +112,9 @@ class ACER(ActorCriticRLModel):
                  _init_setup_model=True, policy_kwargs=None,
                  full_tensorboard_log=False, seed=None, n_cpu_tf_sess=1):
 
-        if num_procs is not None:
-            warnings.warn("num_procs will be removed in a future version (v3.x.x) "
-                          "use n_cpu_tf_sess instead", DeprecationWarning)
-            n_cpu_tf_sess = num_procs
+        super(ACER, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
+                                   _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs,
+                                   seed=seed, n_cpu_tf_sess=n_cpu_tf_sess)
 
         self.n_steps = n_steps
         self.replay_ratio = replay_ratio
@@ -213,32 +135,35 @@ class ACER(ActorCriticRLModel):
         self.tensorboard_log = tensorboard_log
         self.full_tensorboard_log = full_tensorboard_log
 
+        if num_procs is not None:
+            warnings.warn("num_procs will be removed in a future version (v3.x.x) "
+                          "use n_cpu_tf_sess instead", DeprecationWarning)
+            self.n_cpu_tf_sess = num_procs
+
+        self.graph = None
+        self.sess = None
         self.action_ph = None
         self.done_ph = None
         self.reward_ph = None
         self.mu_ph = None
         self.learning_rate_ph = None
+        self.params = None
         self.polyak_model = None
         self.learning_rate_schedule = None
         self.run_ops = None
         self.names_ops = None
         self.train_model = None
         self.step_model = None
+        self.step = None
         self.proba_step = None
+        self.initial_state = None
         self.n_act = None
         self.n_batch = None
         self.summary = None
-
-        super(ACER, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
-                                   _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs,
-                                   seed=seed, n_cpu_tf_sess=n_cpu_tf_sess)
-
+        self.episode_reward = None
 
         if _init_setup_model:
             self.setup_model()
-
-    def _make_runner(self) -> AbstractEnvRunner:
-        return _Runner(env=self.env, model=self, n_steps=self.n_steps)
 
     def _get_pretrain_placeholders(self):
         policy = self.step_model
@@ -552,7 +477,6 @@ class ACER(ActorCriticRLModel):
               reset_num_timesteps=True):
 
         new_tb_log = self._init_num_timesteps(reset_num_timesteps)
-        callback = self._init_callback(callback)
 
         with SetVerbosity(self.verbose), TensorboardWriter(self.graph, self.tensorboard_log, tb_log_name, new_tb_log) \
                 as writer:
@@ -563,51 +487,47 @@ class ACER(ActorCriticRLModel):
 
             episode_stats = EpisodeStats(self.n_steps, self.n_envs)
 
+            runner = _Runner(env=self.env, model=self, n_steps=self.n_steps)
+            self.episode_reward = np.zeros((self.n_envs,))
             if self.replay_ratio > 0:
                 buffer = Buffer(env=self.env, n_steps=self.n_steps, size=self.buffer_size)
             else:
                 buffer = None
 
             t_start = time.time()
-            callback.on_training_start(locals(), globals())
 
             # n_batch samples, 1 on_policy call and multiple off-policy calls
             for steps in range(0, total_timesteps, self.n_batch):
-
-                callback.on_rollout_start()
-
-                enc_obs, obs, actions, rewards, mus, dones, masks = self.runner.run(callback)
-
-                callback.on_rollout_end()
-
-                # Early stopping due to the callback
-                if not self.runner.continue_training:
-                    break
-
+                enc_obs, obs, actions, rewards, mus, dones, masks = runner.run()
                 episode_stats.feed(rewards, dones)
 
                 if buffer is not None:
                     buffer.put(enc_obs, actions, rewards, mus, dones, masks)
 
                 if writer is not None:
-                    total_episode_reward_logger(self.episode_reward,
-                                                rewards.reshape((self.n_envs, self.n_steps)),
-                                                dones.reshape((self.n_envs, self.n_steps)),
-                                                writer, self.num_timesteps)
+                    self.episode_reward = total_episode_reward_logger(self.episode_reward,
+                                                                      rewards.reshape((self.n_envs, self.n_steps)),
+                                                                      dones.reshape((self.n_envs, self.n_steps)),
+                                                                      writer, self.num_timesteps)
 
                 # reshape stuff correctly
-                obs = obs.reshape(self.runner.batch_ob_shape)
-                actions = actions.reshape([self.n_batch])
-                rewards = rewards.reshape([self.n_batch])
-                mus = mus.reshape([self.n_batch, self.n_act])
-                dones = dones.reshape([self.n_batch])
-                masks = masks.reshape([self.runner.batch_ob_shape[0]])
+                obs = obs.reshape(runner.batch_ob_shape)
+                actions = actions.reshape([runner.n_batch])
+                rewards = rewards.reshape([runner.n_batch])
+                mus = mus.reshape([runner.n_batch, runner.n_act])
+                dones = dones.reshape([runner.n_batch])
+                masks = masks.reshape([runner.batch_ob_shape[0]])
 
                 names_ops, values_ops = self._train_step(obs, actions, rewards, dones, mus, self.initial_state, masks,
                                                          self.num_timesteps, writer)
 
+                if callback is not None:
+                    # Only stop training if return value is False, not when it is None. This is for backwards
+                    # compatibility with callbacks that have no return statement.
+                    if callback(locals(), globals()) is False:
+                        break
 
-                if self.verbose >= 1 and (int(steps / self.n_batch) % log_interval == 0):
+                if self.verbose >= 1 and (int(steps / runner.n_batch) % log_interval == 0):
                     logger.record_tabular("total_timesteps", self.num_timesteps)
                     logger.record_tabular("fps", int(steps / (time.time() - t_start)))
                     # IMP: In EpisodicLife env, during training, we get done=True at each loss of life,
@@ -628,17 +548,17 @@ class ACER(ActorCriticRLModel):
                         obs, actions, rewards, mus, dones, masks = buffer.get()
 
                         # reshape stuff correctly
-                        obs = obs.reshape(self.runner.batch_ob_shape)
-                        actions = actions.reshape([self.n_batch])
-                        rewards = rewards.reshape([self.n_batch])
-                        mus = mus.reshape([self.n_batch, self.n_act])
-                        dones = dones.reshape([self.n_batch])
-                        masks = masks.reshape([self.runner.batch_ob_shape[0]])
+                        obs = obs.reshape(runner.batch_ob_shape)
+                        actions = actions.reshape([runner.n_batch])
+                        rewards = rewards.reshape([runner.n_batch])
+                        mus = mus.reshape([runner.n_batch, runner.n_act])
+                        dones = dones.reshape([runner.n_batch])
+                        masks = masks.reshape([runner.batch_ob_shape[0]])
 
                         self._train_step(obs, actions, rewards, dones, mus, self.initial_state, masks,
                                          self.num_timesteps)
 
-        callback.on_training_end()
+                self.num_timesteps += self.n_batch
 
         return self
 
@@ -714,7 +634,7 @@ class _Runner(AbstractEnvRunner):
         self.states = model.initial_state
         self.dones = [False for _ in range(n_env)]
 
-    def _run(self):
+    def run(self):
         """
         Run a step leaning of the model
 
@@ -735,16 +655,6 @@ class _Runner(AbstractEnvRunner):
             if isinstance(self.env.action_space, Box):
                 clipped_actions = np.clip(actions, self.env.action_space.low, self.env.action_space.high)
             obs, rewards, dones, _ = self.env.step(clipped_actions)
-
-            self.model.num_timesteps += self.n_envs
-
-            if self.callback is not None:
-                # Abort training early
-                if self.callback.on_step() is False:
-                    self.continue_training = False
-                    # Return dummy values
-                    return [None] * 7
-
             # states information for statefull models like LSTM
             self.states = states
             self.dones = dones

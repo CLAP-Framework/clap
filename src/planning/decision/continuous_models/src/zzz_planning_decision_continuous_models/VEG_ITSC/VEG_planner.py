@@ -6,15 +6,17 @@ import math
 import numpy as np
 
 from zzz_cognition_msgs.msg import MapState
-from zzz_planning_decision_continuous_models.Werling_trajectory import Werling
 from zzz_driver_msgs.utils import get_speed
 from carla import Location, Rotation, Transform
 from zzz_common.geometry import dense_polyline2d
 from zzz_common.kinematics import get_frenet_state
 
+from zzz_planning_msgs.msg import DecisionTrajectory
+from zzz_planning_decision_continuous_models.VEG_ITSC.Werling_trajectory import Werling
+from zzz_planning_decision_continuous_models.common import rviz_display, convert_ndarray_to_pathmsg, convert_path_to_ndarray
+from zzz_planning_decision_continuous_models.predict import predict
 
-
-class RLSPlanner(object):
+class VEG_Planner_ITSC(object):
     """
     Parameter:
         mode: ZZZ TCP connection mode (client/server)
@@ -26,6 +28,7 @@ class RLSPlanner(object):
         self._buffer_size = recv_buffer
         self._collision_signal = False
         self._collision_times = 0
+        self._has_clear_buff = False
     
         if mode == "client":
             rospy.loginfo("Connecting to RL server...")
@@ -38,10 +41,8 @@ class RLSPlanner(object):
             #     In this mode, only rule based action is returned to system
             raise NotImplementedError("Server mode is still wating to be implemented.") 
         
-    def speed_update(self, trajectory, dynamic_map):
-        return 10   
 
-    def something_in_lane(self, dynamic_map):
+    def clear_buff(self, dynamic_map):
         self._rule_based_trajectory_model_instance.last_trajectory_array = []
         self._rule_based_trajectory_model_instance.last_trajectory = []
         self._rule_based_trajectory_model_instance.last_trajectory_array_rule = []
@@ -49,49 +50,38 @@ class RLSPlanner(object):
         self._collision_signal = False
 
         # # send done to OPENAI
-        collision = False
+        if self._has_clear_buff == False:
+            ego_x = dynamic_map.ego_state.pose.pose.position.x
+            ego_y = dynamic_map.ego_state.pose.pose.position.y
+            if math.pow((ego_x+10),2) + math.pow((ego_y-94),2) < 64:  # restart point
+                leave_current_mmap = 2
+            else:  
+                leave_current_mmap = 1
 
-        ego_x = dynamic_map.ego_state.pose.pose.position.x
-        ego_y = dynamic_map.ego_state.pose.pose.position.y
-        if math.pow((ego_x+10),2) + math.pow((ego_y-94),2) < 64:  # waiting too long and restart
-            leave_current_mmap = 2
-        else:  
-            leave_current_mmap = 1
+            collision = False
+            sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+            sent_RL_msg.append(collision)
+            sent_RL_msg.append(leave_current_mmap)
+            sent_RL_msg.append(5.0) # RL.point
+            sent_RL_msg.append(0.0)
+            sent_RL_msg.append(0.0)
+            sent_RL_msg.append(10000000)
 
-        sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-        sent_RL_msg.append(collision)
-        sent_RL_msg.append(leave_current_mmap)
-        sent_RL_msg.append(5.0) # RL.point
-        sent_RL_msg.append(0.0)
-        sent_RL_msg.append(0.0)
-        sent_RL_msg.append(10000000)
+            # print("-----------------------------",sent_RL_msg)
+            self.sock.sendall(msgpack.packb(sent_RL_msg))
 
-        # print("-----------------------------",sent_RL_msg)
-        self.sock.sendall(msgpack.packb(sent_RL_msg))
+            try:
+                RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
+            except:
+                pass
 
-        try:
-            RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
-        except:
-            pass
-
+            self._has_clear_buff = True
         return None
-
-    def werling_trajectory_update(self, dynamic_map):
-        self._dynamic_map = dynamic_map
-        
-        reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
-        
-        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
-        ref_path = dense_polyline2d(ref_path_ori, 1)
-        ref_path_tangets = np.zeros(len(ref_path))
-        print("into werling trajectory update")
-        closest_obs = self.found_closest_obstacles(3, self._dynamic_map)
-        trajectory_rule, desired_speed_rule, generated_trajectory_rule = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map, closest_obs)
-        return trajectory_rule, desired_speed_rule
 
 
     def trajectory_update(self, dynamic_map):
         now1 = rospy.get_rostime()
+        self._has_clear_buff = False
         self._dynamic_map = dynamic_map
         self._rule_based_trajectory_model_instance.update_dynamic_map(dynamic_map)        
         closest_obs = []
@@ -104,7 +94,7 @@ class RLSPlanner(object):
         sent_RL_msg = RL_state
 
         reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
-        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+        ref_path_ori = convert_path_to_ndarray(reference_path_from_map)
         ref_path = dense_polyline2d(ref_path_ori, 1)
         ref_path_tangets = np.zeros(len(ref_path))
 
@@ -155,7 +145,6 @@ class RLSPlanner(object):
             rospy.logdebug("received action:%f, %f", rl_action[0], rl_action[1])
             now3 = rospy.get_rostime()
 
-
             if q_value - rule_q > threshold:
                 rl_action[1] = rl_action[1] + 12.5/3.6
                 print("-+++++++++++++++++++++++++++++++++++++++++++befor-generated RL trajectory")
@@ -164,16 +153,24 @@ class RLSPlanner(object):
                 now4 = rospy.get_rostime()
                 print("-----------------------------rl planning time consume",now4.to_sec() - now3.to_sec())
                 # return trajectory_rule, desired_speed_rule
-                return trajectory, desired_speed 
+                if trajectory is not None:
+                    msg = DecisionTrajectory()
+                    msg.trajectory = convert_ndarray_to_pathmsg(trajectory)
+                    msg.desired_speed = desired_speed
+                    return msg
+                               
             else:
-                return trajectory_rule, desired_speed_rule
-
+                msg = DecisionTrajectory()
+                msg.trajectory = convert_ndarray_to_pathmsg(trajectory_rule)
+                msg.desired_speed = desired_speed_rule
+                return msg
             
         except:
             rospy.logerr("Continous RLS Model cannot receive an action")
-            return trajectory_rule, desired_speed_rule
-            # return [], 0
-            
+            msg = DecisionTrajectory()
+            msg.trajectory = convert_ndarray_to_pathmsg(trajectory_rule)
+            msg.desired_speed = desired_speed_rule
+            return msg   
             
     def wrap_state(self, closest_obs):
 
@@ -185,7 +182,7 @@ class RLSPlanner(object):
             # obstacle 2 : x0(12), y0(13), vx0(14), vy0(15)
         reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
         
-        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+        ref_path_ori = convert_path_to_ndarray(reference_path_from_map)
         ref_path = dense_polyline2d(ref_path_ori, 1)
         ref_path_tangets = np.zeros(len(ref_path))
         ffstate = get_frenet_state(self._dynamic_map.ego_state, ref_path, ref_path_tangets)
@@ -209,16 +206,12 @@ class RLSPlanner(object):
 
         return state
 
-    def convert_path_to_ndarray(self, path):
-        point_list = [(point.position.x, point.position.y) for point in path]
-        return np.array(point_list)
-
     def found_closest_obstacles(self, num, dynamic_map):
         closest_obs = []
         obs_tuples = []
 
         reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
-        ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+        ref_path_ori = convert_path_to_ndarray(reference_path_from_map)
         if ref_path_ori is not None:
             ref_path = dense_polyline2d(ref_path_ori, 1)
             ref_path_tangets = np.zeros(len(ref_path))
@@ -260,3 +253,16 @@ class RLSPlanner(object):
             RLpoint.location.x = 0
             RLpoint.location.y = 0           
         return RLpoint
+
+    # def werling_trajectory_update(self, dynamic_map):
+    #     self._dynamic_map = dynamic_map
+        
+    #     reference_path_from_map = self._dynamic_map.jmap.reference_path.map_lane.central_path_points
+        
+    #     ref_path_ori = self.convert_path_to_ndarray(reference_path_from_map)
+    #     ref_path = dense_polyline2d(ref_path_ori, 1)
+    #     ref_path_tangets = np.zeros(len(ref_path))
+    #     print("into werling trajectory update")
+    #     closest_obs = self.found_closest_obstacles(3, self._dynamic_map)
+    #     trajectory_rule, desired_speed_rule, generated_trajectory_rule = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map, closest_obs)
+    #     return trajectory_rule, desired_speed_rule

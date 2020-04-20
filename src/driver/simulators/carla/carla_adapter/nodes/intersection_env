@@ -353,53 +353,51 @@ def record_vehicle_states(carla_world, delay):
         fw.close()
         time.sleep(delay)
             
-def record_collsion_to_txt(carla_world):
+def record_collsion_to_txt(ego_vehicle):
     # if in intersection
     global if_write
     global if_write_collision
     global stay
-    global pose_buffer
     global collision_signal
 
     if_intersection = False
-    if pose_buffer is not None:
-        ego_x = pose_buffer.state.pose.pose.position.x#ego_vehicle.get_location().x
-        ego_y = pose_buffer.state.pose.pose.position.y#-ego_vehicle.get_location().y
-        if -55.0 < ego_x < -40.0 or 20.0 < ego_x < 40:
-            if -10.0 < ego_y < 10.0 or 80.0 < ego_y < 95.0:
-                if_intersection = True
-                # print("++++++++++++++++++++++++++ in intersection")
-                
-        else:
-            if_intersection = False
-            if_write = False
-            if_write_collision = False
+    ego_x = ego_vehicle.get_location().x
+    ego_y = -ego_vehicle.get_location().y
+    if -55.0 < ego_x < -40.0 or 20.0 < ego_x < 40:
+        if -10.0 < ego_y < 10.0 or 80.0 < ego_y < 95.0:
+            if_intersection = True
+            # print("++++++++++++++++++++++++++ in intersection")
+            
+    else:
+        if_intersection = False
+        if_write = False
+        if_write_collision = False
 
-        if if_intersection == True and if_write == False:
-            fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_collision.txt", 'a')   
-            fw.write("into_intersection")   
-            fw.write("\n")
-            fw.close()               
-            print("++++++++++++++++++++++++++ in intersection")
+    if if_intersection == True and if_write == False:
+        fw = open("/home/zwt/zzz/data/veg/test_data/record_collision.txt", 'a')   
+        fw.write("into_intersection")   
+        fw.write("\n")
+        fw.close()               
+        print("++++++++++++++++++++++++++ in intersection")
 
-            if_write = True
+        if_write = True
 
 
-        if if_intersection == True and if_write_collision == False:    
+    if if_intersection == True and if_write_collision == False:    
 
-            if collision_signal and stay < 10:
-                # fw = open("/home/carla/ZZZ/zzz/src/driver/simulators/carla/carla_adapter/nodes/record_collision.txt", 'a')   
-                fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_collision.txt", 'a')   
-                fw.write("collision")
-                fw.close()   
-                
-                fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_vehicle.txt", 'a')   
-                fw.write("collision")
-                fw.write("\n")
-                fw.close()   
+        if collision_signal and stay < 10:
+            # fw = open("/home/carla/ZZZ/zzz/src/driver/simulators/carla/carla_adapter/nodes/record_collision.txt", 'a')   
+            fw = open("/home/zwt/zzz/data/veg/test_data/record_collision.txt", 'a')   
+            fw.write("collision")
+            fw.close()   
+            
+            # fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_vehicle.txt", 'a')   
+            # fw.write("collision")
+            # fw.write("\n")
+            # fw.close()   
 
-                print("++++++++++++++++++++++++++ write something")
-                if_write_collision = True
+            print("++++++++++++++++++++++++++ write something")
+            if_write_collision = True
 
 #########
 # Ego vehicle related
@@ -580,6 +578,9 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
 
         ego_loc = ego_vehicle.get_location()
+        
+        # Record txt (must before restart)
+        # record_collsion_to_txt(ego_vehicle)
 
         # Restart ego when needed
         restart_ego_vehicle(ego_vehicle)

@@ -1,7 +1,7 @@
 # This message describe the boundary type of a part of a lane
 
-# Offset from the start of the lane where this type of boundary take effect
-float32 s
+# Lane boundary point
+LanePoint boundary_point
 
 # Boundary type from between `s` and `s` of the next section start
 uint8 boundary_type

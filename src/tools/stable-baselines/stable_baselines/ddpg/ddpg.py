@@ -15,10 +15,11 @@ from stable_baselines import logger
 from stable_baselines.common import tf_util, OffPolicyRLModel, SetVerbosity, TensorboardWriter
 from stable_baselines.common.vec_env import VecEnv
 from stable_baselines.common.mpi_adam import MpiAdam
-from stable_baselines.common.buffers import ReplayBuffer
 from stable_baselines.common.math_util import unscale_action, scale_action
-from stable_baselines.common.mpi_running_mean_std import RunningMeanStd
 from stable_baselines.ddpg.policies import DDPGPolicy
+from stable_baselines.common.mpi_running_mean_std import RunningMeanStd
+from stable_baselines.a2c.utils import total_episode_reward_logger
+from stable_baselines.deepq.replay_buffer import ReplayBuffer
 
 
 def normalize(tensor, stats):
@@ -203,7 +204,7 @@ class DDPG(OffPolicyRLModel):
                  return_range=(-np.inf, np.inf), actor_lr=1e-4, critic_lr=1e-3, clip_norm=None, reward_scale=1.,
                  render=False, render_eval=False, memory_limit=None, buffer_size=50000, random_exploration=0.0,
                  verbose=0, tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
-                 full_tensorboard_log=False, seed=None, n_cpu_tf_sess=1):
+                 full_tensorboard_log=False, seed=None, n_cpu_tf_sess=1, save_path=None):
 
         super(DDPG, self).__init__(policy=policy, env=env, replay_buffer=None,
                                    verbose=verbose, policy_base=DDPGPolicy,
@@ -213,6 +214,9 @@ class DDPG(OffPolicyRLModel):
         # Parameters.
         self.gamma = gamma
         self.tau = tau
+
+        #zwt
+        eval_env = env
 
         # TODO: remove this param in v3.x.x
         if memory_policy is not None:
@@ -299,6 +303,7 @@ class DDPG(OffPolicyRLModel):
         self.adaptive_param_noise_actor = None
         self.params = None
         self.summary = None
+        self.episode_reward = None
         self.tb_seen_steps = None
 
         self.target_params = None
@@ -625,6 +630,46 @@ class DDPG(OffPolicyRLModel):
         action = np.clip(action, -1, 1)
         return action, q_value
 
+    # -------- zwt modify ------------
+    def _policy_with_rule_based(self, obs, rule_based_action, apply_noise=True, compute_q=True):
+        obs = np.array(obs).reshape((-1,) + self.observation_space.shape)
+
+        # scale to -1,1
+        rule_based_action = scale_action(self.action_space, rule_based_action)
+        #rule_based_action = np.array(rule_based_action).reshape((-1,) + self.action_space.shape)
+        feed_dict = {self.obs_train: obs}
+        if self.param_noise is not None and apply_noise:
+            actor_tf = self.perturbed_actor_tf
+            feed_dict[self.obs_noise] = obs
+        else:
+            actor_tf = self.actor_tf
+
+        if compute_q:
+            action, q_value = self.sess.run([actor_tf, self.critic_with_actor_tf], feed_dict=feed_dict)
+        else:
+            action = self.sess.run(actor_tf, feed_dict=feed_dict)
+            q_value = None
+        #print("action in policy=",action)
+        #print("rule_based_action in policy=",rule_based_action)
+        action = action.flatten()
+        if self.action_noise is not None and apply_noise:
+            noise = self.action_noise()
+            action += noise
+        action = np.clip(action, -1, 1)
+
+        rule_action, rule_q =  self.baseline_action_estimate(obs, rule_based_action)
+        rule_based_action = unscale_action(self.action_space, rule_based_action)
+
+        return action, q_value, rule_action, rule_q
+
+    def baseline_action_estimate(self, obs, rule_based_action):
+
+        feed_dict = {self.obs_train: obs,  self.actions: rule_based_action}
+        Q_rule = self.sess.run(self.critic_tf, feed_dict=feed_dict)
+
+        return rule_based_action, Q_rule
+ 
+
     def _store_transition(self, obs, action, reward, next_obs, done):
         """
         Store a transition in the replay buffer
@@ -650,8 +695,7 @@ class DDPG(OffPolicyRLModel):
         :return: (float, float) critic loss, actor loss
         """
         # Get a batch
-        obs, actions, rewards, next_obs, terminals = self.replay_buffer.sample(batch_size=self.batch_size,
-                                                                               env=self._vec_normalize_env)
+        obs, actions, rewards, next_obs, terminals = self.replay_buffer.sample(batch_size=self.batch_size)
         # Reshape to match previous behavior and placeholder shape
         rewards = rewards.reshape(-1, 1)
         terminals = terminals.reshape(-1, 1)
@@ -736,8 +780,7 @@ class DDPG(OffPolicyRLModel):
         if self.stats_sample is None:
             # Get a sample and keep that fixed for all further computations.
             # This allows us to estimate the change in value for the same set of inputs.
-            obs, actions, rewards, next_obs, terminals = self.replay_buffer.sample(batch_size=self.batch_size,
-                                                                                   env=self._vec_normalize_env)
+            obs, actions, rewards, next_obs, terminals = self.replay_buffer.sample(batch_size=self.batch_size)
             self.stats_sample = {
                 'obs': obs,
                 'actions': actions,
@@ -779,7 +822,7 @@ class DDPG(OffPolicyRLModel):
             return 0.
 
         # Perturb a separate copy of the policy to adjust the scale for the next "real" perturbation.
-        obs, *_ = self.replay_buffer.sample(batch_size=self.batch_size, env=self._vec_normalize_env)
+        obs, *_ = self.replay_buffer.sample(batch_size=self.batch_size)
         self.sess.run(self.perturb_adaptive_policy_ops, feed_dict={
             self.param_noise_stddev: self.param_noise.current_stddev,
         })
@@ -807,7 +850,6 @@ class DDPG(OffPolicyRLModel):
               reset_num_timesteps=True, replay_wrapper=None):
 
         new_tb_log = self._init_num_timesteps(reset_num_timesteps)
-        callback = self._init_callback(callback)
 
         if replay_wrapper is not None:
             self.replay_buffer = replay_wrapper(self.replay_buffer)
@@ -827,19 +869,15 @@ class DDPG(OffPolicyRLModel):
 
             eval_episode_rewards_history = deque(maxlen=100)
             episode_rewards_history = deque(maxlen=100)
+            self.episode_reward = np.zeros((1,))
             episode_successes = []
-
-
             with self.sess.as_default(), self.graph.as_default():
                 # Prepare everything.
                 self._reset()
-                obs = self.env.reset()
-                # Retrieve unnormalized observation for saving into the buffer
-                if self._vec_normalize_env is not None:
-                    obs_ = self._vec_normalize_env.get_original_obs().squeeze()
+                obs,rule_action = self.env.reset()
                 eval_obs = None
                 if self.eval_env is not None:
-                    eval_obs = self.eval_env.reset()
+                    eval_obs,rule_action = self.eval_env.reset()
                 episode_reward = 0.
                 episode_step = 0
                 episodes = 0
@@ -859,17 +897,11 @@ class DDPG(OffPolicyRLModel):
                 epoch_qs = []
                 epoch_episodes = 0
                 epoch = 0
-
-                callback.on_training_start(locals(), globals())
-
                 while True:
                     for _ in range(log_interval):
-                        callback.on_rollout_start()
                         # Perform rollouts.
                         for _ in range(self.nb_rollout_steps):
-
                             if total_steps >= total_timesteps:
-                                callback.on_training_end()
                                 return self
 
                             # Predict next action.
@@ -891,45 +923,31 @@ class DDPG(OffPolicyRLModel):
                                 # inferred actions need to be transformed to environment action_space before stepping
                                 unscaled_action = unscale_action(self.action_space, action)
 
-                            new_obs, reward, done, info = self.env.step(unscaled_action)
+                            new_obs, reward, done, info, rule_action  = self.env.step(unscaled_action,0,0,0)
 
-                            self.num_timesteps += 1
-
-                            if callback.on_step() is False:
-                                callback.on_training_end()
-                                return self
-
+                            if writer is not None:
+                                ep_rew = np.array([reward]).reshape((1, -1))
+                                ep_done = np.array([done]).reshape((1, -1))
+                                self.episode_reward = total_episode_reward_logger(self.episode_reward, ep_rew, ep_done,
+                                                                                  writer, self.num_timesteps)
                             step += 1
                             total_steps += 1
+                            self.num_timesteps += 1
                             if rank == 0 and self.render:
                                 self.env.render()
+                            episode_reward += reward
+                            episode_step += 1
 
                             # Book-keeping.
                             epoch_actions.append(action)
                             epoch_qs.append(q_value)
-
-                            # Store only the unnormalized version
-                            if self._vec_normalize_env is not None:
-                                new_obs_ = self._vec_normalize_env.get_original_obs().squeeze()
-                                reward_ = self._vec_normalize_env.get_original_reward().squeeze()
-                            else:
-                                # Avoid changing the original ones
-                                obs_, new_obs_, reward_ = obs, new_obs, reward
-
-                            self._store_transition(obs_, action, reward_, new_obs_, done)
+                            self._store_transition(obs, action, reward, new_obs, done)
                             obs = new_obs
-                            # Save the unnormalized observation
-                            if self._vec_normalize_env is not None:
-                                obs_ = new_obs_
-
-                            episode_reward += reward_
-                            episode_step += 1
-
-                            if writer is not None:
-                                ep_rew = np.array([reward_]).reshape((1, -1))
-                                ep_done = np.array([done]).reshape((1, -1))
-                                tf_util.total_episode_reward_logger(self.episode_reward, ep_rew, ep_done,
-                                                                    writer, self.num_timesteps)
+                            if callback is not None:
+                                # Only stop training if return value is False, not when it is None.
+                                # This is for backwards compatibility with callbacks that have no return statement.
+                                if callback(locals(), globals()) is False:
+                                    return self
 
                             if done:
                                 # Episode done.
@@ -947,9 +965,8 @@ class DDPG(OffPolicyRLModel):
 
                                 self._reset()
                                 if not isinstance(self.env, VecEnv):
-                                    obs = self.env.reset()
+                                    obs,rule_action = self.env.reset()
 
-                        callback.on_rollout_end()
                         # Train.
                         epoch_actor_losses = []
                         epoch_critic_losses = []
@@ -974,6 +991,7 @@ class DDPG(OffPolicyRLModel):
                             epoch_critic_losses.append(critic_loss)
                             epoch_actor_losses.append(actor_loss)
                             self._update_target_net()
+                            
 
                         # Evaluate.
                         eval_episode_rewards = []
@@ -986,7 +1004,7 @@ class DDPG(OffPolicyRLModel):
 
                                 eval_action, eval_q = self._policy(eval_obs, apply_noise=False, compute_q=True)
                                 unscaled_action = unscale_action(self.action_space, eval_action)
-                                eval_obs, eval_r, eval_done, _ = self.eval_env.step(unscaled_action)
+                                eval_obs, eval_r, eval_done, info, rule_action = self.eval_env.step(unscaled_action,0,0,0)
                                 if self.render_eval:
                                     self.eval_env.render()
                                 eval_episode_reward += eval_r
@@ -994,10 +1012,16 @@ class DDPG(OffPolicyRLModel):
                                 eval_qs.append(eval_q)
                                 if eval_done:
                                     if not isinstance(self.env, VecEnv):
-                                        eval_obs = self.eval_env.reset()
+                                        eval_obs,rule_action = self.eval_env.reset()
                                     eval_episode_rewards.append(eval_episode_reward)
                                     eval_episode_rewards_history.append(eval_episode_reward)
                                     eval_episode_reward = 0.
+	                #zwt
+                        try:
+                            self.save("ddpg_0308")
+                            print("save models")
+                        except:
+                            print("fail to save models")
 
                     mpi_size = MPI.COMM_WORLD.Get_size()
                     # Log stats.
@@ -1077,6 +1101,26 @@ class DDPG(OffPolicyRLModel):
             actions = actions[0]
 
         return actions, None
+
+    def predict_RLS(self, observation, rule_based_action, state=None, mask=None, deterministic=True):
+        observation = np.array(observation)
+        rule_based_action = np.array(rule_based_action)
+        vectorized_env = self._is_vectorized_observation(observation, self.observation_space)
+
+        observation = observation.reshape((-1,) + self.observation_space.shape)
+        rule_based_action = rule_based_action.reshape((-1,) + self.action_space.shape)
+
+        actions, q_value, rule_action, rule_q = self._policy_with_rule_based(observation, rule_based_action, apply_noise=not deterministic, compute_q=True)
+        actions = actions.reshape((-1,) + self.action_space.shape)  # reshape to the correct action shape
+        actions = unscale_action(self.action_space, actions)  # scale the output for the prediction
+        rule_action = rule_action.reshape((-1,) + self.action_space.shape)  # reshape to the correct action shape
+        rule_action = unscale_action(self.action_space, rule_action)  # scale the output for the prediction
+
+        if not vectorized_env:
+            actions = actions[0]
+
+        return actions, q_value, rule_action, rule_q
+
 
     def action_probability(self, observation, state=None, mask=None, actions=None, logp=False):
         _ = np.array(observation)

@@ -95,6 +95,7 @@ class NearestLocator:
         dynamic_map.header.frame_id = "map"
         dynamic_map.header.stamp = rospy.Time.now()
         dynamic_map.ego_state = tstates.ego_state.state
+
         if static_map.in_junction or len(static_map.lanes) == 0:
             rospy.logdebug("In junction due to static map report junction location")
             dynamic_map.model = MapState.MODEL_JUNCTION_MAP
@@ -174,9 +175,7 @@ class NearestLocator:
         dist_list = np.array([dist_from_point_to_polyline2d(
             tstates.ego_state.state.pose.pose.position.x, tstates.ego_state.state.pose.pose.position.y,
             lane, return_end_distance=True)
-            for lane in tstates.static_map_lane_path_array])  
-        # print("tstates.ego_state.state.pose.pose.position.x=",tstates.ego_state.state.pose.pose.position.x)
-        # print("tstates.ego_state.state.pose.pose.position.y=",tstates.ego_state.state.pose.pose.position.y)
+            for lane in tstates.static_map_lane_path_array])
 
         ego_lane_index = self.locate_object_in_lane(tstates.ego_state.state, tstates)
         ego_lane_index_rounded = int(round(ego_lane_index))
@@ -318,7 +317,7 @@ class NearestLocator:
         # Now we set the multilane speed limit as 40 km/h.
         total_lane_num = len(tstates.static_map.lanes)
         for i in range(total_lane_num):
-            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 20
+            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 25
 
     # TODO(zyxin): Move this function into separate prediction module
     def predict_vehicle_behavior(self, vehicle, tstates, lane_change_thres = 0.2):
