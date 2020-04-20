@@ -11,7 +11,7 @@ class LaneUtility(object):
         self.longitudinal_model_instance = longitudinal_model
         self.dynamic_map = None
 
-    def lateral_decision(self, dynamic_map, close_to_junction = 20):
+    def lateral_decision(self, dynamic_map, close_to_junction = 10):
 
         self.longitudinal_model_instance.update_dynamic_map(dynamic_map)
         self.dynamic_map = dynamic_map
@@ -38,10 +38,10 @@ class LaneUtility(object):
         
         return target_index, target_speed
 
-    def generate_lane_change_index(self):
+    def generate_lane_change_index(self, change_lane_thres = 0.5):
 
         ego_lane_index = int(round(self.dynamic_map.mmap.ego_lane_index))
-        current_lane_utility = self.lane_utility(ego_lane_index)
+        current_lane_utility = self.lane_utility(ego_lane_index) + change_lane_thres
 
         if not self.lane_change_safe(ego_lane_index, ego_lane_index + 1):
             left_lane_utility = -1
@@ -58,7 +58,7 @@ class LaneUtility(object):
             left_lane_utility, current_lane_utility, right_lane_utility)
 
         if right_lane_utility > current_lane_utility and right_lane_utility >= left_lane_utility:
-            return ego_lane_index -1
+            return ego_lane_index - 1
 
         if left_lane_utility > current_lane_utility and left_lane_utility > right_lane_utility:
             return ego_lane_index + 1
@@ -71,7 +71,7 @@ class LaneUtility(object):
         exit_lane_index = self.dynamic_map.mmap.target_lane_index
         distance_to_end = self.dynamic_map.mmap.distance_to_junction
         # XXX: Change 260 to a adjustable parameter?
-        utility = available_speed # + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(260-distance_to_end))
+        utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1) #*max(0,(260-distance_to_end))
         return utility
 
     def lane_change_safe(self, ego_lane_index, target_index):
