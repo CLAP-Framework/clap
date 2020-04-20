@@ -48,12 +48,12 @@ class DecisionNode(object):
                 self._decision_trajectory_publisher.publish(publish_msg)
                 publish_msg2 = publish_msg.trajectory
                 self._rviz_decision_trajectory_publisher.publish(publish_msg2)
-                print("PUBLISH: trajectory length = %d, desired_speed = %f", 
+                rospy.loginfo("continous model: PUBLISH: trajectory length = %d, desired_speed = %.1f", 
                     len(publish_msg.trajectory.poses), publish_msg.desired_speed)
             try:
                 self.pub_rviz()
             except:
-                print("rviz_display failed")
+                rospy.logerror("rviz_display failed")
                 
             self._rate.sleep()
         

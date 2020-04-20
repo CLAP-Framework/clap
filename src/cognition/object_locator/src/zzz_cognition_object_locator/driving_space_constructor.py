@@ -85,7 +85,7 @@ class DrivingSpaceConstructor:
 
         # Skip if not ready
         if not self._ego_vehicle_state_buffer:
-            return None
+            return False
 
         with self._ego_vehicle_state_lock:
             tstates.ego_vehicle_state = copy.deepcopy(self._ego_vehicle_state_buffer) 
@@ -647,6 +647,8 @@ class DrivingSpaceConstructor:
         #rospy.loginfo("lights num: %d\n\n", len(lights))
         
         rospy.logdebug("Updated driving space")
+
+        return True
 
     # ========= For in lane =========
 

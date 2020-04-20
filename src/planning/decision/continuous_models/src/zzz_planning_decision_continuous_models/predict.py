@@ -35,13 +35,12 @@ class predict():
             self.obs = self.found_closest_obstacles()
             self.obs_paths = self.prediction_obstacle(self.obs, self.maxt, self.dt)
         except:
-            print("fail to initialize prediction")
+            rospy.logdebug("continous module: fail to initialize prediction")
             self.obs_paths = []
         
         
     def check_collision(self, fp):
         if len(self.obs_paths) == 0 or len(fp.t) < 2 :
-            print("not checking collision")
             return True
             
         # two circles for a vehicle
@@ -63,7 +62,8 @@ class predict():
                     if d <= self.check_radius**2: 
                         return False
         except:
-            print("collision check fail",len(fp.yaw),len(fp_back.x),len(fp_front.x))
+            pass
+            # print("collision check fail",len(fp.yaw),len(fp_back.x),len(fp_front.x))
 
         # self.rviz_collision_checking_circle = self.rivz_element.draw_circles(fp_front, fp_back, self.check_radius)
         return True

@@ -580,7 +580,7 @@ if __name__ == "__main__":
         ego_loc = ego_vehicle.get_location()
         
         # Record txt (must before restart)
-        record_collsion_to_txt(ego_vehicle)
+        # record_collsion_to_txt(ego_vehicle)
 
         # Restart ego when needed
         restart_ego_vehicle(ego_vehicle)

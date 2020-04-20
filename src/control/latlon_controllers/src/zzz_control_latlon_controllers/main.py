@@ -34,7 +34,7 @@ class MainController():
         with self._ego_state_lock:
             self.ego_state = pose.state
            
-    def ready_for_control(self, short_distance_thres = 2):
+    def ready_for_control(self, short_distance_thres = 2, less_points_thres = 3):
         if self.desired_trajectory is None or len(self.desired_trajectory.poses) == 0:
             rospy.logdebug("Haven't recevied trajectory")
             return False
@@ -45,6 +45,11 @@ class MainController():
 
         if d < short_distance_thres:
             rospy.loginfo("Vehicle stopped since it reached target point (dist:%.3f)", d)
+            return False
+        
+        traj_len = len(self.desired_trajectory.poses)
+        if traj_len < less_points_thres:
+            rospy.loginfo("Vehicle stopped because received trajectory points are too few (traj_len:%d)", traj_len)
             return False
         
         return True
