@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <cmath>
+#include <numeric>
 #include <fstream>
 #include <iostream>
 #include <tf/transform_broadcaster.h>
