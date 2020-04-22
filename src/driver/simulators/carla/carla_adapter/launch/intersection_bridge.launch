@@ -1,0 +1,8 @@
+<launch>
+    <arg name="ego_actor" default='ego_vehicle'/>
+
+    <node pkg="carla_ros_bridge" name="carla_ros_bridge" type="bridge.py" output="screen" respawn="true" />
+    <!-- <node pkg="carla_waypoint_publisher" type="carla_waypoint_publisher.py" name="carla_waypoint_publisher" output="screen">  -->
+         <param name="role_name" value="$(arg ego_actor)" /> 
+
+</launch>

@@ -65,3 +65,9 @@ ref/
 src/CMakeLists.txt
 
 src/driver/simulators/carla/carla_bridge
+
+src.zip
+
+1.txt
+
+get-pip.py

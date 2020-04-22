@@ -27,8 +27,7 @@ class MainDecision(object):
 
     # receive_dynamic_map running in Subscriber CallBack Thread.
     def receive_dynamic_map(self, dynamic_map):
-        with self._dynamic_map_lock:
-            self._dynamic_map_buffer = dynamic_map
+        self._dynamic_map_buffer = dynamic_map
 
     # update running in main node thread loop
     def update(self):
@@ -41,22 +40,22 @@ class MainDecision(object):
         else:
             dynamic_map = self._dynamic_map_buffer
 
-        if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
-            return None
+        # if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
+        #     return None
         
         trajectory = None
-        with self._dynamic_map_lock:
-            changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
-            if desired_speed < 0: # TODO: clean this
-                desired_speed = 0
-            rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
-            
-            # TODO(Temps): Should seperate into continous models 
-            if changing_lane_index == -1 :
-                # return None
-                trajectory = self._local_trajectory_instance_for_ref.get_trajectory(dynamic_map, changing_lane_index, desired_speed)#FIXME(ksj)
-            else:
-                trajectory = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
+        changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
+        if desired_speed < 0: # TODO: clean this
+            desired_speed = 0
+
+        rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
+        
+        # TODO(Temps): Should seperate into continous models 
+        if changing_lane_index == -1:
+            return None
+            # trajectory = self._local_trajectory_instance_for_ref.get_trajectory(dynamic_map, changing_lane_index, desired_speed)#FIXME(ksj)
+        else:
+            trajectory = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
 
 
         msg = DecisionTrajectory()

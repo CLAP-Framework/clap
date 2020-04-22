@@ -14,8 +14,10 @@
  <node pkg="xpmotors" name="auto_control"  type="auto_control_node" output="screen">
   <rosparam file="$(find xpmotors)/conf.yaml"/>
   </node>  -->
- <node pkg="oxford_gps_eth" name="gps_node"  type="gps_node" output="screen">
-
+ 
+  <node pkg="oxford_gps_eth" name="gps_node"  type="gps_node" output="screen">
   </node>
+
+  <!-- <include file="$(find icvfollower)/launch/ICVfollower.launch" /> -->
   
 </launch>

@@ -33,8 +33,6 @@ class RLSDecision(object):
 
         self._out_multilane = True
 
-        self._test_mode = False
-
 
         if mode == "client":
             rospy.loginfo("Connecting to RL server...")
@@ -51,26 +49,6 @@ class RLSDecision(object):
 
         self._dynamic_map = dynamic_map
         self._rule_based_longitudinal_model_instance.update_dynamic_map(dynamic_map)
-
-        if self._test_mode:
-            print("--------sending msg")
-            self._out_multilane = False
-            collision = int(self.collision_signal)
-            self.collision_signal = False
-            leave_current_mmap = 0
-            sent_RL_msg = [0, 0, 0, 0, 50, 0, 20, 0, 50, 1, 20, 0, -50, 0, 0, 0, -34.907974, 0.966466, 0, 0] 
-            sent_RL_msg.append(collision)
-            sent_RL_msg.append(leave_current_mmap)
-            self.sock.sendall(msgpack.packb(sent_RL_msg))
-
-            try:
-                RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
-                print("------received", RLS_action)
-            except:
-                pass
-
-            return -1, 0
-
 
         if not self._out_multilane and dynamic_map.model == MapState.MODEL_JUNCTION_MAP: # or dynamic_map.mmap.target_lane_index == -1:
             # send done to OPENAI
@@ -108,11 +86,10 @@ class RLSDecision(object):
             print("received action:", RLS_action)
             return self.get_decision_from_discrete_action(RLS_action)
         except:
-            print("RLS Connection Wrong")
-            return self.get_decision_from_discrete_action(0)
+            return 0,0
 
-    def wrap_state(self):   
-        
+    def wrap_state(self):     
+
         state = [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
         
         state[0] = 0
@@ -168,11 +145,13 @@ class RLSDecision(object):
 
         self.inside_lane = 1
         self.outside_lane = 0
-        current_speed = get_speed(self._dynamic_map.ego_state)
         # Rule-based action
         if action == 0:
             return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
         
+        ego_y = int(round(self._dynamic_map.mmap.ego_lane_index))
+
+        current_speed = get_speed(self._dynamic_map.ego_state)
         ego_y = int(round(self._dynamic_map.mmap.ego_lane_index))
 
         # Hard-brake action

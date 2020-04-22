@@ -30,7 +30,6 @@ from gym.utils import seeding
 class ZZZCarlaEnv_lane(gym.Env):
     metadata = {'render.modes': []}
     def __init__(self, zzz_client="127.0.0.1", port=2345, recv_buffer=4096):
-        print("initilize")
 
         self.action_space = spaces.Discrete(8)
         """
@@ -62,35 +61,29 @@ class ZZZCarlaEnv_lane(gym.Env):
         self.sock_conn = None
         self.sock_buffer = recv_buffer
  
-        # x y vx vy
-        low  = np.array([-1, -10,  0, -10,  0, -10,  0, -10,  0,-10,  0, -10, -50,-10,  0,-10,-50,-10,  0,-10])
-        high = np.array([ 1,  10, 20,  10, 50,  10, 20,  10, 50, 10, 20,  10,   0, 10, 20, 10,  0, 10, 20, 10])
+        low  = np.array([-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50,-50])
+        high = np.array([50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50])
 
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
         self.seed()
-        self._use_socked = True
-        if self._use_socked:
-            self.sock_conn, addr = self.sock.accept()
-            print("ZZZ connected at {}".format(addr))
-        else:
-            self.test_rec_msg = [0, 0, 0, 0, 50, 0, 20, 0, 50, 1, 20, 0, -50, 0, 0, 0, -34.907974, 0.966466, 0, 0, 0, 0]
-            print("Testing Mode")
+
+        self.sock_conn, addr = self.sock.accept()
+        print("ZZZ connected at {}".format(addr))
 
     def step(self, action):
         action = action.astype(int)
-        action = action.tolist()
+        # action = action.tolist()
         # send action to zzz planning module
+        print("-------------",type(action),action)
         while True:
             try:
-                if self._use_socked:
-                    self.sock_conn.sendall(msgpack.packb(action))
-                    received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
-                else:
-                    received_msg = self.test_rec_msg
+                self.sock_conn.sendall(msgpack.packb(action))
+                
                 # wait next state
-                self.state = received_msg[0:20]
+                received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
+                print("-------------received msg in step")
+                self.state = received_msg[0:19]
                 collision = received_msg[20]
-                leave_current_map = received_msg[21]
 
                 # calculate reward
                 reward = 0
@@ -109,12 +102,8 @@ class ZZZCarlaEnv_lane(gym.Env):
 
                 steps = self.steps
                 self.steps = steps + 1
-
-                if leave_current_map:
-                    done = True
-                    reward = 0
                 
-                return np.array(self.state), reward, done, {"is_success": not collision_happen}
+                return np.array(self.state), reward, done, collision_happen
 
             except:
                 print("RL cannot receive an state")
@@ -129,19 +118,15 @@ class ZZZCarlaEnv_lane(gym.Env):
         # if the received information meets requirements
         while True:
             try:
-                action = 0
-                if self._use_socked:
-                    self.sock_conn.sendall(msgpack.packb(action))
-                    received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
-                else:
-                    received_msg = self.test_rec_msg
-                self.state = received_msg[0:20]
+                action = [0]
+                print("-------------",type(action),action)
+
+                self.sock_conn.sendall(msgpack.packb(action))
+                received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
+                print("-------------received msg in reset",received_msg)
+
+                self.state = received_msg[0:19]
                 collision = received_msg[20]
-                leave_current_map = received_msg[21]
-
-                if collision or leave_current_map:
-                    continue
-
                 return np.array(self.state)
 
             except ValueError:

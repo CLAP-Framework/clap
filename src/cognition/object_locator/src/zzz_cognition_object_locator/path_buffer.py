@@ -94,7 +94,8 @@ class PathBuffer:
         # tstates.reference_path = self._reference_path_buffer
         # reference_path = tstates.reference_path # for easy access
 
-        # Remove passed waypoints - dequeue
+        # zwt modify to avoid reference path update in junction
+        # if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:        # Remove passed waypoints - dequeue
         if len(self._reference_path_segment) > 1:
             _, nearest_idx, _ = dist_from_point_to_polyline2d(
                 ego_state.pose.pose.position.x,
@@ -137,7 +138,7 @@ class PathBuffer:
                 dynamic_map.jmap.reference_path.front_vehicles = [front_vehicle]
 
         # TODO: read or detect speed limit
-        dynamic_map.jmap.reference_path.map_lane.speed_limit = 30
+        dynamic_map.jmap.reference_path.map_lane.speed_limit = 10
         return dynamic_map
 
     def lane_change_smoothen(self, wp):

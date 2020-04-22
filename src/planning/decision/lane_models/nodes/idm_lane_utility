@@ -20,7 +20,7 @@ class DecisionNode(object):
             dynamic_map_topic="/zzz/cognition/local_dynamic_map/map_with_ref",
             static_map_topic="/zzz/navigation/local_static_map",
             RVIZ_decision_trajectory_topic="decision_trajectory_path", 
-            hz = 10,
+            hz = 1.33,
         )
         model_lon = IDM()
         model_lat = LaneUtility(model_lon)
@@ -35,7 +35,12 @@ class DecisionNode(object):
 
     def loop(self):
         while not rospy.is_shutdown():
-            publish_msg = self._decision_instance.update()
+            #zwt for running 
+            try:
+                publish_msg = self._decision_instance.update()
+            except:
+                pass
+
             if publish_msg:
                 self._decision_trajectory_publisher.publish(publish_msg)
                 publish_msg2 = publish_msg.trajectory

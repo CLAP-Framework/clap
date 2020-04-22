@@ -215,7 +215,6 @@ public:
             obs_box.twist.twist.linear.y = obs_msg_static.obstcles[i].velocity.y;
             obs_box.twist.twist.linear.z = obs_msg_static.obstcles[i].velocity.z;
 
-
             obs_array.targets.push_back(obs_box);
         }
         // ROS_INFO("##### obs_array length - %d", obs_array.targets.size());

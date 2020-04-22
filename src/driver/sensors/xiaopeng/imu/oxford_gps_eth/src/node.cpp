@@ -339,6 +339,7 @@ static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, r
     zzz_driver_msgs::RigidBodyStateStamped state;
 
     /**pose**/
+    state.header.frame_id = "map";
     state.state.child_frame_id="odom";
     state.state.pose.pose.position.x=X;
     state.state.pose.pose.position.y=Y;

@@ -123,7 +123,7 @@ class NativeMap(object):
         # map_x, map_y = self._ego_vehicle_x, self._ego_vehicle_y
         
         # Left is 0 
-        self.static_local_map.in_junction = False # lane change
+        self.static_local_map.in_junction = True # lane change
         self.static_local_map.target_lane_index = 0
         self.static_local_map.lanes.append(self._lanes[0])
         self.static_local_map.lanes.append(self._lanes[1])
