@@ -199,6 +199,7 @@ void LidarTrackRos::objectsCallback(const autoware_msgs::DetectedObjectArray& in
   GetTrackObjects(detected_objects_output);
 
   zzz_perception_msgs::TrackingBoxArray trackingBoxArray;
+  trackingBoxArray.header = input.header;
   convert_DetectedObjectArray2TrackingBoxArray(detected_objects_output, trackingBoxArray);
 
   pub_object_array_.publish(detected_objects_output);

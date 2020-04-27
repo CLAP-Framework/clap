@@ -42,6 +42,8 @@
 #include <nav_msgs/Odometry.h>
 #include <zzz_driver_msgs/RigidBodyState.h>
 #include <zzz_driver_msgs/RigidBodyStateStamped.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 // Tf Quaternions
 #include <tf/LinearMath/Quaternion.h>
 
@@ -121,7 +123,10 @@ static inline double SQUARE(double x)
 
 static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, ros::Publisher &pub_vel,
                                 ros::Publisher &pub_imu, ros::Publisher &pub_odom, const std::string &frame_id,
-                                const std::string &frame_id_vel,ros::Publisher &pub_ego_pose)
+                                const std::string &frame_id_vel,
+                                ros::Publisher &pub_ego_pose,
+                                ros::Publisher &pub__current_pose,
+                                ros::Publisher &pub__current_velocity)
 {
   static uint8_t fix_status = sensor_msgs::NavSatStatus::STATUS_FIX;
   static uint8_t position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_UNKNOWN;
@@ -340,6 +345,13 @@ static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, r
     // ego_pose 
     zzz_driver_msgs::RigidBodyStateStamped state;
 
+
+    geometry_msgs::PoseStamped pose;
+    pose.header.frame_id ="map";
+    pose.pose.position.x=X;
+    pose.pose.position.y=Y;
+    pose.pose.position.z=msg_fix.altitude;
+
     /**pose**/
     state.header.frame_id = "map";
     state.state.child_frame_id="odom";
@@ -376,6 +388,16 @@ static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, r
     // state.state.pose.pose.orientation=msg_imu.orientation;
 
 
+    pose.pose.orientation.x=x1;
+    pose.pose.orientation.y=y1;
+    pose.pose.orientation.z=z1;
+    pose.pose.orientation.w=w1;
+    pub__current_pose.publish(pose);
+    geometry_msgs::TwistStamped twist;
+    twist.twist.linear=msg_vel.twist.twist.linear;
+    twist.twist.angular=msg_imu.angular_velocity;
+    pub__current_velocity.publish(twist);
+
 
 
 
@@ -386,6 +408,14 @@ static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, r
     state.state.accel.accel.linear=msg_imu.linear_acceleration;
 
     pub_ego_pose.publish(state);
+
+    // nav_msgs::Odometry msg_odom;
+    msg_odom.header.stamp = stamp;
+    msg_odom.header.frame_id = frame_id_vel;
+    msg_odom.child_frame_id = "base_link";
+    msg_odom.pose.pose = pose.pose;
+    msg_odom.twist = msg_vel.twist;
+    pub_odom.publish(msg_odom);
 
 #if OXFORD_DISPLAY_INFO
   } else {
@@ -455,7 +485,10 @@ int main(int argc, char **argv)
             first = false;
             ROS_INFO("Connected to Oxford GPS at %s:%u", inet_ntoa(((sockaddr_in*)&source)->sin_addr), htons(((sockaddr_in*)&source)->sin_port));
           }
-          handlePacket(&packet, pub_fix, pub_vel, pub_imu, pub_odom, frame_id, frame_id_vel,pub_ego_pose);
+          handlePacket(&packet, pub_fix, pub_vel, pub_imu, pub_odom, frame_id, frame_id_vel,
+              pub_ego_pose,
+		          pub_current_pose,
+              pub__current_velocity);
         }
       }
 
