@@ -1,0 +1,33 @@
+<!-- -->
+<launch>
+  <arg name="network_definition_file" default="$(find lidar_cnn_seg_detect_trt)/models/deploy.prototxt"/>
+  <arg name="pretrained_model_file" default="$(find lidar_cnn_seg_detect_trt)/models/deploy.caffemodel" />
+  <arg name="deploy_mode" default="FP32" />
+  <arg name="points_src" default="/points_raw" />
+  <arg name="score_threshold" default="0.6" />
+  <arg name="use_gpu" default="true" />
+  <arg name="gpu_device_id" default="0" />
+  <arg name="ground_height" default="-1.73" />
+  <arg name="benchmark_path" default="" />
+  <arg name="duration_path" default="" />
+  
+  <node pkg="lidar_cnn_seg_detect_trt" 
+      type="lidar_cnn_seg_detect_trt" 
+      name="lidar_cnn_seg_detect_trt" 
+      output="screen">
+    <param name="network_definition_file" value="$(arg network_definition_file)" />
+    <param name="pretrained_model_file" value="$(arg pretrained_model_file)" />
+    <param name="deploy_mode" value="$(arg deploy_mode)" />
+    <param name="points_src" value="$(arg points_src)" />
+    <param name="score_threshold" value="$(arg score_threshold)" />
+    <param name="use_gpu" value="$(arg use_gpu)" />
+    <param name="gpu_device_id" value="$(arg gpu_device_id)" />
+    <param name="ground_height" value="$(arg ground_height)" />
+    <param name="benchmark_path" value="$(arg benchmark_path)" />
+    <param name="duration_path" value="$(arg duration_path)" />
+  </node>
+
+  <node pkg="detected_objects_visualizer" type="visualize_detected_objects" name="cluster_detect_visualization_01"
+          output="screen" ns="/detection/lidar_detector" />
+
+</launch>

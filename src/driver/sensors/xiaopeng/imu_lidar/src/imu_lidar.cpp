@@ -154,17 +154,6 @@ public:
             new_geo_dir_matrix << R_static*R_ego*old_geo_dir_matrix;
             Eigen::Quaterniond geo_dir_quat(new_geo_dir_matrix);
 
-            // cv::Point p1(int(obs_msg.obstcles[i].geo_center.x*5+600),int(obs_msg.obstcles[i].geo_center.y*5+600));
-            // cv::Point p2(int((obs_msg_static.obstcles[i].geo_center.x-442860)*5+600),int((obs_msg_static.obstcles[i].geo_center.y-4427880)*5+600));
-            
-            // cv::Point p3(int((obs_msg_static.obstcles[i].geo_center.x-442860)*5+600 + scale_vel*obs_msg_static.obstcles[i].geo_direction.x),int((obs_msg_static.obstcles[i].geo_center.y-4427880)*5 + 600+scale_vel*obs_msg_static.obstcles[i].geo_direction.y));
-            // cv::Point p4(int((obs_msg_static.obstcles[i].geo_center.x-442860)*5+600 + scale_vel*obs_msg_static.obstcles[i].velocity.x),int((obs_msg_static.obstcles[i].geo_center.y-4427880)*5 + 600+scale_vel*obs_msg_static.obstcles[i].velocity.y));
-
-            // //cv::circle(tmp_disp, p1, 4, cv::Scalar(0, 0, 255), -1);
-            // cv::circle(tmp_disp, p2, 4, cv::Scalar(0, 0, 0), -1);
-            // //cv::arrowedLine(tmp_disp, p2, p3, cv::Scalar(125, 125, 125));
-            // cv::arrowedLine(tmp_disp, p2, p4, cv::Scalar(0, 0, 0), 2);
-
             zzz_perception_msgs::TrackingBox obs_box;
             // TODO 
             zzz_perception_msgs::ObjectClass t;

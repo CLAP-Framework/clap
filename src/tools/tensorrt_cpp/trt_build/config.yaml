@@ -1,0 +1,22 @@
+###### option:caffe, onnx, uff ######
+gModelType: caffe
+###### option:0--FP32, 1--FP16, 2--INT8 ######
+gDataType: 0
+gMaxBatchSize: 1
+gMaxWorkspaceSize: 30  #2^30
+
+gInputNode: [input]
+###### caffe model ######
+gCaffePrototxt: /home/yli/mini-auto/src/perception/lidar_cnn_seg_detect_trt/models/deploy.prototxt
+gCaffeModel: /home/yli/mini-auto/src/perception/lidar_cnn_seg_detect_trt/models/deploy.caffemodel
+gOutputNode: [deconv0]
+gCnnSeg: True
+
+###### onnx model ######
+# gOnnxModel: ../models/part1.onnx
+# gOutputNode: ["pointpillars_part1/features"]
+# gOnnxModel: ../models/part2.onnx
+# gOutputNode: ["pointpillars_part2/features"]
+
+###### uff model ######
+gUffModel: ../models/

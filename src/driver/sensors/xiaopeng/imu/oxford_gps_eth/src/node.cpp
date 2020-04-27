@@ -331,11 +331,13 @@ static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, r
     Eigen::Vector3d xyz(utm.easting, utm.northing, utm.altitude);
 
 
-    //442867,4427888)
-    double X=utm.easting-442867;
-    double Y=utm.northing-4427888;
+    // THU-Meiyuan origin point (442867,4427888)
+    // shougnag-origin (428191,4417667)
+    double X=utm.easting-428191;
+    double Y=utm.northing-4417667;
     // TODO fixme(zhangxiang trick)
     
+    // ego_pose 
     zzz_driver_msgs::RigidBodyStateStamped state;
 
     /**pose**/
@@ -436,7 +438,9 @@ int main(int argc, char **argv)
     ros::Publisher pub_imu = node.advertise<sensor_msgs::Imu>("imu/data", 2);
     ros::Publisher pub_odom = node.advertise<nav_msgs::Odometry>("gps/odom", 2);
     ros::Publisher pub_ego_pose = node.advertise<zzz_driver_msgs::RigidBodyStateStamped>("/zzz/navigation/ego_pose", 2);
-    
+
+    ros::Publisher pub_current_pose = node.advertise<geometry_msgs::PoseStamped>("current_pose", 2);
+    ros::Publisher pub__current_velocity = node.advertise<geometry_msgs::TwistStamped>("current_velocity", 2);    
 
     // Variables
     Packet packet;
