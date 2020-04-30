@@ -1,5 +1,6 @@
 <launch>
     <!-- Carla setup & conversion -->
+    <!-- carla-0.9.9 support <arg name="carla_settings_file" default="$(find zzz_driver_simulators_carla_adapter)/launch/server099.launch.yaml"/> -->
     <arg name="carla_settings_file" default="$(find zzz_driver_simulators_carla_adapter)/launch/server.launch.yaml"/>
     <arg name="vehicle_sensors_file" default="$(find zzz_driver_simulators_carla_adapter)/config/sensors.json"/>
     <arg name="static_sensors_file" default="$(find zzz_driver_simulators_carla_adapter)/config/static_sensors.example.json"/>
