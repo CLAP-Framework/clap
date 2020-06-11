@@ -51,14 +51,7 @@ class MainDecision(object):
             desired_speed = 0
 
         rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
-        
-        # TODO(Temps): Should seperate into continous models 
-        # if changing_lane_index == -1:
-        #     return None
-        #     # trajectory = self._local_trajectory_instance_for_ref.get_trajectory(dynamic_map, changing_lane_index, desired_speed)#FIXME(ksj)
-        # else:
         trajectory = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed, in_junction)
-
 
         msg = DecisionTrajectory()
         msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory) # TODO: move to library

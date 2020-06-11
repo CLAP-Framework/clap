@@ -426,9 +426,7 @@ class Werling_planner(object):
         ego_y = dynamic_map.ego_state.pose.pose.position.y
         
         target_lane = dynamic_map.mmap.lanes[int(target_lane_index)]
-
         central_path = target_lane.map_lane.central_path_points
-        
         extend_centrol_path = self.extend_path(central_path)
         
         # self._local_trajectory_planner = Werling(dense_centrol_path)

@@ -114,6 +114,7 @@ class NearestLocator:
 
         # Locate vehicles onto the multilane map
         if dynamic_map.model == MapState.MODEL_MULTILANE_MAP:
+            self.locate_traffic_light_in_lanes(tstates)
             self.locate_ego_vehicle_in_lanes(tstates)
             self.locate_surrounding_objects_in_lanes(tstates)
             self.locate_stop_sign_in_lanes(tstates)
@@ -184,7 +185,15 @@ class NearestLocator:
 
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
         self._ego_vehicle_distance_to_lane_tail = dist_list[:, 4]
-        if ego_lane_index_rounded < 0 or self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded] <= lane_end_dist_thres:
+
+
+        if ego_lane_index_rounded < 0 or ego_lane_index_rounded > len(tstates.static_map_lane_path_array) - 1:
+            tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
+            rospy.logdebug("Ego_lane_index_error")
+            return
+
+        if (self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded] <= lane_end_dist_thres 
+                and tstates.dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane.stop_state == Lane.STOP_STATE_THRU):
             # Drive into junction, wait until next map
             rospy.logdebug("In junction due to close to intersection, ego_lane_index = %f, dist_to_lane_tail = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)])
             tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
@@ -270,9 +279,15 @@ class NearestLocator:
 
     def locate_traffic_light_in_lanes(self, tstates):
         # TODO: Currently it's a very simple rule to locate the traffic lights
-        if tstates.traffic_light_detection is None:
-            return
-        lights = tstates.traffic_light_detection.detections
+        # if tstates.traffic_light_detection is None:
+        #     return
+        # Vurtual Traffic Lights
+        traffic_light_detection = DetectionBoxArray()
+        traffic_light = DetectionBox()
+        traffic_light.signal = ObjectSignals.TRAFFIC_LIGHT_GREEN
+        traffic_light_detection.detections.append(traffic_light)
+
+        lights = traffic_light_detection.detections
 
         total_lane_num = len(tstates.static_map.lanes)
         if len(lights) == 1:
