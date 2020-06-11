@@ -9,7 +9,7 @@ from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 from zzz_cognition_msgs.msg import MapState
 from zzz_driver_msgs.utils import get_speed, get_yaw
-from zzz_planning_decision_lane_models.local_trajectory import PolylineTrajectory # TODO(Temps): Should seperate into continous models
+from zzz_planning_decision_lane_models.local_trajectory import PolylineTrajectory, Werling_planner # TODO(Temps): Should seperate into continous models
 
 # Make lat lon model as parameter
 
@@ -20,8 +20,8 @@ class MainDecision(object):
 
         self._longitudinal_model_instance = lon_decision
         self._lateral_model_instance = lat_decision
-        self._local_trajectory_instance = PolylineTrajectory() # MPCTrajectory()
-        self._local_trajectory_instance_for_ref = PolylineTrajectory() # TODO(Temps): Should seperate into continous models
+        self._local_trajectory_instance = Werling_planner() # MPCTrajectory()
+        # self._local_trajectory_instance_for_ref = PolylineTrajectory() # TODO(Temps): Should seperate into continous models
 
         self._dynamic_map_lock = Lock()
 
@@ -40,8 +40,10 @@ class MainDecision(object):
         else:
             dynamic_map = self._dynamic_map_buffer
 
-        # if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
-        #     return None
+        in_junction = False
+        if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
+            self._local_trajectory_instance.last_target_lane_index = -1
+            return None
         
         trajectory = None
         changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
@@ -51,11 +53,11 @@ class MainDecision(object):
         rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
         
         # TODO(Temps): Should seperate into continous models 
-        if changing_lane_index == -1:
-            return None
-            # trajectory = self._local_trajectory_instance_for_ref.get_trajectory(dynamic_map, changing_lane_index, desired_speed)#FIXME(ksj)
-        else:
-            trajectory = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
+        # if changing_lane_index == -1:
+        #     return None
+        #     # trajectory = self._local_trajectory_instance_for_ref.get_trajectory(dynamic_map, changing_lane_index, desired_speed)#FIXME(ksj)
+        # else:
+        trajectory = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed, in_junction)
 
 
         msg = DecisionTrajectory()

@@ -159,6 +159,7 @@ class FeedForwardPolicy(TD3Policy):
 
     def step(self, obs, state=None, mask=None):
         return self.sess.run(self.policy, {self.obs_ph: obs})
+    
 
 
 class CnnPolicy(FeedForwardPolicy):

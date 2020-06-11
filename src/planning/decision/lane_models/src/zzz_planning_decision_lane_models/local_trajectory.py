@@ -5,6 +5,9 @@ from cvxopt import solvers, matrix
 from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from zzz_cognition_msgs.msg import MapState
 from zzz_driver_msgs.utils import get_speed, get_yaw
+from lane_werling_planner import Werling
+from zzz_navigation_msgs.msg import LanePoint
+
 
 
 class MPCTrajectory(object):
@@ -384,7 +387,6 @@ class PolylineTrajectory(object):
 
         # replace lane change path into ahead path
         smoothen_lc_path = np.concatenate((lc_path,path_after_lc),axis = 0)
-
         return smoothen_lc_path
 
     def cubic_hermite_spline(self, p0, p1, m0, m1, resolution = 20):
@@ -409,3 +411,51 @@ class PolylineTrajectory(object):
         m1 = m1.reshape(1,2)
 
         return np.matmul(h00,p0) + np.matmul(h10,m0) + np.matmul(h01,p1) + np.matmul(h11,m1)
+
+
+class Werling_planner(object):
+    def __init__(self):
+        self.last_target_lane_index = -10
+
+
+    def get_trajectory(self, dynamic_map, target_lane_index, desired_speed, 
+                resolution=2.0, time_ahead=5, distance_ahead=10, rectify_thres=2,
+                lc_dt = 1.5, lc_v = 2.67):
+        # TODO: get smooth spline (write another module to generate spline)
+        ego_x = dynamic_map.ego_state.pose.pose.position.x
+        ego_y = dynamic_map.ego_state.pose.pose.position.y
+        
+        target_lane = dynamic_map.mmap.lanes[int(target_lane_index)]
+
+        central_path = target_lane.map_lane.central_path_points
+        
+        extend_centrol_path = self.extend_path(central_path)
+        
+        # self._local_trajectory_planner = Werling(dense_centrol_path)
+        if target_lane_index != self.last_target_lane_index:
+            self._local_trajectory_planner = Werling(extend_centrol_path)
+            self.last_target_lane_index = target_lane_index
+            
+        desired_speed = 15 / 3.6
+        return self._local_trajectory_planner.trajectory_update(dynamic_map, desired_speed)
+
+    def extend_path(self, path):
+        
+        dx = path[1].position.x - path[0].position.x
+        dy = path[1].position.y - path[0].position.y
+        
+        for i in range(1,30):
+            point = LanePoint()
+            point.position.x = path[0].position.x - dx
+            point.position.y = path[0].position.y - dy
+            path.insert(0, point)
+
+        return path
+
+
+    # TODO(zyxin): Add these to zzz_navigation_msgs.utils
+    def convert_path_to_ndarray(self, path):
+        point_list = [(point.position.x, point.position.y) for point in path]
+        return np.array(point_list)
+
+    

@@ -21,11 +21,14 @@ param_noise = None
 action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.5) * np.ones(n_actions))
 
 try:
-    model = DDPG.load(load_path,env=env, tensorboard_log=log_path)
+    model = DDPG.load(load_path,env=env, tensorboard_log=log_path, save_path=save_path)
     print("load saved model")
 
 except:
-    model = DDPG(MlpPolicy, env, verbose=1, param_noise=param_noise, action_noise=action_noise, gamma=0.99, nb_train_steps=20, nb_rollout_steps=100, nb_eval_steps=50, tensorboard_log=log_path,full_tensorboard_log=True, save_path=save_path)
+    model = DDPG(MlpPolicy, env, verbose=2, param_noise=param_noise, action_noise=action_noise, 
+                gamma=0.99, normalize_observations=False, normalize_returns=True, 
+                nb_train_steps=20, nb_rollout_steps=100, nb_eval_steps=50, 
+                tensorboard_log=log_path,full_tensorboard_log=True, save_path=save_path)
     print("build new model")
 
 model.learn(total_timesteps=100000)

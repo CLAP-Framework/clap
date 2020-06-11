@@ -15,6 +15,8 @@ from zzz_cognition_msgs.msg import RoadObstacle
 from zzz_common.kinematics import get_frenet_state
 from zzz_common.geometry import dense_polyline2d
 from zzz_planning_msgs.msg import DecisionTrajectory
+from zzz_common.geometry import dist_from_point_to_polyline2d
+
 
 from zzz_planning_decision_continuous_models.common import rviz_display, convert_ndarray_to_pathmsg, convert_path_to_ndarray
 from zzz_planning_decision_continuous_models.predict import predict
@@ -34,7 +36,7 @@ N_S_SAMPLE = 2  # sampling number of target speed
 
 # RL paramter
 MIN_SPEED_RL = 3/3.6 # min speed for rl planning [m/s]
-KICK_IN_TIME = 2.25 # kick in time for rl action [s]
+KICK_IN_TIME = 2.1 # kick in time for rl action [s]
 
 # collision check
 OBSTACLES_CONSIDERED = 3
@@ -113,6 +115,7 @@ class Werling(object):
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
             self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
             self.rivz_element.collision_circle = self.obs_prediction.rviz_collision_checking_circle
+            
             return msg
         else:
             return None
@@ -170,8 +173,12 @@ class Werling(object):
     def initialize(self, dynamic_map):
         self._dynamic_map = dynamic_map
         try:
+            # calculate dist to the end of ref path 
+            if self.ref_path is not None:
+                self.dist_to_end = dist_from_point_to_polyline2d(dynamic_map.ego_state.pose.pose.position.x, dynamic_map.ego_state.pose.pose.position.y, self.ref_path, return_end_distance=True)
+                
             # estabilish frenet frame
-            if self.csp is None:
+            if self.csp is None or self.dist_to_end[4] < 10:
                 self.reference_path = dynamic_map.jmap.reference_path.map_lane.central_path_points
                 ref_path_ori = convert_path_to_ndarray(self.reference_path)
                 self.ref_path = dense_polyline2d(ref_path_ori, 2)
@@ -245,6 +252,7 @@ class Werling(object):
                                             time_consume2, candidate_len2,
                                             time_consume3, candidate_len3)
 
+        self.all_trajectory = fplist
         # find minimum cost path
         mincost = float("inf")
         bestpath = None

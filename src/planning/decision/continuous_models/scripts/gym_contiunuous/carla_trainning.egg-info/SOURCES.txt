@@ -7,4 +7,3 @@ carla_trainning.egg-info/top_level.txt
 gym_routing/__init__.py
 gym_routing/envs/__init__.py
 gym_routing/envs/zzz_ddpg.py
-gym_routing/envs/zzz_ddpg_0114bak.py

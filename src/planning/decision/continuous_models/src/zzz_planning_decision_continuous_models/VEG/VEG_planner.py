@@ -17,9 +17,14 @@ from zzz_planning_decision_continuous_models.common import rviz_display, convert
 from zzz_planning_decision_continuous_models.predict import predict
 
 # PARAMETERS
-THRESHOLD = -100000
+THRESHOLD = 0.2
 OBSTACLES_CONSIDERED = 3
 ACTION_SPACE_SYMMERTY = 15/3.6 
+
+# Should be the same with those in werling!
+KICK_IN_TIME = 2.1
+DT = 0.3
+KICK_IN_POINT = 7 # 2.1/0.3
 
 
 
@@ -42,8 +47,6 @@ class VEG_Planner(object):
         self.ref_path_tangets = None
 
         self.rivz_element = rviz_display()
-        self.kick_in_signal = None
-
     
         if mode == "client":
             rospy.loginfo("Connecting to RL server...")
@@ -58,10 +61,11 @@ class VEG_Planner(object):
         
     def initialize(self, dynamic_map):
         try:
-            self.reference_path = dynamic_map.jmap.reference_path.map_lane.central_path_points
-            ref_path_ori = convert_path_to_ndarray(self.reference_path)
-            self.ref_path = dense_polyline2d(ref_path_ori, 2)
-            self.ref_path_tangets = np.zeros(len(self.ref_path))
+            if self.reference_path is None: # a fixed reference path
+                self.reference_path = dynamic_map.jmap.reference_path.map_lane.central_path_points
+                ref_path_ori = convert_path_to_ndarray(self.reference_path)
+                self.ref_path = dense_polyline2d(ref_path_ori, 2)
+                self.ref_path_tangets = np.zeros(len(self.ref_path))
             return True
         except:
             rospy.logdebug("------> VEG: Initialize fail ")
@@ -70,6 +74,11 @@ class VEG_Planner(object):
     def clear_buff(self, dynamic_map):
         self._rule_based_trajectory_model_instance.clear_buff(dynamic_map)
         self._collision_signal = False
+        self.reference_path = None
+        self.ref_path = None
+        self.ref_path_tangets = None
+        self.rivz_element.kick_in_signal = None
+
 
         # send done to OPENAI
         if self._has_clear_buff == False:
@@ -80,13 +89,15 @@ class VEG_Planner(object):
             else:  
                 leave_current_mmap = 1
 
-            collision = False
+            collision = 0
             sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # ego and obs state
             sent_RL_msg.append(collision)
             sent_RL_msg.append(leave_current_mmap)
             sent_RL_msg.append(THRESHOLD) # threshold
             sent_RL_msg.append(0.0) # Rule_based_point.d
             sent_RL_msg.append(0.0 - ACTION_SPACE_SYMMERTY) # Rule_based_point.vs
+            print("-----------------------------",sent_RL_msg)
+
             self.sock.sendall(msgpack.packb(sent_RL_msg))
             try:
                 RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
@@ -111,6 +122,7 @@ class VEG_Planner(object):
             sent_RL_msg.append(RLpoint.location.y)
             print("-----------------------------",sent_RL_msg)
             self.sock.sendall(msgpack.packb(sent_RL_msg))
+            
 
             # received RL action and plan a RL trajectory
             try:
@@ -199,9 +211,9 @@ class VEG_Planner(object):
     def get_RL_point_from_trajectory(self, frenet_trajectory_rule):
         RLpoint = Transform()
 
-        if len(frenet_trajectory_rule.t) > 15:
-            RLpoint.location.x = frenet_trajectory_rule.d[15] #only works when DT param of werling is 0.15
-            RLpoint.location.y = frenet_trajectory_rule.s_d[15] - ACTION_SPACE_SYMMERTY
+        if len(frenet_trajectory_rule.t) > KICK_IN_POINT:
+            RLpoint.location.x = frenet_trajectory_rule.d[KICK_IN_POINT] #only works when DT param of werling is 0.15
+            RLpoint.location.y = frenet_trajectory_rule.s_d[KICK_IN_POINT] - ACTION_SPACE_SYMMERTY
         else:
             RLpoint.location.x = 0
             RLpoint.location.y = 0 - ACTION_SPACE_SYMMERTY
@@ -216,10 +228,9 @@ class VEG_Planner(object):
 
         if rl_q - rule_q > THRESHOLD and rl_action[0] < 2333 and rl_action[1] < 2333:
             rl_action[1] = rl_action[1] + ACTION_SPACE_SYMMERTY
-            self.kick_in_signal = self.rivz_element.draw_kick_in_circles(self._dynamic_map.ego_state.pose.pose.position.x,
-                        self._dynamic_map.ego_state.pose.pose.position.y, 3.5)
+            self.rivz_element.kick_in_signal = self.rivz_element.draw_kick_in_path(self._rule_based_trajectory_model_instance.last_trajectory_array)
             return self._rule_based_trajectory_model_instance.trajectory_update_RL_kick(self._dynamic_map, rl_action)
                                
         else:
-            self.kick_in_signal = None
+            self.rivz_element.kick_in_signal = self.rivz_element.draw_rule_path(self._rule_based_trajectory_model_instance.last_trajectory_array_rule)
             return rule_trajectory_msg

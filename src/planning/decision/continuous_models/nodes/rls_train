@@ -26,7 +26,7 @@ class RLSNode(object):
             RVIZ_predi_trajectory_topic="predi_trajectory_path", 
             RVIZ_collision_circle_topic="collision_circle", 
             RVIZ_kick_in_signal_topic="kick_in_signal",
-            hz = 2,
+            hz = 10,
         )
         self._rate = rospy.Rate(params.hz)
         
@@ -65,7 +65,7 @@ class RLSNode(object):
         all_trajectory = self._decision_instance._trajectory_planner._rule_based_trajectory_model_instance.rivz_element.candidates_trajectory
         obs_paths = self._decision_instance._trajectory_planner._rule_based_trajectory_model_instance.rivz_element.prediciton_trajectory
         collision_circle = self._decision_instance._trajectory_planner._rule_based_trajectory_model_instance.rivz_element.collision_circle
-        kick_in_signal = self._decision_instance._trajectory_planner.kick_in_signal
+        kick_in_signal = self._decision_instance._trajectory_planner.rivz_element.kick_in_signal
         
         if all_trajectory:
             self._rviz_all_trajectory_publisher.publish(all_trajectory)
@@ -75,6 +75,7 @@ class RLSNode(object):
             self._rviz_collision_circle_publisher.publish(collision_circle)
         if kick_in_signal:
             self._rviz_kick_in_signal_publisher.publish(kick_in_signal)
+    
 
 
     def collision_callback(self, msg):

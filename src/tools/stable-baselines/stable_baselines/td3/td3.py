@@ -59,13 +59,13 @@ class TD3(OffPolicyRLModel):
     :param n_cpu_tf_sess: (int) The number of threads for TensorFlow operations
         If None, the number of cpu of the current machine will be used.
     """
-    def __init__(self, policy, env, gamma=0.99, learning_rate=3e-4, buffer_size=50000,
-                 learning_starts=100, train_freq=100, gradient_steps=100, batch_size=128,
+    def __init__(self, policy, env, gamma=0.99, learning_rate=1e-5, buffer_size=50000,
+                 learning_starts=100, train_freq=100, gradient_steps=100, batch_size=256,
                  tau=0.005, policy_delay=2, action_noise=None,
                  target_policy_noise=0.2, target_noise_clip=0.5,
-                 random_exploration=0.0, verbose=0, tensorboard_log=None,
+                 random_exploration=0.3, verbose=0, tensorboard_log=None,
                  _init_setup_model=True, policy_kwargs=None,
-                 full_tensorboard_log=False, seed=None, n_cpu_tf_sess=None):
+                 full_tensorboard_log=False, seed=None, n_cpu_tf_sess=None, save_path=None):
 
         super(TD3, self).__init__(policy=policy, env=env, replay_buffer=None, verbose=verbose,
                                   policy_base=TD3Policy, requires_vec_env=False, policy_kwargs=policy_kwargs,
@@ -115,6 +115,12 @@ class TD3(OffPolicyRLModel):
         self.policy_train_op = None
         self.policy_loss = None
 
+        #zwt
+        self.save_path = save_path
+        self.qf1 = None
+        self.qf1_for_rule = None
+        self.qf2_for_rule = None
+
         if _init_setup_model:
             self.setup_model()
 
@@ -134,6 +140,7 @@ class TD3(OffPolicyRLModel):
                 self.replay_buffer = ReplayBuffer(self.buffer_size)
 
                 with tf.variable_scope("input", reuse=False):
+
                     # Create policy and target TF objects
                     self.policy_tf = self.policy(self.sess, self.observation_space, self.action_space,
                                                  **self.policy_kwargs)
@@ -161,6 +168,9 @@ class TD3(OffPolicyRLModel):
                     # Q value when following the current policy
                     qf1_pi, _ = self.policy_tf.make_critics(self.processed_obs_ph,
                                                             policy_out, reuse=True)
+                    self.qf1 = qf1_pi
+                    self.qf1_for_rule = qf1
+                    self.qf2_for_rule = qf2
 
                 with tf.variable_scope("target", reuse=False):
                     # Create target networks
@@ -300,18 +310,19 @@ class TD3(OffPolicyRLModel):
             episode_successes = []
             if self.action_noise is not None:
                 self.action_noise.reset()
-            obs = self.env.reset()
+            obs, rule_action = self.env.reset()
             self.episode_reward = np.zeros((1,))
             ep_info_buf = deque(maxlen=100)
             n_updates = 0
             infos_values = []
-
+            save_count = 0
             for step in range(total_timesteps):
                 if callback is not None:
                     # Only stop training if return value is False, not when it is None. This is for backwards
                     # compatibility with callbacks that have no return statement.
                     if callback(locals(), globals()) is False:
                         break
+                print("-----222",obs)
 
                 # Before training starts, randomly sample actions
                 # from a uniform distribution for better exploration.
@@ -333,7 +344,7 @@ class TD3(OffPolicyRLModel):
 
                 assert action.shape == self.env.action_space.shape
 
-                new_obs, reward, done, info = self.env.step(unscaled_action)
+                new_obs, reward, done, info, rule_action = self.env.step(unscaled_action,0,0,0)
 
                 # Store transition in the replay buffer.
                 self.replay_buffer.add(obs, action, reward, new_obs, float(done))
@@ -379,7 +390,8 @@ class TD3(OffPolicyRLModel):
                     if self.action_noise is not None:
                         self.action_noise.reset()
                     if not isinstance(self.env, VecEnv):
-                        obs = self.env.reset()
+                        obs, rule_action = self.env.reset()
+                        print("-----111",obs)
                     episode_rewards.append(0.0)
 
                     maybe_is_success = info.get('is_success')
@@ -414,6 +426,15 @@ class TD3(OffPolicyRLModel):
                     logger.dumpkvs()
                     # Reset infos:
                     infos_values = []
+                # zwt
+                save_count = save_count + 1
+                if save_count > 100:
+                    try:
+                        self.save(self.save_path)
+                        print("save models")
+                        save_count = 0
+                    except:
+                        print("fail to save models")
             return self
 
     def action_probability(self, observation, state=None, mask=None, actions=None, logp=False):
@@ -443,6 +464,46 @@ class TD3(OffPolicyRLModel):
             actions = actions[0]
 
         return actions, None
+
+    # -------- zwt modify ------------
+    def predict_RLS(self, observation, rule_based_action, state=None, mask=None, deterministic=True):
+        observation = np.array(observation)
+        rule_based_action = np.array(rule_based_action)
+        vectorized_env = self._is_vectorized_observation(observation, self.observation_space)
+
+        observation = observation.reshape((-1,) + self.observation_space.shape)
+        rule_based_action = rule_based_action.reshape((-1,) + self.action_space.shape)
+        rule_based_action = scale_action(self.action_space, rule_based_action)
+
+        feed_dict = {self.policy_tf.obs_ph: observation}
+       
+        actions, q_value = self.sess.run([self.policy_out, self.qf1], feed_dict=feed_dict)
+        feed_dict = {self.policy_tf.obs_ph: observation,  self.actions_ph: actions}
+        # print("action",actions)
+        # print("q-value",q_value)
+        actions = actions.reshape((-1,) + self.action_space.shape)  # reshape to the correct action shape
+        actions = unscale_action(self.action_space, actions)  # scale the output for the prediction
+
+        
+        rule_action, rule_q = self.baseline_action_estimate(observation, rule_based_action)
+        # print("rule_action",rule_action)
+        
+        rule_action = rule_action.reshape((-1,) + self.action_space.shape)  # reshape to the correct action shape
+        rule_action = unscale_action(self.action_space, rule_action)  # scale the output for the prediction
+
+        if not vectorized_env:
+            actions = actions[0]
+
+        return actions, q_value, rule_action, rule_q
+
+    def baseline_action_estimate(self, obs, rule_based_action):
+
+        feed_dict = {self.policy_tf.obs_ph: obs,  self.actions_ph: rule_based_action}
+        Q_rule = self.sess.run(self.qf1_for_rule, feed_dict=feed_dict)
+        # print("rule_q1",Q_rule)
+    
+        return rule_based_action, Q_rule
+    # ------- modify end ---------------
 
     def get_parameter_list(self):
         return (self.params +

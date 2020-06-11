@@ -3,7 +3,7 @@ import gym_routing
 
 import numpy as np
 import sys
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+#sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 from stable_baselines.deepq.policies import MlpPolicy
 from stable_baselines import DQN
