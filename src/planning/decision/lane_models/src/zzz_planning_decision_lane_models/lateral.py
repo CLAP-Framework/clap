@@ -23,11 +23,11 @@ class LaneUtility(object):
         
         target_index = self.generate_lane_change_index()
         target_speed = self.longitudinal_model_instance.longitudinal_speed(target_index,traffic_light = True)
-        # TODO: More accurate speed
-        tail_speed = self.tail_speed(dynamic_map.mmap.distance_to_junction)
+        # # TODO: More accurate speed
+        # tail_speed = self.tail_speed(dynamic_map.mmap.distance_to_junction)
 
-        if tail_speed < target_speed:
-            target_speed = tail_speed
+        # if tail_speed < target_speed:
+        #     target_speed = tail_speed
         
         return target_index, target_speed
 
@@ -63,8 +63,8 @@ class LaneUtility(object):
         available_speed = self.longitudinal_model_instance.longitudinal_speed(lane_index)
         exit_lane_index = self.dynamic_map.mmap.target_lane_index
         distance_to_end = self.dynamic_map.mmap.distance_to_junction
-        # XXX: Change 260 to a adjustable parameter?
-        utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1) #*max(0,(260-distance_to_end))
+
+        utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1) * max(0,(200-distance_to_end)) * 0.1
         return utility
 
     def lane_change_safe(self, ego_lane_index, target_index):
@@ -79,13 +79,13 @@ class LaneUtility(object):
         ego_vehicle_location = np.array([self.dynamic_map.ego_state.pose.pose.position.x,
                                          self.dynamic_map.ego_state.pose.pose.position.y])
 
-        for lane in self.dynamic_map.mmap.lanes:
-            if lane.map_lane.index == target_index:
-                if len(lane.front_vehicles) > 0:
-                    front_vehicle = lane.front_vehicles[0]
-                if len(lane.rear_vehicles) > 0:
-                    rear_vehicle = lane.rear_vehicles[0]
-                break
+        target_lane = self.dynamic_map.mmap.lanes[target_index]
+
+        if len(target_lane.front_vehicles) > 0:
+            front_vehicle = target_lane.front_vehicles[0]
+        
+        if len(target_lane.rear_vehicles) > 0:
+            rear_vehicle = target_lane.rear_vehicles[0]
 
         ego_v = get_speed(self.dynamic_map.ego_state)
 
@@ -102,7 +102,7 @@ class LaneUtility(object):
             # TODO: Change to real distance in lane
             d_front = np.linalg.norm(front_vehicle_location - ego_vehicle_location)
             front_v = get_speed(front_vehicle.state)
-            if d_front > max(10 + 3*(ego_v-front_v), 10):
+            if d_front > max(10 + 5*(ego_v-front_v), 10):
                 front_safe = True
         
 
@@ -118,7 +118,7 @@ class LaneUtility(object):
             behavior_rear = rear_vehicle.behavior
             d_rear = np.linalg.norm(rear_vehicle_location - ego_vehicle_location)
             rear_v = get_speed(rear_vehicle.state)
-            if d_rear > max(10 + 3*(rear_v-ego_v), 10):
+            if d_rear > max(10 + 5*(rear_v-ego_v), 20):
                 rear_safe = True
 
         rospy.logdebug("ego_lane = %d, target_lane = %d, front_d = %f(%d), rear_d = %f(%d)",

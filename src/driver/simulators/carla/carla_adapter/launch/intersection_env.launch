@@ -1,6 +1,0 @@
-<launch>
-
-    <node pkg="zzz_driver_simulators_carla_adapter" type="intersection_env" name="intersection_env" output="screen" respawn="true"> 
-    </node>
-
-</launch>

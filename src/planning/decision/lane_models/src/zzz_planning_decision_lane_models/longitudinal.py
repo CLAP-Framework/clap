@@ -23,9 +23,6 @@ class IDM(object):
     def longitudinal_speed(self, target_lane_index, traffic_light = False):
 
         target_lane = None
-
-        if target_lane_index == -1:
-            target_lane = self.dynamic_map.jmap.reference_path
         
         if target_lane_index > len(self.dynamic_map.mmap.lanes)-1:
             rospy.logwarn("cannot find neighbor lane, lane_index: %d", target_lane_index)

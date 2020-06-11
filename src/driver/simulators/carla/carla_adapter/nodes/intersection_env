@@ -272,7 +272,7 @@ def generate_remove_traffic(carla_world, delay = 0.5):
 
     while not rospy.is_shutdown():
         generate_traffic_098(carla_world, blueprints, spawn_points)
-        removed_stopped_vehicle(carla_world, 20/delay)
+        removed_stopped_vehicle(carla_world, 10/delay)
         time.sleep(delay)
 
     # if rospy.Time.now().to_sec() - needed_generate > 0.5:
@@ -384,8 +384,8 @@ def record_collsion_to_txt(ego_vehicle):
 
 
     if if_intersection == True and if_write_collision == False:    
+        if collision_signal and rospy.Time.now().to_sec() - stay < 10:
 
-        if collision_signal and stay < 10:
             # fw = open("/home/carla/ZZZ/zzz/src/driver/simulators/carla/carla_adapter/nodes/record_collision.txt", 'a')   
             fw = open("/home/zwt/zzz/data/veg/test_data/record_collision.txt", 'a')   
             fw.write("collision")

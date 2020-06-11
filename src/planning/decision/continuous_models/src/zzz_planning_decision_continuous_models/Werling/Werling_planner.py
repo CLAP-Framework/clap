@@ -32,13 +32,15 @@ MINT = 4.0  # min prediction time [m]
 TARGET_SPEED = 15.0 / 3.6  # target speed [m/s]
 D_T_S = 5.0 / 3.6  # target speed sampling length [m/s]
 N_S_SAMPLE = 2  # sampling number of target speed
+REQUIRED_PATH_LENGTH = 50
+
 
 # collision check
 OBSTACLES_CONSIDERED = 3
 ROBOT_RADIUS = 3.5  # robot radius [m]
 RADIUS_SPEED_RATIO = 0.25 # higher speed, bigger circle
 MOVE_GAP = 1.0
-ONLY_SAMPLE_TO_RIGHT = True
+ONLY_SAMPLE_TO_RIGHT = False
 
 # Cost weights
 KJ = 0.1
@@ -81,6 +83,8 @@ class Werling(object):
         self.rivz_element.candidates_trajectory = None
         self.rivz_element.prediciton_trajectory = None
         self.rivz_element.collision_circle = None
+        self.rivz_element.collision_circle_ego = None
+        
         return None
     
     def trajectory_update(self, dynamic_map):
@@ -115,6 +119,7 @@ class Werling(object):
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
             self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
             self.rivz_element.collision_circle = self.obs_prediction.rviz_collision_checking_circle
+            self.rivz_element.collision_circle_ego = self.obs_prediction.rviz_collision_checking_circle_ego
             return msg
         else:
             return None
@@ -205,13 +210,54 @@ class Werling(object):
         self.all_trajectory = fplist
 
         # find minimum cost path
-        mincost = float("inf")
-        bestpath = None
+        # mincost = float("inf")
+        # bestpath = None
+        # for fp in fplist:
+        #     if mincost >= fp.cf:
+        #         mincost = fp.cf
+        #         bestpath = fp   
+        
+        # return bestpath
+
+        
+        # 0711
+        path_tuples = []    
         for fp in fplist:
-            if mincost >= fp.cf:
-                mincost = fp.cf
-                bestpath = fp
-        return bestpath
+            one_path = [fp, fp.cf]
+            path_tuples.append(one_path)
+
+        sorted_fplist = sorted(path_tuples, key=lambda path_tuples: path_tuples[1])
+
+        for fp in sorted_fplist:
+            print(fp[1])
+            if self.obs_prediction.check_collision(fp[0]):
+                return fp[0]
+            else:
+                continue
+        return None
+
+
+        
+
+    def check_paths(self, fplist):
+        okind = []
+        for i, _ in enumerate(fplist):
+
+            if any([v > MAX_SPEED for v in fplist[i].s_d]):  # Max speed check
+                # rospy.logdebug("exceeding max speed")
+                continue
+            elif any([abs(a) > MAX_ACCEL for a in fplist[i].s_dd]):  # Max accel check
+                # rospy.logdebug("exceeding max accel")
+                continue
+            elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
+                # rospy.logdebug("exceeding max curvature")
+                continue
+            # if not self.obs_prediction.check_collision(fplist[i]):
+            #     continue
+
+            okind.append(i)
+
+        return [fplist[i] for i in okind]
 
     def generate_target_course(self, x, y):
         csp = Spline2D(x, y)
@@ -226,6 +272,8 @@ class Werling(object):
             rk.append(csp.calc_curvature(i_s))
 
         return rx, ry, ryaw, rk, csp
+
+
 
     def calc_frenet_paths(self, c_speed, start_state): # input state
 
@@ -274,6 +322,31 @@ class Werling(object):
                     tfp.cd = KJ * Jp + KT * Ti + KD * tfp.d[-1]**2
                     tfp.cv = KJ * Js + KT * Ti + KD * ds
                     tfp.cf = KLAT * tfp.cd + KLON * tfp.cv
+                    
+                    
+                    # 0727 longer path
+                    if tfp.s[-1] < REQUIRED_PATH_LENGTH:
+                        tfp_s_end = tfp.s[-1]
+                        tfp_s_d_end = tfp.s_d[-1]
+                        tfp_s_dd_end = tfp.s_dd[-1]
+                        tfp_s_ddd_end = tfp.s_ddd[-1]
+                        if tfp_s_d_end > 0:
+                            t_plus = (REQUIRED_PATH_LENGTH - tfp_s_end)/tfp_s_d_end
+                        else:
+                            t_plus = (REQUIRED_PATH_LENGTH - tfp_s_end)/1.0
+                        for t in np.arange(DT, t_plus, DT):
+                            tfp.t.append(t)
+                            tfp.d.append(fp.d[-1])
+                            tfp.d_d.append(0)
+                            tfp.d_dd.append(0)
+                            tfp.d_ddd.append(0)
+                            tfp.s.append(tfp_s_end + tfp_s_d_end * t)
+                            tfp.s_d.append(tfp_s_d_end)
+                            tfp.s_dd.append(0)
+                            tfp.s_ddd.append(0)
+                            
+                    else:
+                        pass
 
                     frenet_paths.append(tfp)
 
@@ -291,17 +364,18 @@ class Werling(object):
                 iyaw = csp.calc_yaw(fp.s[i])
                 di = fp.d[i]
                 fx = ix + di * math.cos(iyaw + math.pi / 2.0)
+
                 fy = iy + di * math.sin(iyaw + math.pi / 2.0)
                 fp.x.append(fx)
                 fp.y.append(fy)
-
+                
             # calc yaw and ds
             for i in range(len(fp.x) - 1):
                 dx = fp.x[i + 1] - fp.x[i]
                 dy = fp.y[i + 1] - fp.y[i]
                 fp.yaw.append(math.atan2(dy, dx))
                 fp.ds.append(math.sqrt(dx**2 + dy**2))
-
+              
             
             try:
                 fp.yaw.append(fp.yaw[-1])
@@ -309,32 +383,14 @@ class Werling(object):
             except:
                 fp.yaw.append(0.1)
                 fp.ds.append(0.1)
-
+            
             # calc curvature
             for i in range(len(fp.yaw) - 1):
                 fp.c.append((fp.yaw[i + 1] - fp.yaw[i]) / fp.ds[i])
 
         return fplist
 
-    def check_paths(self, fplist):
-        okind = []
-        for i, _ in enumerate(fplist):
 
-            if any([v > MAX_SPEED for v in fplist[i].s_d]):  # Max speed check
-                # rospy.logdebug("exceeding max speed")
-                continue
-            elif any([abs(a) > MAX_ACCEL for a in fplist[i].s_dd]):  # Max accel check
-                # rospy.logdebug("exceeding max accel")
-                continue
-            elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
-                # rospy.logdebug("exceeding max curvature")
-                continue
-            if not self.obs_prediction.check_collision(fplist[i]):
-                continue
-
-            okind.append(i)
-
-        return [fplist[i] for i in okind]
 
 
 class quintic_polynomial:

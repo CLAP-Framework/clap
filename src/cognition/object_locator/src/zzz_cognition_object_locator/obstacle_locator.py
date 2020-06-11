@@ -3,6 +3,7 @@ import rospy
 from easydict import EasyDict as edict
 from threading import Lock
 import copy
+import math
 
 from zzz_cognition_msgs.msg import LaneState, MapState, RoadObstacle
 from zzz_cognition_msgs.utils import convert_tracking_box
@@ -13,7 +14,7 @@ from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_driver_msgs.utils import get_speed, get_yaw
 from zzz_navigation_msgs.msg import Lane, Map
 from zzz_navigation_msgs.utils import get_lane_array, default_msg as navigation_default
-from zzz_perception_msgs.msg import (DetectionBoxArray, ObjectSignals,
+from zzz_perception_msgs.msg import (DetectionBoxArray, ObjectSignals, DetectionBox,
                                      TrackingBoxArray)
 
 class NearestLocator:
@@ -162,14 +163,21 @@ class NearestLocator:
             la, lb = abs(closest_lane_dist), abs(second_closest_lane_dist)
             return (b*la + a*lb)/(lb + la)
 
-    def locate_objects_in_junction(self, tstates):
+    def locate_objects_in_junction(self, tstates, danger_area = 30):
         tstates.dynamic_map.jmap.obstacles = []
         for obj in tstates.surrounding_object_list:
             if tstates.dynamic_map.model == MapState.MODEL_MULTILANE_MAP:
                 obj.lane_index = self.locate_object_in_lane(obj.state, tstates)
             else:
                 obj.lane_index = -1
+
             tstates.dynamic_map.jmap.obstacles.append(obj)
+
+            # dist_to_ego = math.sqrt(math.pow((obj.state.pose.pose.position.x - tstates.ego_vehicle_state.state.pose.pose.position.x),2) 
+            #     + math.pow((obj.state.pose.pose.position.y - tstates.ego_vehicle_state.state.pose.pose.position.y),2))
+            
+            # if dist_to_ego < danger_area:
+            #     tstates.dynamic_map.jmap.obstacles.append(obj)
 
     # TODO: adjust lane_end_dist_thres to class variable
     def locate_ego_vehicle_in_lanes(self, tstates, lane_end_dist_thres=1.5, lane_dist_thres=5):

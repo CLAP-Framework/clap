@@ -16,6 +16,7 @@ class rviz_display():
         self.candidates_trajectory = None
         self.prediciton_trajectory = None
         self.collision_circle = None
+        self.collision_circle_ego = None
         self.kick_in_signal = None
     
     def put_trajectory_into_marker(self, fplist):

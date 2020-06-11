@@ -44,7 +44,6 @@ class MainDecision(object):
         if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
             self._local_trajectory_instance.last_target_lane_index = -1
             return None
-        
         trajectory = None
         changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
         if desired_speed < 0: # TODO: clean this
