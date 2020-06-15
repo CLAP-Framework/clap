@@ -17,24 +17,46 @@ icvCarlaControlNode::~icvCarlaControlNode()
 
 void icvCarlaControlNode::initForROS()
 {
-  //   ros parameter settings
+//   ros parameter settings
+#ifdef __DEBUG__SURPPORT_
   ros::param::get("~target_speedcarla", target_speedcarla);
-  // ros::param::get("~target_speedxp",target_speedxp);
-  ros::param::get("~carla_flag", carla_flag);
+  speed_plan_desir = target_speedcarla / 3.6;
   ros::param::get("~_R_test", _R_test);
   ros::param::get("~_delta_d", _delta_d);
-  target_speedcarla = target_speedcarla * 3.6;
-  if (carla_flag == 1)
+#endif
+  ros::param::get("~VehicleMode_flag", VehicleMode_flag);
+  if (VehicleMode_flag == 1)
   {
-    /**carla仿真使用**/
+#ifdef __DEBUG__SURPPORT_
+    /**carla simulition**/
     // setup subscriber
-    // sub1_ = nh_.subscribe("/carla/ego_vehicle/waypoints", 10, &icvCarlaControlNode::WaypointCallback, this);//实车屏蔽
-    // sub2_ = nh_.subscribe("/gnss_pose", 10, &icvCarlaControlNode::callbackFromCurrentPose, this);//实车屏蔽
-    // sub3_ = nh_.subscribe("/carla/ego_vehicle/vehicle_status", 10, &icvCarlaControlNode::VehicleStatusCallback, this);  //实车屏蔽
-    // // setup publisher
-    // pub1_ = nh_.advertise<carla_msgs::CarlaEgoVehicleControl>("/carla/ego_vehicle/vehicle_control_cmd", 10);//实车屏蔽
+    sub1_ = nh_.subscribe("/carla/ego_vehicle/waypoints", 10, &icvCarlaControlNode::WaypointCallback, this);
+    sub2_ = nh_.subscribe("/gnss_pose", 10, &icvCarlaControlNode::callbackFromCurrentPose, this);
+    sub4_ = nh_.subscribe("/carla/ego_vehicle/odometry", 10, &icvCarlaControlNode::callbackFromodom, this);
+
+    sub3_ = nh_.subscribe("/carla/ego_vehicle/vehicle_status", 10, &icvCarlaControlNode::VehicleStatusCallback, this);
+    // setup publisher
+    pub1_ = nh_.advertise<carla_msgs::CarlaEgoVehicleControl>("/carla/ego_vehicle/vehicle_control_cmd", 10);
+#endif
   }
-  else
+  if (VehicleMode_flag == 2)
+  {
+    /**mini_auto simulition**/
+    // setup subscriber
+  #if 0
+    sub1_ = nh_.subscribe("final_waypoints", 10, &icvCarlaControlNode::callbackFromWayPoints, this);
+    sub2_ = nh_.subscribe("current_pose", 10, &icvCarlaControlNode::callbackFromCurrentPose, this);
+    sub3_ = nh_.subscribe("/carla/ego_vehicle/vehicle_status", 10, &icvCarlaControlNode::VehicleStatusCallback, this);
+  #endif
+
+#ifdef __ZZZ_SURPPORT__
+    sub_zzz_path_ = nh_.subscribe("/zzz/planning/decision_trajectory", 10, &icvCarlaControlNode::callback_Path, this);
+#endif
+    // setup publisher
+    pub1_ = nh_.advertise<carla_msgs::CarlaEgoVehicleControl>("/carla/ego_vehicle/vehicle_control_cmd", 10);
+  }
+
+  if (VehicleMode_flag == 3)
   {
     /*小鹏实车调试使用*/
     sub_zzz_eogpose_ = nh_.subscribe("/zzz/navigation/ego_pose", 10, &icvCarlaControlNode::callback_egopose, this);
@@ -45,54 +67,139 @@ void icvCarlaControlNode::initForROS()
     sub_autostate_ = nh_.subscribe("/xp/auto_state", 10, &icvCarlaControlNode::callback_auto_state, this);
     sub_esc_status_ = nh_.subscribe("/xp/esc_status", 10, &icvCarlaControlNode::callback_esc, this);
     sub_eps_status_ = nh_.subscribe("/xp/eps_status", 10, &icvCarlaControlNode::callback_eps, this);
+#ifdef __ZZZ_SURPPORT__
     sub_zzz_path_ = nh_.subscribe("/zzz/planning/decision_trajectory", 10, &icvCarlaControlNode::callback_Path, this);
+#endif
 
     pub_xp_ = nh_.advertise<xpmotors_can_msgs::AutoCtlReq>("/xp/auto_control", 1000);
   }
+
+  if (VehicleMode_flag == 4)
+  {
+    /*园区小车调试使用*/
+  #if 0
+    sub1_ = nh_.subscribe("final_waypoints", 10, &icvCarlaControlNode::callbackFromWayPoints, this);
+  #endif
+    // sub2_ = nh_.subscribe("current_pose", 10, &icvCarlaControlNode::callbackFromCurrentPose, this);
+
+    sub_imudata_ = nh_.subscribe("/localization/imu/data", 10, &icvCarlaControlNode::callback_imu, this);
+    sub_gpsfix_ = nh_.subscribe("/localization/gps/fix", 10, &icvCarlaControlNode::callback_gpsfix, this);
+    sub_gpsvel_ = nh_.subscribe("/localization/gps/vel", 10, &icvCarlaControlNode::callback_gpsvel, this);
+
+    sub_gpsodom_ = nh_.subscribe("/localization/gps/odom", 10, &icvCarlaControlNode::callback_gpsodom, this);
+
+    sub_autostateex_ = nh_.subscribe("/xp/auto_state_ex", 10, &icvCarlaControlNode::callback_auto_state_ex, this);
+    sub_autostate_ = nh_.subscribe("/xp/auto_state", 10, &icvCarlaControlNode::callback_auto_state, this);
+    sub_esc_status_ = nh_.subscribe("/xp/esc_status", 10, &icvCarlaControlNode::callback_esc, this);
+    sub_eps_status_ = nh_.subscribe("/xp/eps_status", 10, &icvCarlaControlNode::callback_eps, this);
+#ifdef __ZZZ_SURPPORT__
+    sub_zzz_path_ = nh_.subscribe("/zzz/planning/decision_trajectory", 10, &icvCarlaControlNode::callback_Path, this);
+#endif
+
+    pub_xp_ = nh_.advertise<xpmotors_can_msgs::AutoCtlReq>("/xp/auto_control", 1000);
+  }
+
+  if (VehicleMode_flag != 1 && VehicleMode_flag != 2 && VehicleMode_flag != 3)
+  {
+    ROS_ERROR("VehicleMode_flag set error !!!!!!! please set Vehicleflag=2 for mini_auto system, set Vehicleflag =3 for xiaopeng or Vehicleflag = 4 for cutecar!!!!!");
+  }
+}
+//传递carla信息
+void icvCarlaControlNode::callbackFromodom(const nav_msgs::Odometry &msg)
+{
+  zz.setcarlaomodom(msg);
 }
 
+// void icvCarlaControlNode::callback_gpsodom(const nav_msgs::Odometry &msg)
+// {
 
+//   glo_x = msg.pose.pose.position.x;
+//   glo_y = msg.pose.pose.position.y;
+//   glo_yaw = qua_to_rpy(msg.pose.pose.orientation);
+//   XpPoint_rec.theta = glo_yaw;
+//   XpPoint_rec.x = glo_x;
+//   XpPoint_rec.y = glo_y;
+// }
+
+void icvCarlaControlNode::callbackFromCurrentVelocity(const geometry_msgs::TwistStampedConstPtr &msg)
+{
+  XpPoint_rec.speed_rec = msg->twist.linear.x; //m/s
+}
+
+#if 0
+void icvCarlaControlNode::callbackFromWayPoints(const autoware_msgs::LaneConstPtr &msg)
+{
+  nav_msgs::Path Path_dev; //回调函数接受final waypoins、
+  geometry_msgs::PoseStamped pose_dev;
+  if (!msg->waypoints.empty())
+    target_speedcarla = msg->waypoints.at(0).twist.twist.linear.x;
+  else
+    target_speedcarla = 0;
+  for (int i = 0; i < msg->waypoints.size(); i++)
+  {
+    pose_dev.pose.orientation = msg->waypoints[i].pose.pose.orientation;
+    pose_dev.pose.position = msg->waypoints[i].pose.pose.position;
+    Path_dev.poses.push_back(pose_dev);
+  }
+
+  speed_plan_desir = msg->waypoints[3].twist.twist.linear.x;
+  zz.setWaypoints(Path_dev);
+  ROS_INFO("I hear waypoint %ld", msg->waypoints.size());
+  callback_Path_flag = true;
+}
+#endif
+
+bool callback_safe()
+{
+  //judge sensors status
+  static int gps_flag = 0;
+
+  if (gps_flag != 2)
+  {
+    ROS_ERROR("Warning! Please check your GPS sensors!!!!");
+  }
+}
 void icvCarlaControlNode::Noderun()
 {
   ROS_INFO_STREAM("icv_carla_control  start");
   ros::Rate loop_rate(LOOP_RATE_);
-  int cou = 0;
-  ofstream out;
-  double angle = 0;     //前轮转角
-  double angle_old = 0; //上一时刻角度
+  double angle = 0; //current angle
   double out_throttle = 0;
   double out_brake = 0;
-  double factor = 0;
-  double v_cur = 0; //carla 使用当前车速
 
   while (ros::ok())
   {
-    if (callback_imu_flag == 1 & cou < 10)
+    if (callback_imu_flag == 0)
+      ROS_WARN("gps not receive !!!!");
+
+#ifdef __DEBUG__SURPPORT_
+    if (callback_imu_flag == 1)
     {
       // Path_generator(_R_test,_delta_d,Yaw_carla);//计算测试路径  //实车屏蔽
-      // data_file_input();//提取txt路径测试数据
-      cou += 1;
+      // data_file_input(); //提取txt路径测试数据
     }
-    if (callback_imu_flag == 1 & cou > 9)
+#endif
+
+    if (callback_imu_flag == 1)
     {
       VehicelStatusSend();
       zz.run_follower(&angle);
-      if (carla_flag)
+      if (VehicleMode_flag == 1 || VehicleMode_flag == 2)
       {
         /**carla中使用**/
+        target_speedcarla = speed_plan_desir * 3.6;
         zz.run_speedcontrol(&out_throttle, &out_brake, target_speedcarla);
-        angle = -angle; //carla left - right +
-        ROS_DEBUG("Carla Vehicle SteerSend=  %lf", angle);
-        // cout<<"   "<<out_throttle<<"     223233  "<<out_brake<<endl;
-        // publishVehicleinstruction(angle,out_throttle,out_brake); //carla  pub   //实车屏蔽
+        angle = -angle; //carla left - right +//autoware zuo+ you-
+        ROS_INFO("Carla Vehicle SteerSend=  %lf", angle);
+        publishVehicleinstruction(angle, out_throttle, out_brake); //carla  pub   //实车屏蔽
       }
-      else
+      if (VehicleMode_flag == 3)
       {
         /***小鹏实车测试使用***/
         angle = angle * (180 / PI) * 15.7; //xp left +  right -
         ROS_INFO("XpMotors Vehicle SteerSend=  %lf", angle);
-        ROS_INFO("XpMotors Vehicle target_speedxp=  %lf", target_speedxp);
-        CarconstructionPub(angle, target_speedxp); //发布小鹏的控制信息
+        ROS_INFO("XpMotors Vehicle target_speedxp=  %lf", speed_plan_desir);
+        CarconstructionPub(angle, speed_plan_desir); //发布小鹏的控制信息
       }
     }
     // for visualization with Rviz
@@ -116,31 +223,32 @@ void icvCarlaControlNode::pubVechilepose2rviz(VehicleStatus carpose)
 
   double x_pre, y_pre;
   float d_error;
-  zz.sendXYpre(&x_pre, &y_pre,&d_error);
+  zz.sendXYpre(&x_pre, &y_pre, &d_error);
   pre_point.position.x = x_pre;
   pre_point.position.y = y_pre;
 
-  if(resultSet.size()<10000)
+  /*计算误差平均值和方差*/
+
+  if (resultSet.size() < 1000)
   {
-    resultSet.push_back(abs(d_error)) ;  
+    resultSet.push_back(abs(d_error));
   }
   else
   {
     resultSet.clear();
   }
-  double sum = std::accumulate(std::begin(resultSet), std::end(resultSet), 0.0);  
-  double mean =  sum / resultSet.size(); //均值    
-  double accum  = 0.0;  
-  std::for_each (std::begin(resultSet), std::end(resultSet), [&](const double d) 
-  {  
-  accum  += (d-mean)*(d-mean);  
-  });    
-  double stdev = sqrt(accum/(resultSet.size()-1)); //方差 
+  double sum = std::accumulate(std::begin(resultSet), std::end(resultSet), 0.0);
+  double mean = sum / resultSet.size(); //均值
+  double accum = 0.0;
+  std::for_each(std::begin(resultSet), std::end(resultSet), [&](const double d) {
+    accum += (d - mean) * (d - mean);
+  });
+  double stdev = sqrt(accum / (resultSet.size() - 1)); //方差
 
   geometry_msgs::Vector3 error;
-  error.x=d_error;
-  error.y=mean;
-  error.z=stdev;
+  error.x = d_error;
+  error.y = mean;
+  error.z = stdev;
   visualization_msgs::Marker pre_point_msg = pubPrepointtoRviz(pre_point);
 
   pub_follow_error.publish(error);
@@ -154,7 +262,6 @@ void icvCarlaControlNode::CarconstructionPub(double steer_send, double SpeedReq)
 
   if (!CurDriveMode)
   {
-    // cout<<"CurDriveMode "<<CurDriveMode<<endl;
     ROS_INFO("Vehicle is Humanmode!!!");
     ctrmsg.EPSAngleReq = 0;
     ctrmsg.AutoMode = 1;
@@ -163,10 +270,9 @@ void icvCarlaControlNode::CarconstructionPub(double steer_send, double SpeedReq)
   }
   else if (EPBState)
   {
-    // cout<<"EPBState   "<<EPBState<<endl;
-    for (int i = 0; i < 40; i++)
+    ROS_DEBUG("EPB is hold!!!");
+    for (int i = 0; i < 30; i++)
     {
-      ROS_INFO("EPB is hold!!!");
       ctrmsg.AutoMode = 1;
       ctrmsg.TarSpeedReq = 1;
       usleep(50000);
@@ -174,29 +280,31 @@ void icvCarlaControlNode::CarconstructionPub(double steer_send, double SpeedReq)
     }
     for (int i = 0; i < 20; i++)
     {
-      ROS_INFO("EPB is hold!!!");
+      ROS_DEBUG("EPB is hold!!!");
       ctrmsg.AutoMode = 1;
       ctrmsg.TarSpeedReq = 0;
-      usleep(5000);
+      usleep(1000);
       pub_xp_.publish(ctrmsg);
     }
   }
   else
   {
-    ROS_INFO("Vehicle is Automode!!!");
+    ROS_DEBUG("Vehicle is Automode!!!");
     ctrmsg.AutoMode = 1;
     ctrmsg.TarSpeedReq = SpeedReq; //m/s
   }
-  cout<<" ctrmsg.TarSpeedReq "<<ctrmsg.TarSpeedReq<<endl;//zx
-  cout<<" ctrmsg.EPSAngleReq "<<ctrmsg.EPSAngleReq<<endl;//zx
+
   pub_xp_.publish(ctrmsg);
 }
-//汇总整个类接口数据然后传递，车辆当前状态，定位，路径信息
+
 void icvCarlaControlNode::VehicelStatusSend()
 {
+  //update vehicle coordinate(x(m),y(m),yaw(deg)),chassis data speed(m/s),steerangle(deg)
   zz.SetVehicleStatus(XpPoint_rec.x, XpPoint_rec.y, XpPoint_rec.theta, XpPoint_rec.speed_rec, XpPoint_rec.steer_rec);
 }
+
 /******************************************************************************************************carla*********************************************************************************************************************************/
+#ifdef __DEBUG__SURPPORT_
 /*仿真路径生成,生成固定转弯半径的路径点，距离长度500m,左手坐标系拟合路径*/
 void icvCarlaControlNode::Path_generator(double R, double delta_d, double headingangle)
 {
@@ -207,12 +315,25 @@ void icvCarlaControlNode::Path_generator(double R, double delta_d, double headin
   double delta_max = PI / 2; //转向角度
   double x = XpPoint_rec.x;
   double y = XpPoint_rec.y;
-  double s = 0;       //实时计算的路径长度
-  double s_max = 500; //限制路径长度
+  double s = 0;          //实时计算的路径长度
+  double s1 = 0, s2 = 0; //与弯道连接的直道
+  double s_max = 500;    //限制路径长度
   if (R < 100)
     delta_max = PI;
   if (R < 1000)
   {
+    //50m straight line
+    while (s1 < 30)
+    {
+      x = x + delta_d * cos(headingangle / 180 * PI);
+      y = y + delta_d * sin(headingangle / 180 * PI);
+      Point.pose.position.x = x;
+      Point.pose.position.y = y;
+      s1 += delta_d;
+      testPath.poses.push_back(Point);
+    }
+    cout << "turn point X1,Y1=  " << x << " " << y << endl;
+    //turn line
     delta = asin(delta_d / (2 * R));
     while (delta_run < delta_max)
     {
@@ -223,15 +344,26 @@ void icvCarlaControlNode::Path_generator(double R, double delta_d, double headin
       Point.pose.position.x = x;
       Point.pose.position.y = y;
       testPath.poses.push_back(Point);
-      cout << "delta_run " << delta_run << endl;
+      // cout << "delta_run " << delta_run << endl;
+    }
+    cout << "turn point X2,Y2=  " << x << " " << y << endl;
+    //50m straight line
+    while (s2 < 30)
+    {
+      x = x + delta_d * cos(delta_run + headingangle / 180 * PI);
+      y = y + delta_d * sin(delta_run + headingangle / 180 * PI);
+      Point.pose.position.x = x;
+      Point.pose.position.y = y;
+      s2 += delta_d;
+      testPath.poses.push_back(Point);
     }
   }
   if (R > 5000)
   {
     while (s < s_max)
     {
-      x = x + delta_d * sin(headingangle / 180 * PI);
-      y = y + delta_d * cos(headingangle / 180 * PI);
+      x = x + delta_d * cos(headingangle / 180 * PI);
+      y = y + delta_d * sin(headingangle / 180 * PI);
       Point.pose.position.x = x;
       Point.pose.position.y = y;
       s += delta_d;
@@ -242,49 +374,57 @@ void icvCarlaControlNode::Path_generator(double R, double delta_d, double headin
   pub_path.publish(testPath);
   zz.setWaypoints(testPath);
 }
+#endif
 
 /**carlas仿真环境接口**/
-// void icvCarlaControlNode::VehicleStatusCallback(const carla_msgs::CarlaEgoVehicleStatus &msg)//实车屏蔽
-// {
-//   XpPoint_rec.speed_rec=msg.velocity;
-//   XpPoint_rec.steer_rec=msg.control.steer*180/PI;
-//   // ROS_INFO("I hear Vehiclestatus!");
-// }
-// void icvCarlaControlNode::callbackFromCurrentPose(const geometry_msgs::PoseStampedConstPtr &msg)//实车屏蔽
-// {
+void icvCarlaControlNode::VehicleStatusCallback(const carla_msgs::CarlaEgoVehicleStatus &msg) //实车屏蔽
+{
+  XpPoint_rec.speed_rec = msg.velocity;
+  XpPoint_rec.steer_rec = msg.control.steer * 180 / PI;
+  ROS_INFO_ONCE("I hear Carla Vehiclestatus!");
+}
+void icvCarlaControlNode::callbackFromCurrentPose(const geometry_msgs::PoseStampedConstPtr &msg) //实车屏蔽
+{
 
-//     //carla左手坐标系
-//     XpPoint_rec.x=msg->pose.position.x;
-//     XpPoint_rec.y=msg->pose.position.y;
-//     Yaw_carla=qua_to_rpy(msg->pose.orientation);
-//     XpPoint_rec.theta=Yaw_carla;
+  //carla左手坐标系
+  XpPoint_rec.x = msg->pose.position.x;
+  XpPoint_rec.y = msg->pose.position.y;
+  Yaw_carla = qua_to_rpy(msg->pose.orientation);
+  XpPoint_rec.theta = Yaw_carla;
 
-//     callback_imu_flag=true;
-//     // ROS_INFO("I hear callbackFromCurrentposr!");
-// }
-// void icvCarlaControlNode::WaypointCallback(const nav_msgs::Path &msg)//实车屏蔽
-// {
-//   zz.setWaypoints(msg);
-//   pub_path.publish(msg);
-//   ROS_INFO("I hear %d Waypoints!",msg.poses.size());
-// }
-// void icvCarlaControlNode::publishVehicleinstruction(double steer,double throttle,bool brakeflag)//方向盘、油门值、制动指令//实车屏蔽
-// {
-//     carla_msgs::CarlaEgoVehicleControl msg_pub1;
-//     msg_pub1.steer=steer;
-//     msg_pub1.throttle=throttle;
-//     msg_pub1.brake=brakeflag;
-//     pub1_.publish(msg_pub1);
+  callback_imu_flag = true;
+  // ROS_DEBUG("I hear callbackFromCurrentposr!");
+}
+void icvCarlaControlNode::WaypointCallback(const nav_msgs::Path &msg)
+{
+  //TODO::receive Path and sent it to Control
+  zz.setWaypoints(msg);
+  pub_path.publish(msg);
+  ROS_DEBUG("I hear %ld Waypoints!", msg.poses.size());
+}
+void icvCarlaControlNode::publishVehicleinstruction(double steer, double throttle, bool brakeflag)
+{
+  //TODO::send control instruction to carla
+  //input::steer(rad)  throttle(0~1) brakeflag(0,1)
+  carla_msgs::CarlaEgoVehicleControl msg_pub1;
+  msg_pub1.steer = steer;
+  msg_pub1.throttle = throttle;
+  msg_pub1.brake = brakeflag;
+  pub1_.publish(msg_pub1);
+}
 
-// }
 /***********************************************************************************************小鹏车使用***********************************************************************************************/
 /*读取轨迹点信息*/
+#ifdef __ZZZ_SURPPORT__
 void icvCarlaControlNode::callback_Path(const zzz_planning_msgs::DecisionTrajectory &msg)
 {
-  zz.setWaypoints(msg.trajectory);    //轨迹获取
-  target_speedxp = msg.desired_speed; //速度获取
+  zz.setWaypoints(msg.trajectory); //轨迹获取
+  speed_plan_desir = msg.desired_speed;
   callback_Path_flag = true;
+  ROS_DEBUG("I hear pointsize %ld",msg.trajectory.poses.size());
 }
+#endif
+#ifdef __DEBUG__SURPPORT_
 void icvCarlaControlNode::data_file_input()
 {
   nav_msgs::Path Path_file;
@@ -293,7 +433,7 @@ void icvCarlaControlNode::data_file_input()
 
   //读取采集到的路径点信息
   ifstream infile1;
-  infile1.open("/home/icv/follow_carla/wPath.txt"); //打开文件
+  infile1.open("/home/zx/Desktop/heqingpath.txt"); //打开文件
   if (!infile1.good())
   {
     ROS_ERROR("no Path file !!!please check your pathfile!!!!!");
@@ -306,8 +446,8 @@ void icvCarlaControlNode::data_file_input()
       lineCnt++;
   }
   infile1.close();
-  infile1.open("/home/icv/follow_carla/wPath.txt"); //打开文件
-  for (int i = 0; i < lineCnt; i++)                 //定义行循环
+  infile1.open("/home/zx/Desktop/heqingpath.txt"); //打开文件
+  for (int i = 0; i < lineCnt; i++)                //定义行循环
   {
     for (int j = 0; j < 2; j++) //定义列循环
     {
@@ -331,11 +471,13 @@ void icvCarlaControlNode::data_file_input()
   pub_path.publish(Path_file);
   zz.setWaypoints(Path_file);
 }
+#endif
 
+#ifdef __ZZZ_SURPPORT__
 void icvCarlaControlNode::callback_egopose(const zzz_driver_msgs::RigidBodyStateStamped &msg)
 {
-  XpPoint_rec.x= msg.state.pose.pose.position.x;
-  XpPoint_rec.y= msg.state.pose.pose.position.y;
+  XpPoint_rec.x = msg.state.pose.pose.position.x;
+  XpPoint_rec.y = msg.state.pose.pose.position.y;
   double Yaw = qua_to_rpy(msg.state.pose.pose.orientation);
   // Yaw += 90;
   // if (Yaw < 0)
@@ -346,93 +488,136 @@ void icvCarlaControlNode::callback_egopose(const zzz_driver_msgs::RigidBodyState
 
   callback_imu_flag = true;
 }
-/**车辆驾驶模式反馈*/
+#endif
+
 void icvCarlaControlNode::callback_auto_state_ex(const xpmotors_can_msgs::AutoStateEx &msg)
 {
+  //TODO::Vehicle Drive mode feedback
+
   StateTurningLight = msg.StateTurningLight;
   CurDriveMode = msg.CurDriveMode;
   StateBraking = msg.StateBraking;
   callback_auto_state_ex_flag = true;
+  ROS_INFO_ONCE("I hear /xp/auto_state_ex topic ~~~~~~");
 }
-/**车辆底盘反馈*/
+
 void icvCarlaControlNode::callback_auto_state(const xpmotors_can_msgs::AutoState &msg)
 {
+  //TODO::Vehicle Chassis data
+
   EPBState = msg.EPBState;
   GearState = msg.GearState;
   BrkPedal = msg.BrkPedal;
   AccPedal = msg.AccPedal;
   callback_auto_state_flag = true;
+  ROS_INFO_ONCE("I hear /auto/state topic ~~~~~~");
 }
-/*车辆rsc反馈*/
+
 void icvCarlaControlNode::callback_esc(const xpmotors_can_msgs::ESCStatus &msg)
 {
+  //TODO::Vehicle Drive speedfeedback (km/h)
   RRWheelSpd = msg.RRWheelSpd;
   LFWheelSpd = msg.LFWheelSpd;
   RFWheelSpd = msg.RFWheelSpd;
   LRWheelSpd = msg.LRWheelSpd;
   callback_esc_flag = true;
-  XpPoint_rec.speed_rec = 0.01 * RRWheelSpd / 3.6; //m/s
+  XpPoint_rec.speed_rec = RRWheelSpd / 3.6; //m/s
+  ROS_INFO_ONCE("I hear /xp/esc topic ~~~~~~");
 }
-/*车辆EPS反馈*/
+
 void icvCarlaControlNode::callback_eps(const xpmotors_can_msgs::EPSStatus &msg)
 {
+  //TODO::Vehicle EPS data feedback
 
   AngleSpd = msg.AngleSpd;
   Angle = msg.Angle;
   StrngWhlTorq = msg.StrngWhlTorq;
-  XpPoint_rec.steer_rec = msg.Angle * 0.02; //zx    度数
+  XpPoint_rec.steer_rec = msg.Angle; //zx    度数
   callback_eps_flag = true;
+  ROS_INFO_ONCE("I hear /xp/eps topic ~~~~~~");
 }
-/*GPS速度*/
-// void icvCarlaControlNode::callback_gpsvel(const geometry_msgs::TwistWithCovarianceStamped &msg)
-// {
-//   //  state.state.twist.twist.linear.x=msg.twist.twist.linear.x;
-//   //  state.state.twist.twist.linear.y=msg.twist.twist.linear.y;
-//   //  state.state.twist.twist.linear.z=0;
-// }
 
-// /*IMU航向角*/
-// void icvCarlaControlNode::callback_imu(const sensor_msgs::Imu &msg)
-// {
-//   double Yaw = 0;
-//   double Imu_accX = 0;
-//   double Imu_accY = 0;
-//   double Imu_accZ = 0;
-//   Imu_accX = msg.linear_acceleration.x;
-//   Imu_accY = msg.linear_acceleration.y;
-//   Imu_accZ = msg.linear_acceleration.z;
+void icvCarlaControlNode::callback_gpsvel(const geometry_msgs::TwistWithCovarianceStamped &msg)
+{
+  //  state.state.twist.twist.linear.x=msg.twist.twist.linear.x;
+  //  state.state.twist.twist.linear.y=msg.twist.twist.linear.y;
+  //  state.state.twist.twist.linear.z=0;
+  ROS_INFO_ONCE("I hear /gps/vel topic ~~~~~~");
+}
 
-//   Yaw = qua_to_rpy(msg.orientation);
+/*IMU航向角*/
+void icvCarlaControlNode::callback_imu(const sensor_msgs::Imu &msg)
+{
+  double Yaw = 0;
 
-//   Yaw += 90;
-//   if (Yaw < 0)
-//   {
-//     Yaw += 360;
-//   }
-//   XpPoint_rec.theta = Yaw; //参数传递
+  Imu_angle_acc_x = msg.angular_velocity.x;
+  Imu_angle_acc_y = msg.angular_velocity.y;
+  Imu_angle_acc_z = msg.angular_velocity.z;
 
-//   callback_imu_flag = true;
-// }
-// /*GPS转xy*/
-// void icvCarlaControlNode::callback_gpsfix(const sensor_msgs::NavSatFix &msg)
-// {
+  Imu_linear_accX = msg.linear_acceleration.x;
+  Imu_linear_accY = msg.linear_acceleration.y;
+  Imu_linear_accZ = msg.linear_acceleration.z;
 
-//   callback_gps_flag = true;
+  Yaw = qua_to_rpy(msg.orientation);
 
-//   geographic_msgs::GeoPointStampedPtr gps_msg(new geographic_msgs::GeoPointStamped());
-//   gps_msg->position.latitude = msg.latitude;
-//   gps_msg->position.longitude = msg.longitude;
-//   gps_msg->position.altitude = msg.altitude;
+  Yaw += 90;
+  if (Yaw < 0)
+  {
+    Yaw += 360;
+  }
+  XpPoint_rec.theta = Yaw; //参数传递
+  ROS_INFO_ONCE("I hear /imu/data topic ~~~~~~");
+  callback_imu_flag = true;
+}
 
-//   geodesy::UTMPoint utm;
-//   geodesy::fromMsg(gps_msg->position, utm);
-//   Eigen::Vector3d xyz(utm.easting, utm.northing, utm.altitude);
+//receive UTM coordinate from localization
+void icvCarlaControlNode::callback_gpsodom(const nav_msgs::Odometry &msg)
+{
+  float glo_x, glo_y, glo_yaw;
+  glo_x = msg.pose.pose.position.x;
+  glo_y = msg.pose.pose.position.y;
+  glo_yaw = qua_to_rpy(msg.pose.pose.orientation);
+  XpPoint_rec.theta = glo_yaw;
+  XpPoint_rec.x = glo_x;
+  XpPoint_rec.y = glo_y;
+  // cout << "X , Y =  " << glo_x << " " << glo_y << " " << glo_yaw << endl;
+  callack_odom_flag = true;
+  ROS_INFO_ONCE("I hear /gps/odom topic ~~~~~~");
+}
+/*GPS转xy*/
+void icvCarlaControlNode::callback_gpsfix(const sensor_msgs::NavSatFix &msg)
+{
 
-//   XpPoint_rec.x = utm.easting - 442867;
-//   XpPoint_rec.y = utm.northing - 4427888;
+  callback_gps_flag = true;
 
-//   callback_gpsfix_flag = true;
-// }
+  geographic_msgs::GeoPointStampedPtr gps_msg(new geographic_msgs::GeoPointStamped());
+  gps_msg->position.latitude = msg.latitude;
+  gps_msg->position.longitude = msg.longitude;
+  gps_msg->position.altitude = msg.altitude;
+
+  geodesy::UTMPoint utm;
+  geodesy::fromMsg(gps_msg->position, utm);
+  Eigen::Vector3d xyz(utm.easting, utm.northing, utm.altitude);
+
+  if (VehicleMode_flag == 3)
+  {
+    XpPoint_rec.x = utm.easting - 442867;
+    XpPoint_rec.y = utm.northing - 4427888;
+  }
+
+  callback_gpsfix_flag = true;
+  ROS_INFO_ONCE("I hear /gps/fix topic ~~~~~~");
+  double yawstate = atan2(yy - yyold, xx - xxold) / PI * 180;
+  if (yawstate < 0)
+    yawstate += 360;
+
+  // ofstream out;
+  // out.open("/home/zx/follow_carla/Yawdata0414.txt",std::ios::out | std::ios::app);
+  // out<<setiosflags(ios::fixed)<<setprecision(3)<<yawstate<<" "<<XpPoint_rec.theta<<" "<<xx<<" "<<yy<<" "<<yy-yyold<<" "<<xx-xxold<<" "<<yyold<<" "<<xxold<<endl;
+  // out.close();
+  xxold = xx;
+  yyold = yy;
+}
 /*四元素转航向角*/
 double icvCarlaControlNode::qua_to_rpy(geometry_msgs::Quaternion posedata)
 {
@@ -448,4 +633,28 @@ double icvCarlaControlNode::qua_to_rpy(geometry_msgs::Quaternion posedata)
 
   return Y;
 }
+//RPY转四元素//
+geometry_msgs::Quaternion icvCarlaControlNode::rpy_to_qua(double Yaw, double Pitch, double Roll)
+{
+
+  geometry_msgs::Quaternion qua;
+  Yaw = Yaw * PI / 180;
+  Pitch = 0 * PI / 180;
+  Roll = 0 * PI / 180;
+
+  double cy = cos(Yaw * 0.5);
+  double sy = sin(Yaw * 0.5);
+  double cp = cos(Pitch * 0.5);
+  double sp = sin(Pitch * 0.5);
+  double cr = cos(Roll * 0.5);
+  double sr = sin(Roll * 0.5);
+
+  qua.w = cy * cp * cr + sy * sp * sr;
+  qua.x = cy * cp * sr - sy * sp * cr;
+  qua.y = sy * cp * sr + cy * sp * cr;
+  qua.z = sy * cp * cr - cy * sp * sr;
+
+  return qua;
+}
+
 } // namespace icv

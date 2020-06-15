@@ -118,7 +118,8 @@ class DrivingSpaceConstructor:
             self.locate_stop_sign_in_lanes(tstates)
             self.locate_speed_limit_in_lanes(tstates)
             self.calculate_drivable_area(tstates)
-            self.calculate_next_drivable_area(tstates)
+	    # TODO(disable it under xiaopeng)
+            # self.calculate_next_drivable_area(tstates)
         
         self._driving_space.header.frame_id = "map"
         self._driving_space.header.stamp = rospy.Time.now()
@@ -159,9 +160,9 @@ class DrivingSpaceConstructor:
                 tempmarker.type = Marker.LINE_STRIP
                 tempmarker.action = Marker.ADD
                 tempmarker.scale.x = 0.12
-                tempmarker.color.r = 1.0
-                tempmarker.color.g = 0.0
-                tempmarker.color.b = 0.0
+                tempmarker.color.r = 0.1
+                tempmarker.color.g = 0.8
+                tempmarker.color.b = 0.7
                 tempmarker.color.a = 0.5
                 tempmarker.lifetime = rospy.Duration(0.5)
 

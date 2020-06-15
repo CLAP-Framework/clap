@@ -3,6 +3,7 @@ import rospy
 from easydict import EasyDict as edict
 from threading import Lock
 import copy
+import math
 
 from zzz_cognition_msgs.msg import LaneState, MapState, RoadObstacle
 from zzz_cognition_msgs.utils import convert_tracking_box
@@ -13,11 +14,11 @@ from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_driver_msgs.utils import get_speed, get_yaw
 from zzz_navigation_msgs.msg import Lane, Map
 from zzz_navigation_msgs.utils import get_lane_array, default_msg as navigation_default
-from zzz_perception_msgs.msg import (DetectionBoxArray, ObjectSignals,
+from zzz_perception_msgs.msg import (DetectionBoxArray, DetectionBox, ObjectSignals,
                                      TrackingBoxArray)
 
 class NearestLocator:
-    def __init__(self, lane_dist_thres=5):
+    def __init__(self, lane_dist_thres=5): 
         
         self._static_map_lock = Lock()
         self._static_map_buffer = None
@@ -73,9 +74,9 @@ class NearestLocator:
         # - static_map_lane_tangets
         # - surrounding_object_list
         tstates = edict()
-
         # Skip if not ready
         if not self._ego_vehicle_state_buffer:
+            rospy.logwarn("Cognition Model not receive Ego pose")
             return None
 
         with self._ego_vehicle_state_lock:
@@ -114,7 +115,10 @@ class NearestLocator:
 
         # Locate vehicles onto the multilane map
         if dynamic_map.model == MapState.MODEL_MULTILANE_MAP:
+            self.locate_traffic_light_in_lanes(tstates)
             self.locate_ego_vehicle_in_lanes(tstates)
+        
+        if tstates.dynamic_map.model == MapState.MODEL_MULTILANE_MAP:
             self.locate_surrounding_objects_in_lanes(tstates)
             self.locate_stop_sign_in_lanes(tstates)
             self.locate_speed_limit_in_lanes(tstates)
@@ -161,9 +165,16 @@ class NearestLocator:
             la, lb = abs(closest_lane_dist), abs(second_closest_lane_dist)
             return (b*la + a*lb)/(lb + la)
 
-    def locate_objects_in_junction(self, tstates):
+    def locate_objects_in_junction(self, tstates, danger_area = 30):
         tstates.dynamic_map.jmap.obstacles = []
+               
         for obj in tstates.surrounding_object_list:
+            dist_to_ego = math.sqrt(math.pow((obj.state.pose.pose.position.x - tstates.ego_state.state.pose.pose.position.x),2) 
+                + math.pow((obj.state.pose.pose.position.y - tstates.ego_state.state.pose.pose.position.y),2))
+
+            if dist_to_ego > danger_area:
+                continue
+
             if tstates.dynamic_map.model == MapState.MODEL_MULTILANE_MAP:
                 obj.lane_index = self.locate_object_in_lane(obj.state, tstates)
             else:
@@ -171,7 +182,7 @@ class NearestLocator:
             tstates.dynamic_map.jmap.obstacles.append(obj)
 
     # TODO: adjust lane_end_dist_thres to class variable
-    def locate_ego_vehicle_in_lanes(self, tstates, lane_end_dist_thres=1.5, lane_dist_thres=5):
+    def locate_ego_vehicle_in_lanes(self, tstates, lane_end_dist_thres=15, lane_dist_thres=5):
         dist_list = np.array([dist_from_point_to_polyline2d(
             tstates.ego_state.state.pose.pose.position.x, tstates.ego_state.state.pose.pose.position.y,
             lane, return_end_distance=True)
@@ -180,11 +191,16 @@ class NearestLocator:
         ego_lane_index = self.locate_object_in_lane(tstates.ego_state.state, tstates)
         ego_lane_index_rounded = int(round(ego_lane_index))
 
-        # print("ego_lane_index=",ego_lane_index)
-
+        if ego_lane_index_rounded < 0 or ego_lane_index_rounded > len(tstates.static_map_lane_path_array) - 1:
+            tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
+            rospy.logdebug("Ego_lane_index_error")
+            return
+        
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
         self._ego_vehicle_distance_to_lane_tail = dist_list[:, 4]
-        if ego_lane_index_rounded < 0 or self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded] <= lane_end_dist_thres:
+
+        if (self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded] <= lane_end_dist_thres 
+                and tstates.dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane.stop_state == Lane.STOP_STATE_THRU):
             # Drive into junction, wait until next map
             rospy.logdebug("In junction due to close to intersection, ego_lane_index = %f, dist_to_lane_tail = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)])
             tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
@@ -270,9 +286,16 @@ class NearestLocator:
 
     def locate_traffic_light_in_lanes(self, tstates):
         # TODO: Currently it's a very simple rule to locate the traffic lights
-        if tstates.traffic_light_detection is None:
-            return
-        lights = tstates.traffic_light_detection.detections
+        # if tstates.traffic_light_detection is None:
+        #     return
+        # lights = tstates.traffic_light_detection.detections
+
+        traffic_light_detection = DetectionBoxArray()
+        traffic_light = DetectionBox()
+        traffic_light.signal = ObjectSignals.TRAFFIC_LIGHT_GREEN
+        traffic_light_detection.detections.append(traffic_light)
+
+        lights = traffic_light_detection.detections
 
         total_lane_num = len(tstates.static_map.lanes)
         if len(lights) == 1:
@@ -317,7 +340,7 @@ class NearestLocator:
         # Now we set the multilane speed limit as 40 km/h.
         total_lane_num = len(tstates.static_map.lanes)
         for i in range(total_lane_num):
-            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 25
+            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 20
 
 
 

@@ -13,7 +13,7 @@ from geometry_msgs.msg import Pose
 from nav_msgs.msg import Path
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import Map, MapString
-from zzz_navigation_map_provider_sumo import NativeMap
+from zzz_navigation_map_provider_sumo import ShougangMap
 
 class MapProvider(object):
     def __init__(self):
@@ -23,7 +23,7 @@ class MapProvider(object):
             hz = 10
         )
         self._rate = rospy.Rate(params.hz)
-        self._map_instance = NativeMap()
+        self._map_instance = ShougangMap()
 
         # Map Loading moved into init.
         self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.pose_callback)

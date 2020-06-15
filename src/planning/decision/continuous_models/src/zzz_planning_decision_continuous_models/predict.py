@@ -111,8 +111,8 @@ class predict():
             ay = 0#one_ob[10]
 
             for i in range(len(obsp_front.t)):
-                vx = one_ob[2] + ax * delta_t * i
-                vy = one_ob[3] + ax * delta_t * i
+                vx = 0# one_ob[2] + ax * delta_t * i
+                vy = 0# one_ob[3] + ax * delta_t * i
                 yaw = one_ob[11]   #only for constant prediction
 
                 obspx = one_ob[0] + i * delta_t * vx

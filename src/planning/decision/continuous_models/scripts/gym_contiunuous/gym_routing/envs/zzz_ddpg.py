@@ -22,7 +22,6 @@ import numpy as np
 import gym
 from gym import core, error, spaces, utils
 from gym.utils import seeding
-# from carla import Location, Rotation, Transform
 
 # from carla import Location, Rotation, Transform
 
@@ -51,8 +50,8 @@ class ZZZCarlaEnv(gym.Env):
         print("ZZZ connected at {}".format(addr))
 
         # Set action space
-        low_action = np.array([-4.0,-15/3.6]) # di - ROAD_WIDTH, tv - TARGET_SPEED - D_T_S * N_S_SAMPLE
-        high_action = np.array([4.0, 15/3.6])  #Should be symmetry for DDPG
+        low_action = np.array([-2.0,-15/3.6]) # di - ROAD_WIDTH, tv - TARGET_SPEED - D_T_S * N_S_SAMPLE
+        high_action = np.array([2.0, 15/3.6])  #Should be symmetry for DDPG
         self.action_space = spaces.Box(low=low_action, high=high_action, dtype=np.float32)
 
         self.state_dimention = 16
@@ -90,24 +89,29 @@ class ZZZCarlaEnv(gym.Env):
                 self.rule_based_action = [(RLpointx, RLpointy)]
 
                 # calculate reward
-                reward = 50 - (abs(action[0] - RLpointx) + abs(action[1] - (RLpointy))) #+ 0.5 * ego_s
+                reward = 5 - (abs(action[0] - RLpointx) + abs(action[1] - RLpointy)) + 0.5 * received_msg[0]
               
                 # judge if finish
                 done = False
 
                 if collision:
                     done = True
-                    reward = -1500#-1000
-                    print("+++++++++++++++++++++ received collision")
+                    #reward = 0#-1000
+                    # print("+++++++++++++++++++++ received collision")
                 
                 if leave_current_mmap == 1:
                     done = True
                     reward = 500#+500
-                    print("+++++++++++++++++++++ successful pass intersection")
+                    # print("+++++++++++++++++++++ successful pass intersection")
 
                 elif leave_current_mmap == 2:
                     done = True
-                    print("+++++++++++++++++++++ restart by code")
+                    # print("+++++++++++++++++++++ restart by code")
+                reward = reward / 500
+                print("reward=", reward)
+
+                if q_value - rule_q > threshold:
+                    print("kick in!！！!！!！!！!！!！!") 
                 
                 # self.record_rl_intxt(action, q_value, RLpointx, RLpointy, rule_q, collision, leave_current_mmap, ego_s, threshold)
                 return np.array(self.state), reward, done,  {}, np.array(self.rule_based_action)
@@ -157,14 +161,14 @@ class ZZZCarlaEnv(gym.Env):
                 print("-------------try received msg in reset")
 
                 received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
-                print("-------------received msg in reset")
+                print("-------------received msg in reset",received_msg)
 
                 self.state = received_msg[0:16]
                 collision = received_msg[16]
                 leave_current_mmap = received_msg[17]
                 RLpointx = received_msg[18]
                 RLpointy = received_msg[19]
-                self.rule_based_action = [(RLpointx,RLpointy - 12.5/3.6)]
+                self.rule_based_action = [(RLpointx,RLpointy)]
 
                 return np.array(self.state), np.array(self.rule_based_action)
 
@@ -174,8 +178,8 @@ class ZZZCarlaEnv(gym.Env):
                 collision = 0
                 leave_current_mmap = 0
                 RLpointx = 0
-                RLpointy = 0
-                self.rule_based_action = [(RLpointx,RLpointy - 12.5/3.6)]
+                RLpointy = 0 - 15/3.6
+                self.rule_based_action = [(RLpointx,RLpointy)]
 
                 return np.array(self.state), np.array(self.rule_based_action)
 

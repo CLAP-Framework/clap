@@ -26,8 +26,13 @@
 #include "CanBT_509.hpp"
 #include "CanMotor_50B.hpp"
 
+//headers in Health Checker
+
+#include <unistd.h>			//to get pid
+
 using namespace ros;
 using namespace std;
+
 
 string ipAddr;
 unsigned int ipPort;
@@ -57,8 +62,10 @@ main (int argc, char **argv)
   Publisher pubEsc = n.advertise < xpmotors_can_msgs::ESCStatus > ("/xp/esc_status", 1000);
   Publisher pubEps = n.advertise < xpmotors_can_msgs::EPSStatus > ("/xp/eps_status", 1000);
 
-  if (xudp.Bind (ipPort) < 0)
+  if (xudp.Bind (ipPort) < 0){
+    ROS_ERROR("xpmotors - bind socket fail");
     return -1;
+	}
 
   Rate loop_rate (2);
   while (ok ())
@@ -68,8 +75,10 @@ main (int argc, char **argv)
       memset (ip, 0, sizeof (ip));
 
       len = xudp.Receive (buf, 512, ip);
-    //   cout << buf << endl;
-    //   cout << " received length: " << len << endl;
+      if (len < 0)
+	  ROS_WARN("xpmotors - socket receives fault data.");
+//      cout << buf << endl;
+//      cout << " received length: " << len << endl;
 
       int n = len / 13;
       p = buf;
@@ -98,10 +107,13 @@ main (int argc, char **argv)
 			xpEsc.decode();
 			CanFrameSPD_510 data510 = *(xpEsc.data());
 
-			escStatus.RRWheelSpd = data510.RR_WhlSpd;
-			escStatus.LFWheelSpd = data510.LF_WhlSpd;
-			escStatus.LRWheelSpd = data510.LR_WhlSpd;
-			escStatus.RFWheelSpd = data510.RF_WhlSpd;
+			escStatus.RRWheelSpd = (float)data510.RR_WhlSpd / 100.0;
+			escStatus.LFWheelSpd = (float)data510.LF_WhlSpd / 100.0;
+			escStatus.LRWheelSpd = (float)data510.LR_WhlSpd / 100.0;
+			escStatus.RFWheelSpd = (float)data510.RF_WhlSpd / 100.0;
+			
+  //			node_status_pub_ptr->NODE_ACTIVATE();
+  //			node_status_pub_ptr->CHECK_RATE("/xp/esc_status", 16, 10, 2, "topic '/xp/esc_status' publish rate low.");
 
 			pubEsc.publish(escStatus);
 			break;
@@ -115,9 +127,12 @@ main (int argc, char **argv)
 			xpEps.decode();
 			CanFrameEPS_511 data511 = *(xpEps.data());
 
-			epsStatus.Angle = data511.EPS_angle_ccp;
-			epsStatus.AngleSpd = data511.EPS_angle_spd_ccp;
-			epsStatus.StrngWhlTorq = data511.EPS_StrngWhlTorq;
+			epsStatus.Angle = (float)data511.EPS_angle_ccp / 50.0;
+			epsStatus.AngleSpd = (float)data511.EPS_angle_spd_ccp / 50.0;
+			epsStatus.StrngWhlTorq = (float)data511.EPS_StrngWhlTorq / 100.0;
+
+//			node_status_pub_ptr->NODE_ACTIVATE();
+  //			node_status_pub_ptr->CHECK_RATE("/xp/eps_status", 16, 10, 2, "topic '/xp/eps_status' publish rate low.");
 
 			pubEps.publish(epsStatus);
 			break;
@@ -161,9 +176,11 @@ main (int argc, char **argv)
 		}
 	      n--;
 	      p = p + 13;
-	    }
-	}
-    }
+	    }		//end of while (n)
+	}		//end of if (len % 13 == 0)
+	else
+		ROS_WARN("xpmotors - length of received data is not times of 13.");
+    }	//end of while (ok ())
   return 0;
 }
 

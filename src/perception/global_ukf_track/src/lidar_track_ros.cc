@@ -29,7 +29,7 @@
 #include <zzz_perception_msgs/TrackingBox.h>
 #include <zzz_perception_msgs/TrackingBoxArray.h>
 
-#define GLOBAL_TRACK 0
+#define GLOBAL_TRACK 1
 
 // 'Car', 'Van', 'Truck','Pedestrian', 'Person_sitting', 'Cyclist','Tram',  'Misc' or  'DontCare'
 static std::string Label2Classification[5] = {

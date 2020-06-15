@@ -6,5 +6,5 @@ catkin_package()
 
 catkin_python_setup()
 
-catkin_install_python(PROGRAMS nodes/local_map_generator nodes/carla_map_generator
+catkin_install_python(PROGRAMS nodes/local_map_generator
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

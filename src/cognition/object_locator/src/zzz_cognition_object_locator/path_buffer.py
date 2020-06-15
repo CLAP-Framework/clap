@@ -8,7 +8,7 @@ from zzz_cognition_msgs.msg import MapState
 from zzz_cognition_msgs.utils import default_msg
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import LanePoint
-from zzz_common.geometry import dist_from_point_to_polyline2d
+from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from nav_msgs.msg import Path
 import copy
 from threading import Lock
@@ -62,8 +62,13 @@ class PathBuffer:
             self._reference_path_buffer = [(waypoint.pose.position.x, waypoint.pose.position.y) 
                                         for waypoint in reversed(reference_path.poses)]
             self._reference_path_changed = True
+            self._dense_reference_path_buffer()
         rospy.loginfo("Received reference path, length:%d", len(reference_path.poses))
 
+    def _dense_reference_path_buffer(self,resolution = 2):
+        self._reference_path_buffer = dense_polyline2d(np.array(self._reference_path_buffer),resolution).tolist()
+    
+    
     def update(self, required_reference_path_length = 10, 
                 front_vehicle_avoidance_require_thres = 2,
                 remained_passed_point = 5):
@@ -138,7 +143,7 @@ class PathBuffer:
                 dynamic_map.jmap.reference_path.front_vehicles = [front_vehicle]
 
         # TODO: read or detect speed limit
-        dynamic_map.jmap.reference_path.map_lane.speed_limit = 10
+        dynamic_map.jmap.reference_path.map_lane.speed_limit = 30
         return dynamic_map
 
     def lane_change_smoothen(self, wp):

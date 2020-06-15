@@ -3,7 +3,7 @@ project(icvfollower)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
-#add_compile_options(-g -O0)
+add_compile_options(-g -O0)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -58,10 +58,10 @@ find_package(Boost REQUIRED COMPONENTS system)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-#add_message_files(
-#  FILES
-#  DecisionTrajectory.msg  
-#)
+add_message_files(
+  FILES
+  DecisionTrajectory.msg  
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -78,11 +78,11 @@ find_package(Boost REQUIRED COMPONENTS system)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-#generate_messages(
-#  DEPENDENCIES
-#  std_msgs
-#  nav_msgs
-#)
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  nav_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -129,9 +129,12 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-  $ENV{ZZZ_ROOT}/zzz/devel/include
   ${catkin_INCLUDE_DIRS}
+  ${ZZZ_ROOT}/devel/include
   /usr/include/eigen3
+  ~/follow_carla/devel/include/
+  ~/follow_carla/src/icvfollower/include/carla_msgs
+  ~/follow_carla/src/icvfollower/include/
 )
 
 ## Declare a C++ library

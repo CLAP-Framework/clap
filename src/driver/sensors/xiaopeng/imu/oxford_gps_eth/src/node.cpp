@@ -40,10 +40,12 @@
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <nav_msgs/Odometry.h>
+#include <oxford_gps_msgs/Channel.h>
 #include <zzz_driver_msgs/RigidBodyState.h>
 #include <zzz_driver_msgs/RigidBodyStateStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
+
 // Tf Quaternions
 #include <tf/LinearMath/Quaternion.h>
 

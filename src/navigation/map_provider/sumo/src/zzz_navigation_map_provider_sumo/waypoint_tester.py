@@ -59,15 +59,15 @@ class CarlaToRosWaypointConverter(object):
         self._ego_pose_y = 0.0
 
         self.current_route = (np.loadtxt(
-            os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/outer_loop.dat', 
+            os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/shougang_ref_path.dat', 
             delimiter=',')).tolist()
 
         self.waypoint_publisher = rospy.Publisher(
             '/carla/{}/waypoints'.format(self.role_name), Path, queue_size=1, latch=True)
 
         self._pose_subscriber = rospy.Subscriber('/zzz/navigation/ego_pose', RigidBodyStateStamped, self.pose_callback)
-        self._thread = threading.Thread(target=self.run)
-        self._thread.start()
+        # self._thread = threading.Thread(target=self.run)
+        # self._thread.start()
 
     def pose_callback(self, msg):
         # Note: Here we actually assume that pose is updating at highest frequency
@@ -76,7 +76,7 @@ class CarlaToRosWaypointConverter(object):
 
 
     def rebuild_routes(self):
-
+        
         dist_list = np.linalg.norm(
             np.array(self.current_route) - [self._ego_pose_x, self._ego_pose_y],
             axis = 1)
@@ -139,7 +139,7 @@ def main():
         rospy.loginfo("Connected to Carla.")
 
         waypointConverter = CarlaToRosWaypointConverter()
-
+        waypointConverter.publish_waypoints(waypointConverter.current_route)
         rospy.spin()
 
     finally:

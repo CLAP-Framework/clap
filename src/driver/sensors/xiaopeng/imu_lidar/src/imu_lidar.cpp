@@ -184,9 +184,11 @@ public:
             obs_box.confidence = 1.0;
 
             // pose
-            // TODO (map origin for temp 442867, 4427888)
-            obs_box.bbox.pose.pose.position.x = obs_msg_static.obstcles[i].geo_center.x - 442867;
-            obs_box.bbox.pose.pose.position.y = obs_msg_static.obstcles[i].geo_center.y - 4427888;
+            // TODO (map origin for temp 442867, 4427888), Tsinghua   
+            // TODO (map origin for temp 428191, 4417667), Shougang    
+      
+            obs_box.bbox.pose.pose.position.x = obs_msg_static.obstcles[i].geo_center.x - 428191;
+            obs_box.bbox.pose.pose.position.y = obs_msg_static.obstcles[i].geo_center.y - 4417667;
             obs_box.bbox.pose.pose.position.z = obs_msg_static.obstcles[i].geo_center.z;
             // orientation
             obs_box.bbox.pose.pose.orientation.x = geo_dir_quat.x();
