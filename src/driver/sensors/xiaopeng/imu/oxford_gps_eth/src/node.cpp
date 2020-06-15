@@ -123,12 +123,17 @@ static inline double SQUARE(double x)
 #define OXFORD_DISPLAY_INFO 0
 #endif
 
-static inline void handlePacket(const Packet *packet, ros::Publisher &pub_fix, ros::Publisher &pub_vel,
-                                ros::Publisher &pub_imu, ros::Publisher &pub_odom, const std::string &frame_id,
-                                const std::string &frame_id_vel,
-                                ros::Publisher &pub_ego_pose,
-                                ros::Publisher &pub__current_pose,
-                                ros::Publisher &pub__current_velocity)
+static inline void handlePacket(
+  const Packet *packet, 
+  ros::Publisher &pub_fix, 
+  ros::Publisher &pub_vel,
+  ros::Publisher &pub_imu, 
+  ros::Publisher &pub_odom, 
+  const std::string &frame_id,
+  const std::string &frame_id_vel,
+  ros::Publisher &pub_ego_pose,
+  ros::Publisher &pub__current_pose,
+  ros::Publisher &pub__current_velocity)
 {
   static uint8_t fix_status = sensor_msgs::NavSatStatus::STATUS_FIX;
   static uint8_t position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_UNKNOWN;
@@ -487,7 +492,14 @@ int main(int argc, char **argv)
             first = false;
             ROS_INFO("Connected to Oxford GPS at %s:%u", inet_ntoa(((sockaddr_in*)&source)->sin_addr), htons(((sockaddr_in*)&source)->sin_port));
           }
-          handlePacket(&packet, pub_fix, pub_vel, pub_imu, pub_odom, frame_id, frame_id_vel,
+          handlePacket(
+              &packet, 
+              pub_fix, 
+              pub_vel, 
+              pub_imu, 
+              pub_odom, 
+              frame_id, 
+              frame_id_vel,
               pub_ego_pose,
 		          pub_current_pose,
               pub__current_velocity);

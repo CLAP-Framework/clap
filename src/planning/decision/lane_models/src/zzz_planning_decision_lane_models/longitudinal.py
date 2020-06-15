@@ -9,12 +9,12 @@ from zzz_cognition_msgs.msg import RoadObstacle
 class IDM(object):
 
     def __init__(self):
-        self.T = 2.0
-        self.g0 = 11 #7
-        self.a = 2.73
-        self.b = 1.65
+        self.T = 1.6
+        self.g0 = 7 + 8
+        self.a = 2.73 
+        self.b = 1.65 + 5
         self.delta = 4
-        self.decision_dt = 0.25
+        self.decision_dt = 0.2
         self.dynamic_map = None
     
     def update_dynamic_map(self, dynamic_map):
@@ -24,9 +24,6 @@ class IDM(object):
 
         target_lane = None
 
-        if target_lane_index == -1:
-            target_lane = self.dynamic_map.jmap.reference_path
-        
         if target_lane_index > len(self.dynamic_map.mmap.lanes)-1:
             rospy.logwarn("cannot find neighbor lane, lane_index: %d", target_lane_index)
             return 0 
@@ -70,7 +67,7 @@ class IDM(object):
                                          self.dynamic_map.ego_state.pose.pose.position.y])
 
         v = get_speed(self.dynamic_map.ego_state)
-        v0 = lane.map_lane.speed_limit/3.6        
+        v0 = lane.map_lane.speed_limit/3.6
         if v0 == 0: v0 = 5 # TODO: ensure this
         if v < 5:
             a = self.a + (5 - v)/5*2
@@ -98,10 +95,11 @@ class IDM(object):
 
         if g == 0 or v0 == 0:
             rospy.logerr("Front vehicle position: (%.3f, %.3f), ego vehicle position: (%.3f, %.3f)", f_v_location[0], f_v_location[1], ego_vehicle_location[0], ego_vehicle_location[1])
-        acc = a*(1 - pow(v/v0, delta) - (g1/g)*((g1/g))) 
-        acc=max(acc,-4)  
+        acc = a*(1 - pow(v/v0, delta) - (g1/g)*((g1/g)))
+
         return max(0, v + acc*self.decision_dt)
-       
+
+
     def traffic_light_speed(self, lane):
 
         ego_vehicle_speed = get_speed(self.dynamic_map.ego_state)
