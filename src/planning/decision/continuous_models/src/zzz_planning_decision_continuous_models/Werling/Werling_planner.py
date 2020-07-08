@@ -329,6 +329,9 @@ class Werling(object):
             elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
                 # rospy.logdebug("exceeding max curvature")
                 continue
+            elif not check_region(fplist[i].x,fplist[i].y,polylist):  # Outside region check
+                # rospy.logdebug("exceeding whether in region")
+                continue
             if not self.obs_prediction.check_collision(fplist[i]):
                 continue
 
@@ -336,6 +339,26 @@ class Werling(object):
 
         return [fplist[i] for i in okind]
 
+def check_region(fpx, fpy, polylist):
+    l = len(fpx)
+    for i in range(l):
+        oddNodes = False
+        x = fpx[l-i-1]
+        y = fpy[l-i-1]
+        q = len(polylist.x)-1
+        for p in range(len(polylist.x)):
+            if (((polylist.y[p]<y and polylist.y[q]>=y) or (polylist.y[q]<y and polylist.y[p]>=y)) and ((polylist.x[p]<=x) or (polylist.x[q]<=x))):
+                if (polylist.x[p]+(y-polylist.y[p])/(polylist.y[q]-polylist.y[p])*(polylist.x[q]-polylist.x[p])<x):
+                    oddNodes = not oddNodes
+            q = p
+        if oddNodes == 0 :
+            return False #point outside
+    return True #point inside
+
+class polylist:
+    def __init__(self):
+        self.x = []
+        self.y = []
 
 class quintic_polynomial:
 
