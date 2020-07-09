@@ -12,11 +12,6 @@
             "type": "sensor.other.gnss",
             "id": "GPS",
             "x": 0.7, "y": -0.4, "z": 1.60
-        },
-        
-        {
-            "type": "sensor.other.collision",
-            "id": "Collision"
         }
     ]
 }

@@ -38,8 +38,8 @@ class LocatorNode(object):
         while not rospy.is_shutdown():
             self._rate.sleep() # TODO(zyxin): remove sleep after ensure the following modules are good
             dmap = self._map_instance.update()
-            
-            if dmap: self._dynamic_map_publisher.publish(dmap)
+            if dmap: 
+                self._dynamic_map_publisher.publish(dmap)
 
 if __name__ == "__main__":
 

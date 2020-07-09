@@ -6,27 +6,27 @@
 #include <vector>
 #include <fstream>
 
-#define _GLOBAL_OUTPUT_
+// #define _GLOBAL_OUTPUT_
 
-// #ifdef _GLOBAL_OUTPUT_
-//     #define _T(expression,...) _TP(expression , __VA_ARGS__)
-// #else
-//     #define _T(expression, ...) 
-// #endif 
-
-#ifdef _GLOBAL_OUTPUT_
+#ifdef _TIME_POINT_
     #define _T(expression) _TP(expression)
 #else
     #define _T(expression) {expression;}
 #endif 
 
-#define  _TP(expression) { \
-    std::chrono::system_clock::time_point start_point = std::chrono::system_clock::now(); \
-    expression; \
-    std::chrono::system_clock::time_point end_point = std::chrono::system_clock::now(); \
-    auto dura = (std::chrono::duration_cast<std::chrono::microseconds>(end_point - start_point)).count() / 1000.0f; \
-    std::cout << #expression << " running time: " << dura << " ms." << std::endl; \
-}
+#ifdef _TIME_POINT_
+    #define  _TP(expression) { \
+        std::chrono::system_clock::time_point start_point = std::chrono::system_clock::now(); \
+        expression; \
+        std::chrono::system_clock::time_point end_point = std::chrono::system_clock::now(); \
+        auto dura = (std::chrono::duration_cast<std::chrono::microseconds>(end_point - start_point)).count() / 1000.0f; \
+        std::cout << #expression << " running time: " << dura << " ms." << std::endl; \
+    }
+#else
+    #define _TP(expression) {expression;}
+#endif 
+
+#ifdef _TIME_POINT_
 
 #define _TCSV_INIT() std::chrono::system_clock::time_point tcsv_start_point, tcsv_end_point; \
     std::vector<float> tcsv_duration
@@ -49,6 +49,14 @@
                     std::cout << std::endl; \   
     } 
 
+#else
+
+    #define _TCSV_INIT()  
+    #define _TCSV_START() 
+    #define _TCSV_END() 
+    #define _TCSV_PRINT(filename, enable) 
+    
+#endif 
 
 
 #endif // _TIME_POINT_H_

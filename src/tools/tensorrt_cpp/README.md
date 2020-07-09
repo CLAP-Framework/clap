@@ -14,7 +14,7 @@
 cd trt_build
 mkdir build
 cd build
-cmake -Darm=on ..(Xavier)    /   cmake -Dx86=on ..(工控机)
+cmake ..
 make
 ```
 
@@ -68,6 +68,18 @@ gUffModel: ../models/
 virtual void SetInputTensor(const int &bindIndex, std::vector<float> &shapes) = 0;
 
 /**
+ * @description: set input data to the device memory.
+ * @bindIndex binding data index.
+ * @shapes the format is float pointer(host).
+ * @dataSize the counts of the input data.
+ * @isHostToDevice
+ *   True: copy data to device memory from host memory;
+ *   False: the data in device memory, don't need copy;
+ */
+virtual void SetInputTensor(const int &bindIndex, float *shapes, \
+                            int dataSize, bool isHostToDevice) = 0;
+
+/**
  * @description: do inference on engine context, make sure you already copy your data to device memory.
  */
 virtual void Infer() = 0;
@@ -76,6 +88,22 @@ virtual void Infer() = 0;
  * @description: get output data to the host memory from device memory.
  */
 virtual void GetOutputTensor(const int &bindIndex, std::vector<float> &shapes) = 0;
+
+/**
+ * @description: get output data to the host memory from device memory.
+ *    You should alloc in the host memory by dataSize.
+ *  @outputData the pointer to host memory. 
+ *  @dataSize the counts of the output data.
+ */
+virtual void GetOutputTensor(const int &bindIndex, float *outputData, int dataSize) = 0;
+
+/**
+ * @description: get binding data pointer in device. for example if you want to do some post processing
+ *               on inference output but want to process them in gpu directly for efficiency, you can
+ *               use this function to avoid extra data io
+ * @return: pointer point to device memory.
+ */
+virtual void* GetBindingPtr(int bindIndex) const = 0;
 ```
 
 **工程编译流程：**
@@ -84,7 +112,7 @@ virtual void GetOutputTensor(const int &bindIndex, std::vector<float> &shapes) =
 cd trt_infer
 mkdir build
 cd build
-cmake -Darm=on ..(Xavier)    /   cmake -Dx86=on ..(工控机)
+cmake ..  /  cmake -DBUILD_TEST=OFF ..(若无需编译测试模块)
 make
 ```
 

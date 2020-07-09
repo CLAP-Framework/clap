@@ -47,12 +47,18 @@ class predict():
         fp_front = copy.deepcopy(fp)
         fp_back = copy.deepcopy(fp)
         try:
-            for t in range(len(fp.yaw)):
-                fp_front.x[t] = fp.x[t] + math.cos(fp.yaw[t]) * self.move_gap
-                fp_front.y[t] = fp.y[t] + math.sin(fp.yaw[t]) * self.move_gap
-                fp_back.x[t] = fp.x[t] - math.cos(fp.yaw[t]) * self.move_gap
-                fp_back.y[t] = fp.y[t] - math.sin(fp.yaw[t]) * self.move_gap
+            # for t in range(len(fp.yaw)):
+            #     fp_front.x[t] = fp.x[t] + math.cos(fp.yaw[t]) * self.move_gap
+            #     fp_front.y[t] = fp.y[t] + math.sin(fp.yaw[t]) * self.move_gap
+            #     fp_back.x[t] = fp.x[t] - math.cos(fp.yaw[t]) * self.move_gap
+            #     fp_back.y[t] = fp.y[t] - math.sin(fp.yaw[t]) * self.move_gap
 
+            fp_front.x = (np.array(fp.x)+np.cos(np.array(fp.yaw))*self.move_gap).tolist()
+            fp_front.y = (np.array(fp.y)+np.sin(np.array(fp.yaw))*self.move_gap).tolist()
+            fp_back.x = (np.array(fp.x)-np.cos(np.array(fp.yaw))*self.move_gap).tolist()
+            fp_back.y = (np.array(fp.y)-np.sin(np.array(fp.yaw))*self.move_gap).tolist()
+            
+            
             for obsp in self.obs_paths:
                 for t in range(len(fp.t)):
                     d = (obsp.x[t] - fp_front.x[t])**2 + (obsp.y[t] - fp_front.y[t])**2
@@ -107,21 +113,32 @@ class predict():
             obsp_back = Frenet_path()
             obsp_front.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
             obsp_back.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
-            ax = 0#one_ob[9]
-            ay = 0#one_ob[10]
+            ax = 0 #one_ob[9]
+            ay = 0 #one_ob[10]
 
-            for i in range(len(obsp_front.t)):
-                vx = 0# one_ob[2] + ax * delta_t * i
-                vy = 0# one_ob[3] + ax * delta_t * i
-                yaw = one_ob[11]   #only for constant prediction
+            vx = one_ob[2]*np.ones(len(obsp_front.t))
+            vy = one_ob[3]*np.ones(len(obsp_front.t))
+            yaw = one_ob[11]
+            obspx = one_ob[0] + np.array(obsp_front.t)*delta_t*vx
+            obspy = one_ob[1] + np.array(obsp_front.t)*delta_t*vy
+            
+            obsp_front.x = (obspx + math.cos(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
+            obsp_front.y = (obspy + math.sin(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
+            obsp_back.x = (obspx - math.cos(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
+            obsp_back.y = (obspy - math.sin(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
+            
+            # for i in range(len(obsp_front.t)):
+            #     vx =  one_ob[2] + ax * delta_t * i
+            #     vy =  one_ob[3] + ax * delta_t * i
+            #     yaw = one_ob[11]   #only for constant prediction
 
-                obspx = one_ob[0] + i * delta_t * vx
-                obspy = one_ob[1] + i * delta_t * vy
+            #     obspx = one_ob[0] + i * delta_t * vx
+            #     obspy = one_ob[1] + i * delta_t * vy
 
-                obsp_front.x.append(obspx + math.cos(yaw) * self.move_gap)
-                obsp_front.y.append(obspy + math.sin(yaw) * self.move_gap)
-                obsp_back.x.append(obspx - math.cos(yaw) * self.move_gap)
-                obsp_back.y.append(obspy - math.sin(yaw) * self.move_gap)
+            #     obsp_front.x.append(obspx + math.cos(yaw) * self.move_gap)
+            #     obsp_front.y.append(obspy + math.sin(yaw) * self.move_gap)
+            #     obsp_back.x.append(obspx - math.cos(yaw) * self.move_gap)
+            #     obsp_back.y.append(obspy - math.sin(yaw) * self.move_gap)
                 
             obs_paths.append(obsp_front)
             obs_paths.append(obsp_back)

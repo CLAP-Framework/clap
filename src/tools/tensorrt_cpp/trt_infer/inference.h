@@ -14,11 +14,23 @@ public:
 	virtual ~Inference() = default;
 
 	/**
-     * @description: set input data to the device memory.
+     * @description: set input data to the device memory from host memory.
 	 * @bindIndex binding data index.
-	 * @shapes the host input data.
+	 * @shapes the format is vector container(host).
      */
 	virtual void SetInputTensor(const int &bindIndex, std::vector<float> &shapes) = 0;
+     
+     /**
+     * @description: set input data to the device memory.
+	 * @bindIndex binding data index.
+	 * @shapes the format is float pointer(host).
+      * @dataSize the counts of the input data.
+      * @isHostToDevice
+      *   True: copy data to device memory from host memory;
+      *   False: the data in device memory, don't need copy;
+     */
+	virtual void SetInputTensor(const int &bindIndex, float *shapes, \
+                                 int dataSize, bool isHostToDevice) = 0;
 
 	/**
      * @description: do inference on engine context, make sure you already copy your data to device memory.
@@ -30,20 +42,28 @@ public:
      */
 	virtual void GetOutputTensor(const int &bindIndex, std::vector<float> &shapes) = 0;
 
-	virtual int GetDevice() const = 0;
-	/**
-     * @description: get max batch size of build engine.
-     * @return: max batch size of build engine.
+     /**
+     * @description: get output data to the host memory from device memory.
+     *    You should alloc in the host memory by dataSize.
+     *  @outputData the pointer to host memory. 
+     *  @dataSize the counts of the output data.
      */
-    virtual int GetMaxBatchSize() const = 0;
-
-    /**
+     virtual void GetOutputTensor(const int &bindIndex, float *outputData, int dataSize) = 0;
+     
+     /**
      * @description: get binding data pointer in device. for example if you want to do some post processing
      *               on inference output but want to process them in gpu directly for efficiency, you can
      *               use this function to avoid extra data io
      * @return: pointer point to device memory.
      */
     virtual void* GetBindingPtr(int bindIndex) const = 0;
+
+	virtual int GetDevice() const = 0;
+	/**
+     * @description: get max batch size of build engine.
+     * @return: max batch size of build engine.
+     */
+    virtual int GetMaxBatchSize() const = 0;
 
     /**
      * @description: get binding data size in byte, so maybe you need to divide it by sizeof(T) where T is data type

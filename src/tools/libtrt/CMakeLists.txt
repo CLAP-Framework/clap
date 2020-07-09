@@ -35,19 +35,14 @@ option(BUILD_TRT_BUILDER "compile builder" ON)
 if(BUILD_TRT_BUILDER)
 
   find_package(CUDA REQUIRED)
-  include(${TRT_BUILDER_ROOT}/cmake/CUDA_utils.cmake)
-  # Set what architectures does nvcc support
-  set(CUDA_TARGET_ARCHS_SORTED ${CUDA_TARGET_ARCHS})
-  list(SORT CUDA_TARGET_ARCHS_SORTED)
-  CUDA_find_supported_arch_values(CUDA_targeted_archs ${CUDA_TARGET_ARCHS_SORTED})
-  message(STATUS "CUDA targeted archs: ${CUDA_targeted_archs}")
-  if (NOT CUDA_targeted_archs)
-    message(FATAL_ERROR "None of the provided CUDA architectures ({${CUDA_TARGET_ARCHS}}) is supported by nvcc, use one or more of: ${CUDA_supported_archs}")
-  endif()
-  CUDA_get_gencode_args(CUDA_gencode_flags ${CUDA_targeted_archs})
-  message(STATUS "Generated gencode flags: ${CUDA_gencode_flags}")
-  # Add ptx & bin flags for cuda
-  set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${CUDA_gencode_flags}")
+  include(FindCUDA)
+  set(CUDA_ARCH_LIST Auto CACHE STRING
+      "List of CUDA architectures (e.g. Pascal, Volta, etc) or \
+  compute capability versions (6.1, 7.0, etc) to generate code for. \
+  Set to Auto for automatic detection (default)."
+  )
+  cuda_select_nvcc_arch_flags(CUDA_ARCH_FLAGS ${CUDA_ARCH_LIST})
+  list(APPEND CUDA_NVCC_FLAGS ${CUDA_ARCH_FLAGS})
 
   include_directories(${TRT_BUILDER_ROOT}/include)
   include_directories(${TRT_BUILDER_ROOT}/spdlog)
@@ -91,19 +86,15 @@ if(BUILD_TRT_INFER)
 
   option(BUILD_TEST "compile test" OFF)
   find_package(CUDA REQUIRED)
-  include(${TRT_INFER_ROOT}/cmake/CUDA_utils.cmake)
-  # Set what architectures does nvcc support
-  set(CUDA_TARGET_ARCHS_SORTED ${CUDA_TARGET_ARCHS})
-  list(SORT CUDA_TARGET_ARCHS_SORTED)
-  CUDA_find_supported_arch_values(CUDA_targeted_archs ${CUDA_TARGET_ARCHS_SORTED})
-  message(STATUS "CUDA targeted archs: ${CUDA_targeted_archs}")
-  if (NOT CUDA_targeted_archs)
-    message(FATAL_ERROR "None of the provided CUDA architectures ({${CUDA_TARGET_ARCHS}}) is supported by nvcc, use one or more of: ${CUDA_supported_archs}")
-  endif()
-  CUDA_get_gencode_args(CUDA_gencode_flags ${CUDA_targeted_archs})
-  message(STATUS "Generated gencode flags: ${CUDA_gencode_flags}")
-  # Add ptx & bin flags for cuda
-  set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${CUDA_gencode_flags}")
+
+  include(FindCUDA)
+  set(CUDA_ARCH_LIST Auto CACHE STRING
+      "List of CUDA architectures (e.g. Pascal, Volta, etc) or \
+  compute capability versions (6.1, 7.0, etc) to generate code for. \
+  Set to Auto for automatic detection (default)."
+  )
+  cuda_select_nvcc_arch_flags(CUDA_ARCH_FLAGS ${CUDA_ARCH_LIST})
+  list(APPEND CUDA_NVCC_FLAGS ${CUDA_ARCH_FLAGS})
 
   include_directories(${TRT_INFER_ROOT}/include)
   include_directories(${TRT_INFER_ROOT}/third/spdlog)

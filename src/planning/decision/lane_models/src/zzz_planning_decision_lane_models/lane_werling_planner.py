@@ -50,7 +50,7 @@ KLON = 1.0
 
 class Werling(object):
 
-    def __init__(self, target_line):
+    def __init__(self, target_line, lane_idx, lane_num, lane_width = 3):
 
         self.last_trajectory_array = np.c_[0, 0]
         self.last_trajectory = Frenet_path()
@@ -67,6 +67,10 @@ class Werling(object):
         self.csp = None
         self.target_line = target_line
         self.target_speed = 0
+
+        self._lane_num = lane_num
+        self._lane_idx = lane_idx
+        self._lane_width = lane_width
 
         self.rivz_element = rviz_display()
     
@@ -256,7 +260,16 @@ class Werling(object):
         #     left_sample_bound = D_ROAD_W
         # else:
         #     left_sample_bound = MAX_ROAD_WIDTH 
-        for di in np.arange(-RIGHT_SAMPLE_BOUND, LEFT_SAMPLE_BOUND, D_ROAD_W):
+
+        right_bound = -RIGHT_SAMPLE_BOUND
+        left_bound = LEFT_SAMPLE_BOUND
+        sampled_width_d = D_ROAD_W
+
+        right_bound = -(self._lane_idx*self._lane_idx + 0.5*self._lane_width)
+        left_bound = ((self._lane_num-1) - self._lane_idx)*self._lane_width + 0.5*self._lane_width
+        sample_width_d = 0.125*self._lane_width
+
+        for di in np.arange(right_bound, left_bound, sample_width_d):
 
             # Lateral motion planning
             for Ti in np.arange(MINT, MAXT, DT):

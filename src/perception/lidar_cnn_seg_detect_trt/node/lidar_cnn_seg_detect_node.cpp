@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 #include "cnn_segmentation.h"
-
+#include <ros/console.h>
 
 
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "lidar_apollo_cnn_seg_detect");
+  ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Error);
   CNNSegmentation node;
   node.run();
   

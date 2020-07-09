@@ -1,0 +1,6 @@
+- name: /auto_state_node
+  publish: [/xp/auto_state, /xp/auto_state_ex, /xp/eps_status, /xp/esc_status]
+  subscribe: []
+- name: /auto_control_node
+  publish: []
+  subscribe: [/xp/auto_control]

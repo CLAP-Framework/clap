@@ -1,0 +1,10 @@
+easydict
+cython >= 0.29
+utm
+intervaltree
+plotly
+dash
+filterpy
+pcl.py
+scipy
+shapely

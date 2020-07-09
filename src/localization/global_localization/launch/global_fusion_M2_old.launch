@@ -1,0 +1,37 @@
+<launch>
+
+  <!-- 车体坐标系定义:右前上, 与传统组合导航一致 -->
+
+  
+  <param name="debug" type="bool" value="true" />
+
+  <!-- 北偏西取正 -->
+  <param name="yaw_n2w" type="bool" value="true" />
+  
+  <!---input topics -->
+  <param name="gnss_inspva_topic" value="/gnss/inspva" />
+  <param name="gnss_rawimu_topic" value="/gnss/rawimu" />
+  <param name="gnss_bestposb_topic" value="/gnss/bestposb" />
+  <param name="gnss_bestvelb_topic" value="/gnss/bestvelb" />
+  <param name="gnss_headingb_topic" value="/gnss/headingb" />
+
+  <!---output topics -->
+  <param name="gps_fix_topic" value="/localization/gps/fix" />
+  <param name="gps_vel_topic" value="/localization/gps/vel" />
+  <param name="gps_odom_topic" value="/localization/gps/odom" />
+  <param name="gps_imu_topic" value="/localization/imu/data" />
+  <param name="gps_pos_type_topic" value=" /localization/gps/pos_type" />
+  <param name="gps_nav_status_topic" value=" /localization/gps/nav_status" />
+  <param name="gps_time_ref_topic" value=" /localization/gps/time_ref" />
+
+
+  <param name="utm0_x" type="double" value="428191" />
+  <param name="utm0_y" type="double" value="4417667" />
+
+
+  <!--- run-node -->
+  <node pkg="global_localization" type="global_fusion_m2_node" name="global_fusion_m2_node" output="screen">
+  </node>
+
+
+</launch>

@@ -1,0 +1,36 @@
+<launch>
+
+  <param name="debug" type="bool" value="true" />
+
+  <!-- 北偏西取正 -->
+  <param name="yaw_n2w" type="bool" value="true" />
+
+  <!---input topics -->
+  <param name="in_gps_topic" value="/ox_gps/fix" />
+  <param name="in_imu_topic" value="/ox_imu/data" />
+  <param name="in_vel_topic" value="/ox_gps/vel" />
+  <param name="in_odom_topic" value="/ox_gps/odom" />
+  <param name="in_pos_type_topic" value="/ox_gps/pos_type" />
+  <param name="in_nav_status_topic" value="/ox_gps/nav_status" />
+  <param name="in_gps_time_ref_topic" value="/ox_gps/time_ref" />
+
+  <!---output topics -->
+  <param name="gps_fix_topic" value="/localization/gps/fix" />
+  <param name="gps_vel_topic" value="/localization/gps/vel" />
+  <param name="gps_odom_topic" value="/localization/gps/odom" />
+  <param name="gps_imu_topic" value="/localization/imu/data" />
+  <param name="gps_pos_type_topic" value=" /localization/gps/pos_type" />
+  <param name="gps_nav_status_topic" value=" /localization/gps/nav_status" />
+  <param name="gps_time_ref_topic" value=" /localization/gps/time_ref" />
+
+
+  <param name="utm0_x" type="double" value="428191" />
+  <param name="utm0_y" type="double" value="4417667" />
+
+
+  <!--- run-node -->
+  <node pkg="global_localization" type="global_fusion_oxford_node" name="global_fusion_oxford_node" output="screen">
+  </node>
+
+
+</launch>

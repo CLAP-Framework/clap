@@ -16,50 +16,60 @@
 #ifndef FEATURE_GENERATOR_H
 #define FEATURE_GENERATOR_H
 
-// headers in CUDA
-#include <cuda_runtime_api.h>
 #include "util.h"
 
-#include <pcl/point_types.h>
-#include <pcl/point_cloud.h>
+// #include <pcl/point_types.h>
+// #include <pcl/point_cloud.h>
 
-#include <vector>
+// #include <vector>
+
+// struct FeatureParameter {
+
+// };
 
 class FeatureGenerator {
+  #define LOG_TABLE_SIZE  1024
 public:
-    FeatureGenerator() {}
-    ~FeatureGenerator() {}
+  FeatureGenerator() {}
+  ~FeatureGenerator() {}
 
-    bool init(std::vector<float>* out_blob);
-    void generate(const float* pc_ptr, const size_t );
-
+  // bool init(std::vector<float>* out_blob);
+  bool init(void* out_blob, int height, int width, float range, 
+      float min_height, float max_height, bool intensity_normalized, int batchsize, int channel);
+  void generate(const void* pointcloud_ptr, int num);
+// private:
+//   float logCount(int count);
 private:
-    int width_ = 0;
-    int height_ = 0;
-    int channel_ = 0;
-    int batch_ = 0;
+  int width_ = 640;
+  int height_ = 640;
+  int channel_ = 8;
+  int batch_ = 1;
 
-    int range_ = 0;
-    bool intensity_normalized_ = false;
-    float min_height_ = 0.0;
-    float max_height_ = 0.0;
-    int channel_size_ = 0;
-    // raw feature data
-    float* max_height_data_ = nullptr;
-    float* mean_height_data_ = nullptr;
-    float* count_data_ = nullptr;
-    float* direction_data_ = nullptr;
-    float* top_intensity_data_ = nullptr;
-    float* mean_intensity_data_ = nullptr;
-    float* distance_data_ = nullptr;
-    float* nonempty_data_ = nullptr;
+  float range_ = 60;
+  bool intensity_normalized_ = false;
+  float min_height_ = 0.0;
+  float max_height_ = 0.0;
+  int channel_size_ = 0;
+  int channel_bytes_size_;
+  int dev_out_blob_bytes_;
 
-    // output Caffe blob
-    std::vector<float>* out_blob_ = nullptr;
-    std::vector<float> log_table_;
-    // point index in feature map
-    std::vector<int> map_idx_;
-    float logCount(int count);
+  // raw feature data in device
+  float* dev_max_height_data_;
+  float* dev_mean_height_data_;
+  float* dev_count_data_;
+  float* dev_direction_data_;
+  float* dev_top_intensity_data_;
+  float* dev_mean_intensity_data_;
+  float* dev_distance_data_;
+  float* dev_nonempty_data_;
+
+  float* dev_out_blob_; 
+  float* dev_log_table_; 
+
+  // cpu 
+  // float* out_blob_;
+  float* max_height_data_;
+  float* top_intensity_data_;
 };
 
 #endif //FEATURE_GENERATOR_H

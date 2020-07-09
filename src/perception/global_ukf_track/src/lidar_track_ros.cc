@@ -25,11 +25,14 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <yaml-cpp/yaml.h>
 
 #include <zzz_perception_msgs/TrackingBox.h>
 #include <zzz_perception_msgs/TrackingBoxArray.h>
 
 #define GLOBAL_TRACK 1
+#define DEBUG_OUTPUT 0
+#define USE_MESSAGE_FILTERS 0
 
 // 'Car', 'Van', 'Truck','Pedestrian', 'Person_sitting', 'Cyclist','Tram',  'Misc' or  'DontCare'
 static std::string Label2Classification[5] = {
@@ -67,8 +70,21 @@ LidarTrackRos::LidarTrackRos() : private_nh_("~"){
     private_nh_.param<std::string>("input_obj_topic", input_obj_topic_,
             "/detection/lidar_detector/objects");
     if (global_output_) {
+      std::string rotation_str;
+      std::string translation_str;
       private_nh_.param<std::string>("input_odm_topic", input_odm_topic_,
-          "/Odometry/data");      
+          "/Odometry/data");
+      private_nh_.param<std::string>("lidar2imu_rotation", rotation_str,
+          "[-0.027756, -0.99923, -0.027761, 0.9991, -0.026836, -0.032968, 0.032197, -0.028651, 0.99907]");  
+      private_nh_.param<std::string>("lidar2imu_translation", translation_str,
+          "[-0.1798, 0.91685, 1.585]");  
+
+      YAML::Node rot = YAML::Load(rotation_str);
+      YAML::Node trans = YAML::Load(translation_str);
+      lidar2imu_rotation_ << rot[0].as<double>(), rot[1].as<double>(), rot[2].as<double>(), 
+          rot[3].as<double>(), rot[4].as<double>(), rot[5].as<double>(), 
+          rot[6].as<double>(), rot[7].as<double>(), rot[8].as<double>();
+      lidar2imu_translation_ << trans[0].as<double>(), trans[1].as<double>(), trans[2].as<double>();
     }
     private_nh_.param<std::string>("output_topic", output_topic_, 
             "/detection/lidar_tracker/objects");
@@ -86,6 +102,10 @@ LidarTrackRos::LidarTrackRos() : private_nh_("~"){
     ROS_INFO("[%s] input_topic: %s", __APP_NAME__, input_obj_topic_.c_str());
     if (global_output_) {
         ROS_INFO("[%s] input_odm_topic: %s", __APP_NAME__, input_odm_topic_.c_str());
+        ROS_INFO("[%s] lidar2imu_rotation:", __APP_NAME__);
+        std::cout << lidar2imu_rotation_ << std::endl;
+        ROS_INFO("[%s] lidar2imu_translation:", __APP_NAME__);
+        std::cout << lidar2imu_translation_ << std::endl;
     }
     ROS_INFO("[%s] output_topic: %s", __APP_NAME__, output_topic_.c_str());
     ROS_INFO("[%s] dis_sqrt_thres: %s", __APP_NAME__, std::to_string(dis_sqrt_thres_).c_str());
@@ -108,6 +128,7 @@ void LidarTrackRos::Run()
         output_zzz_topic_, 1);
 
   if (global_output_) {
+#if USE_MESSAGE_FILTERS
     mf_sub_detected_array_ = new message_filters::Subscriber<nav_msgs::Odometry>(
         node_handle_, input_odm_topic_, 2);
     mf_sub_odm_ = new message_filters::Subscriber<autoware_msgs::DetectedObjectArray>(
@@ -116,6 +137,12 @@ void LidarTrackRos::Run()
         *mf_sub_detected_array_, *mf_sub_odm_);
     sync_->registerCallback(boost::bind(&LidarTrackRos::syncCallback, 
         this, _1, _2));
+#else // !USE_MESSAGE_FILTERS
+    sub_detected_array_ = node_handle_.subscribe(input_obj_topic_, 
+        1, &LidarTrackRos::objectsCallback, this);
+    sub_odm_ = node_handle_.subscribe(input_odm_topic_, 
+        1, &LidarTrackRos::odmCallback, this);
+#endif // USE_MESSAGE_FILTERS
   } else {
     sub_detected_array_ = node_handle_.subscribe(input_obj_topic_, 
         1, &LidarTrackRos::objectsCallback, this);
@@ -124,6 +151,9 @@ void LidarTrackRos::Run()
 
 void LidarTrackRos::odmCallback(const nav_msgs::Odometry& input) {
   input_odm_ = input;
+#if 1
+  input_odm_.header.frame_id = "map";
+#endif
 }
 
 void convert_DetectedObject2TrackingBox(
@@ -141,6 +171,7 @@ void convert_DetectedObject2TrackingBox(
     t.classid = 3;
   } else {
     // unknown id
+    t.classid = 1;
   }
   
   obs_box.classes.push_back(t);
@@ -185,7 +216,7 @@ void convert_DetectedObjectArray2TrackingBoxArray(
 void LidarTrackRos::objectsCallback(const autoware_msgs::DetectedObjectArray& input) {
   input_header_ = input.header;
   if ( global_output_ && std::abs(input_header_.stamp.toSec() -
-      input_odm_.header.stamp.toSec()) > 0.05) { 
+      input_odm_.header.stamp.toSec()) > 0.5) { 
     ROS_ERROR("Odometry lost !!!");
     return ;
   } 
@@ -200,13 +231,14 @@ void LidarTrackRos::objectsCallback(const autoware_msgs::DetectedObjectArray& in
 
   zzz_perception_msgs::TrackingBoxArray trackingBoxArray;
   trackingBoxArray.header = input.header;
+  trackingBoxArray.header.frame_id = "map";
   convert_DetectedObjectArray2TrackingBoxArray(detected_objects_output, trackingBoxArray);
 
   pub_object_array_.publish(detected_objects_output);
   // publish cnn-seg objects.
   pub_zzz_object_array_.publish(trackingBoxArray);
 
-  std::cout << "obj " << detected_objects_output.objects.size() << std::endl;
+  // std::cout << "obj " << detected_objects_output.objects.size() << std::endl;
   if (is_benchmark_) {
     DumpResultText(detected_objects_output);
   }
@@ -238,22 +270,37 @@ void LidarTrackRos::SetDetectedObjects(const autoware_msgs::DetectedObjectArray&
 #if GLOBAL_TRACK
     if (global_output_) {
       input_header_.frame_id = input_odm_.header.frame_id;
-      Eigen::Quaterniond q_obj(obj.pose.orientation.w,
+      Eigen::Quaterniond q_obj(
+          obj.pose.orientation.w,
           obj.pose.orientation.x,
           obj.pose.orientation.y,
           obj.pose.orientation.z);
-      Eigen::Quaterniond q_ego(input_odm_.pose.pose.orientation.w,
+      Eigen::Quaterniond q_ego(
+          input_odm_.pose.pose.orientation.w,
           input_odm_.pose.pose.orientation.x,
           input_odm_.pose.pose.orientation.y,
           input_odm_.pose.pose.orientation.z);
-      Eigen::Vector3d pose_ego(input_odm_.pose.pose.position.x,
+#if 1
+      Eigen::AngleAxisd rollAngle(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()));
+      Eigen::AngleAxisd pitchAngle(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()));
+      Eigen::AngleAxisd yawAngle(Eigen::AngleAxisd(-M_PI/2, Eigen::Vector3d::UnitZ())); 
+      Eigen::Quaterniond rot_q;
+      rot_q = yawAngle*pitchAngle*rollAngle;
+      q_ego = rot_q * q_ego;
+#endif
+      Eigen::Vector3d pose_ego(
+          input_odm_.pose.pose.position.x,
           input_odm_.pose.pose.position.y,
           input_odm_.pose.pose.position.z);
-      Eigen::Vector3d pose_obj(obj.pose.position.x,
+      Eigen::Vector3d pose_obj(
+          obj.pose.position.x,
           obj.pose.position.y,
           obj.pose.position.z);
-      Eigen::Vector3d pose_obj_global = pose_ego + q_ego.toRotationMatrix() * pose_obj;
-      Eigen::Quaterniond q_pbj_global = q_ego * q_obj;
+      Eigen::Quaterniond q_lidar2imu(lidar2imu_rotation_);
+
+      Eigen::Vector3d pose_obj_global = pose_ego + q_ego.toRotationMatrix() * 
+          (lidar2imu_translation_ + lidar2imu_rotation_ * pose_obj);
+      Eigen::Quaterniond q_pbj_global = q_ego * q_lidar2imu * q_obj;
       tmp.pose.x = pose_obj_global.x();
       tmp.pose.y = pose_obj_global.y();
       tmp.pose.z = pose_obj_global.z();
@@ -261,7 +308,11 @@ void LidarTrackRos::SetDetectedObjects(const autoware_msgs::DetectedObjectArray&
       tmp.orientation.y = q_pbj_global.y();
       tmp.orientation.z = q_pbj_global.z();
       tmp.orientation.w = q_pbj_global.w();  
-      
+#if DEBUG_OUTPUT
+      std::cout << "obj -> global " << i << " : " << obj.pose.position.x << " " << obj.pose.position.y
+          << " -> " << tmp.pose.x << " " << tmp.pose.y 
+          << std::endl;
+#endif 
     } else {
       tmp.pose.x = obj.pose.position.x;
       tmp.pose.y = obj.pose.position.y;
@@ -290,16 +341,16 @@ void LidarTrackRos::SetDetectedObjects(const autoware_msgs::DetectedObjectArray&
     tmp.color.r = obj.color.r;
     tmp.color.g = obj.color.g;
     tmp.color.b = obj.color.b;
-    tmp.features.c.x = obj.pose.position.x;
-    tmp.features.c.y = obj.pose.position.y;
-    tmp.features.fl.x = obj.pose.position.x + obj.dimensions.x*0.5;
-    tmp.features.fl.y = obj.pose.position.y + obj.dimensions.y*0.5;
-    tmp.features.rr.x = obj.pose.position.x - obj.dimensions.x*0.5;
-    tmp.features.rr.y = obj.pose.position.y - obj.dimensions.y*0.5;
-    Eigen::Quaterniond quaternion(obj.pose.orientation.w, 
-                                  obj.pose.orientation.x,
-                                  obj.pose.orientation.y,
-                                  obj.pose.orientation.z);
+    tmp.features.c.x = tmp.pose.x;
+    tmp.features.c.y = tmp.pose.y;
+    // tmp.features.fl.x = tmp.pose.x + obj.dimensions.x*0.5;
+    // tmp.features.fl.y = tmp.pose.y + obj.dimensions.y*0.5;
+    // tmp.features.rr.x = tmp.pose.x - obj.dimensions.x*0.5;
+    // tmp.features.rr.y = tmp.pose.y - obj.dimensions.y*0.5;
+    Eigen::Quaterniond quaternion(tmp.orientation.w, 
+                                  tmp.orientation.x,
+                                  tmp.orientation.y,
+                                  tmp.orientation.z);
     // Z-Y-X RPY
     Eigen::Vector3d eulerAngle = quaternion.matrix().eulerAngles(2,1,0);
     tmp.features.yaw = eulerAngle(0);
@@ -342,7 +393,11 @@ void LidarTrackRos::GetTrackObjects(
     obj.pose.orientation.x = tmp.orientation.x;
     obj.pose.orientation.y = tmp.orientation.y;
     obj.pose.orientation.z = tmp.orientation.z;
-
+#if DEBUG_OUTPUT
+    std::cout << "global " << i << " : " << obj.pose.position.x << " " << obj.pose.position.y
+        << " v: " << obj.velocity.linear.x << " " << obj.velocity.linear.y 
+        << std::endl;
+#endif
 #else // GLOBAL_TRACK
     if (global_output_) {
       output.header.frame_id = input_odm_.header.frame_id;
@@ -352,22 +407,27 @@ void LidarTrackRos::GetTrackObjects(
           input_odm_.pose.pose.orientation.y,
           input_odm_.pose.pose.orientation.z); 
       Eigen::Vector3d pose_ego(input_odm_.pose.pose.position.x,
-          input_odm_.pose.pose.position.y, input_odm_.pose.pose.position.z + 2.0);  
+          input_odm_.pose.pose.position.y, input_odm_.pose.pose.position.z);  
+
       /** ego vehicle Quaterniond, Position and Velocity */            
       Eigen::Quaterniond q_obj(tmp.orientation.w,
           tmp.orientation.x, tmp.orientation.y, tmp.orientation.z);
       Eigen::Vector3d pose_obj(tmp.pose.x, tmp.pose.y, tmp.pose.z);
-      Eigen::Vector3d ref_vel_obj(tmp.velocity.x, tmp.velocity.y, 0.0);
-      Eigen::Quaterniond q_pbj_global = q_ego * q_obj;
-      Eigen::Vector3d pose_obj_global = pose_ego + q_ego.toRotationMatrix() * pose_obj;
-      Eigen::Vector3d vel_ego_global(input_odm_.twist.twist.linear.x,
-          input_odm_.twist.twist.linear.y, 0.0);
-      Eigen::Vector3d vel_obj_global = q_ego.toRotationMatrix() * ref_vel_obj + vel_ego_global;
+      Eigen::Vector3d ref_vel_obj(tmp.velocity.x, tmp.velocity.y, tmp.velocity.z);
+      Eigen::Quaterniond q_lidar2imu(lidar2imu_rotation_);
+      Eigen::Quaterniond q_pbj_global = q_ego * q_lidar2imu * q_obj;
+      Eigen::Vector3d pose_obj_global = pose_ego + q_ego.toRotationMatrix() * 
+          (lidar2imu_translation_ + lidar2imu_rotation_ * pose_obj);
 
-      std::cout << "obj " << i << " : " << tmp.velocity.x << " " << tmp.velocity.y
+      Eigen::Vector3d vel_ego_global(input_odm_.twist.twist.linear.x,
+          input_odm_.twist.twist.linear.y, input_odm_.twist.twist.linear.z);
+      Eigen::Vector3d vel_obj_global = q_ego.toRotationMatrix() * 
+          lidar2imu_rotation_ * ref_vel_obj + vel_ego_global;
+#if DEBUG_OUTPUT
+      std::cout << "objV -> globalV " << i << " : " << tmp.velocity.x << " " << tmp.velocity.y
           << " -> " << vel_obj_global.x() << " " << vel_obj_global.y() 
           << std::endl;
-
+#endif 
       obj.pose.position.x = pose_obj_global.x();
       obj.pose.position.y = pose_obj_global.y();
       obj.pose.position.z = pose_obj_global.z();
@@ -398,16 +458,19 @@ void LidarTrackRos::GetTrackObjects(
     obj.dimensions.z = tmp.dimension.z;
     obj.label = Label2Classification[tmp.label];
     obj.score = tmp.score;
-    obj.pose_reliable = tmp.pose_reliable;
+
     // obj.header = input_header_;
+    // obj.space_frame = "velodyne";
     obj.id = tmp.id;
+
     obj.angle = tmp.features.yaw;
     obj.color.r = tmp.color.r;
     obj.color.g = tmp.color.g;
     obj.color.b = tmp.color.b;
     obj.color.a = tmp.color.a;
+
     obj.valid = tmp.valid;
-    // obj.space_frame = "velodyne";
+    obj.pose_reliable = tmp.pose_reliable;
     obj.velocity_reliable = tmp.velocity_reliable;
     obj.behavior_state = 0;
     

@@ -1,0 +1,44 @@
+<launch>
+
+  <!-- global_fusion_m2_node2 调整车体坐标系到前左上(FLU),  无rviz -->
+  <param name="debug" type="bool" value="true" />
+
+  <!-- 北偏西取正 -->
+  <param name="yaw_n2w" type="bool" value="false" />
+
+  <!---input topics -->
+  <param name="gnss_inspva_topic" value="/gnss/inspva" />
+  <param name="gnss_rawimu_topic" value="/gnss/rawimu" />
+  <param name="gnss_bestposb_topic" value="/gnss/bestposb" />
+  <param name="gnss_bestvelb_topic" value="/gnss/bestvelb" />
+  <param name="gnss_headingb_topic" value="/gnss/headingb" />
+
+  <!---output topics -->
+  <param name="gps_fix_topic" value="/localization/gps/fix" />
+  <param name="gps_vel_topic" value="/localization/gps/vel" />
+  <param name="gps_odom_topic" value="/localization/gps/odom" />
+  <param name="gps_imu_topic" value="/localization/imu/data" />
+  <param name="gps_pos_type_topic" value=" /localization/gps/pos_type" />
+  <param name="gps_nav_status_topic" value=" /localization/gps/nav_status" />
+  <param name="gps_time_ref_topic" value=" /localization/gps/time_ref" />
+
+  <!-- 初始位置UTM0,默认不使用 -->
+  <param name="utm0_x" type="double" value="428191" />
+  <param name="utm0_y" type="double" value="4417667" />
+
+  <!-- 初始位置GPS0,默认使用,可以修改这里改变零点 -->
+  <param name="lat0" type="double" value="40.0129710975" />
+  <param name="lon0" type="double" value="116.323009657" />
+  <param name="alt0" type="double" value="33.1419906616" />
+
+
+  <!--- run-node -->
+  <node pkg="global_localization" type="global_fusion_m2_node2" name="global_fusion_m2_node2" output="screen">
+  </node>
+
+  <!--- Sim Time -->
+  <param name="/use_sim_time" value="false" />
+  <node pkg="tf" type="static_transform_publisher" name="world_to_map" args="0 0 0  0   0  0 /utm    /map 100" />
+
+
+</launch>

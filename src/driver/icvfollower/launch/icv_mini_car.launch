@@ -1,0 +1,12 @@
+<launch>
+  <node pkg="icvfollower" name="icv_carla_control"  type="icv_carla_control" output="screen">
+    
+    <param name="~target_speedxp" type="double" value="10"/>   
+    
+    <param name="~VehicleMode_flag" type="int" value="4"/>
+ 
+  </node> 
+
+  
+  
+</launch>

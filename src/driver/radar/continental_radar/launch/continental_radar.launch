@@ -1,0 +1,13 @@
+<launch>
+  <group ns="front">
+    <node name="continental_radar" pkg="continental_radar" type="continental_radar" output="screen">
+    <rosparam file="$(find continental_radar)/FrontConf.yaml"/>
+    </node>
+  </group>
+  <group ns="rear">
+    <node name="continental_radar" pkg="continental_radar" type="continental_radar" output="screen">
+    <rosparam file="$(find continental_radar)/RearConf.yaml"/>
+    </node>
+  </group>
+</launch>
+

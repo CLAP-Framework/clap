@@ -57,7 +57,7 @@ enum ObjectType {
 };
 
 enum MetaType : int {
-    META_UNKNOWN,
+    META_UNKNOWN = 0,
     META_SMALLMOT,
     META_BIGMOT,
     META_NONMOT,

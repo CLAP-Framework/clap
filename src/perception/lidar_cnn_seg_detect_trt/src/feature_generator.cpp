@@ -21,66 +21,67 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
-bool FeatureGenerator::init(std::vector<float>* out_blob)
-{
-    out_blob_ = out_blob;
-    // raw feature parameters
+bool FeatureGenerator::init(std::vector<float>* out_blob, 
+    int height = 640, int width = 640, float range = 60.0, 
+    float min_height = -5.0, float max_height = 5.0, 
+    bool intensity_normalized = false, int batchsize = 1, 
+    int channel = 8) {
 
-    width_   = 640;
-    height_  = 640;
-    channel_ = 8;  
-    batch_   = 1;
-    range_   = 60;
-    min_height_ = -5.0;
-    max_height_ = 5.0;
-    intensity_normalized_ = false;
-    // CHECK_EQ(width_, height_) << "Current implementation version requires input_width == input_height.";
+  out_blob_ = out_blob;
+  width_   = width;
+  height_  = height;
+  channel_ = channel;  
+  batch_   = batchsize;
+  range_   = range;
+  min_height_ = min_height;
+  max_height_ = max_height;
+  intensity_normalized_ = intensity_normalized; 
 
-    // set output blob and log lookup table
-    out_blob_->resize(batch_*channel_*height_*width_); 
+  // set output blob and log lookup table
+  out_blob_->resize(batch_*channel_*height_*width_); 
 
-    // table for log(x+1) 
-    log_table_.resize(256);
-    for (size_t i = 0; i < log_table_.size(); ++i) {
-        log_table_[i] = std::log1p(static_cast<float>(i));
+  // table for log(x+1) 
+  log_table_.resize(256);
+  for (size_t i = 0; i < log_table_.size(); ++i) {
+      log_table_[i] = std::log1p(static_cast<float>(i));
+  }
+
+  float* out_blob_data = nullptr;
+  out_blob_data = out_blob_->data();
+
+  int channel_index = 0;
+  channel_size_  = height_ * width_;
+  max_height_data_     = out_blob_data + channel_size_ * channel_index++;
+  mean_height_data_    = out_blob_data + channel_size_ * channel_index++;
+  count_data_          = out_blob_data + channel_size_ * channel_index++;
+  direction_data_      = out_blob_data + channel_size_ * channel_index++;
+  top_intensity_data_  = out_blob_data + channel_size_ * channel_index++;
+  mean_intensity_data_ = out_blob_data + channel_size_ * channel_index++;
+  distance_data_       = out_blob_data + channel_size_ * channel_index++;
+  nonempty_data_       = out_blob_data + channel_size_ * channel_index++;
+
+  constexpr double K_CV_PI = 3.1415926535897932384626433832795;
+  for (int row = 0; row < height_; ++row) {
+    for (int col = 0; col < width_; ++col) {
+      int idx = row * width_ + col;
+      // * row <-> x, column <-> y
+      float center_x = Pixel2Pc(row, height_, range_);
+      float center_y = Pixel2Pc(col, width_, range_);
+      direction_data_[idx] =
+          static_cast<float>(std::atan2(center_y, center_x) / (2.0 * K_CV_PI));
+      distance_data_[idx] =
+          static_cast<float>(std::hypot(center_x, center_y) / range_ - 0.5);
     }
+  }
 
-    float* out_blob_data = nullptr;
-    out_blob_data = out_blob_->data();
-
-    int channel_index = 0;
-    channel_size_  = height_ * width_;
-    max_height_data_     = out_blob_data + channel_size_ * channel_index++;
-    mean_height_data_    = out_blob_data + channel_size_ * channel_index++;
-    count_data_          = out_blob_data + channel_size_ * channel_index++;
-    direction_data_      = out_blob_data + channel_size_ * channel_index++;
-    top_intensity_data_  = out_blob_data + channel_size_ * channel_index++;
-    mean_intensity_data_ = out_blob_data + channel_size_ * channel_index++;
-    distance_data_       = out_blob_data + channel_size_ * channel_index++;
-    nonempty_data_       = out_blob_data + channel_size_ * channel_index++;
-
-    constexpr double K_CV_PI = 3.1415926535897932384626433832795;
-    for (int row = 0; row < height_; ++row) {
-        for (int col = 0; col < width_; ++col) {
-            int idx = row * width_ + col;
-            // * row <-> x, column <-> y
-            float center_x = Pixel2Pc(row, height_, range_);
-            float center_y = Pixel2Pc(col, width_, range_);
-            
-            direction_data_[idx] =
-                static_cast<float>(std::atan2(center_y, center_x) / (2.0 * K_CV_PI));
-            distance_data_[idx] =
-                static_cast<float>(std::hypot(center_x, center_y) / 60.0 - 0.5);
-        }
-    }
-    return true;
+  return true;
 }
 
 float FeatureGenerator::logCount(int count) {
-    if (count < static_cast<int>(log_table_.size())) {
-        return log_table_[count];
-    }
-    return std::log(static_cast<float>(1 + count));
+  if (count < static_cast<int>(log_table_.size())) {
+    return log_table_[count];
+  }
+  return std::log(static_cast<float>(1 + count));
 }
 
 void FeatureGenerator::generate( const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_ptr) {

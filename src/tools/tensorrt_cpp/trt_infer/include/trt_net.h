@@ -28,9 +28,11 @@ public:
     virtual ~TRTNet();
 
     void SetInputTensor(const int &bindIndex, std::vector<float> &shapes) override;
+    void SetInputTensor(const int &bindIndex, float *shapes, \
+                        int dataSize, bool isHostToDevice) override;
     void Infer() override;
     void GetOutputTensor(const int &bindIndex, std::vector<float> &shapes) override;
-
+    void GetOutputTensor(const int &bindIndex, float *outputData, int dataSize) override;
     int GetDevice() const override;
     int GetMaxBatchSize() const override;
     void* GetBindingPtr(int bindIndex) const override;

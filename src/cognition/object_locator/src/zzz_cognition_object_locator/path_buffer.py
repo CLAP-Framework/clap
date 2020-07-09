@@ -62,12 +62,26 @@ class PathBuffer:
             self._reference_path_buffer = [(waypoint.pose.position.x, waypoint.pose.position.y) 
                                         for waypoint in reversed(reference_path.poses)]
             self._reference_path_changed = True
-            self._dense_reference_path_buffer()
+            self._reference_path_buffer_t = dense_polyline2d(np.array(self._reference_path_buffer),2).tolist()
         rospy.loginfo("Received reference path, length:%d", len(reference_path.poses))
 
-    def _dense_reference_path_buffer(self,resolution = 2):
-        self._reference_path_buffer = dense_polyline2d(np.array(self._reference_path_buffer),resolution).tolist()
-    
+    def _relocate_dense_reference_path_buffer(self, ego_state, resolution = 2):
+        
+        _reference_path_buffer_t = np.array(self._reference_path_buffer)
+            
+        _, nearest_idx, _ = dist_from_point_to_polyline2d(
+                ego_state.pose.pose.position.x,
+                ego_state.pose.pose.position.y,
+                _reference_path_buffer_t
+            )
+        
+        self._reference_path_buffer = _reference_path_buffer_t.tolist()
+
+        # print(self._reference_path_buffer)
+        # print(_reference_path_buffer_t[max(0,nearest_idx-100):].tolist())
+        # self._reference_path_buffer = (_reference_path_buffer_t.tolist()[max(0,nearest_idx-100):])
+        # print("------------abcdefg",len((_reference_path_buffer_t[max(0,nearest_idx-3):]).tolist()))
+        
     
     def update(self, required_reference_path_length = 10, 
                 front_vehicle_avoidance_require_thres = 2,
@@ -96,11 +110,12 @@ class PathBuffer:
         if self._reference_path_changed:
             self._reference_path_segment.clear()
             self._reference_path_changed = False
+            
+            # self._relocate_dense_reference_path_buffer(ego_state)
         # tstates.reference_path = self._reference_path_buffer
         # reference_path = tstates.reference_path # for easy access
 
-        # zwt modify to avoid reference path update in junction
-        # if dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:        # Remove passed waypoints - dequeue
+        # Remove passed waypoints - dequeue
         if len(self._reference_path_segment) > 1:
             _, nearest_idx, _ = dist_from_point_to_polyline2d(
                 ego_state.pose.pose.position.x,

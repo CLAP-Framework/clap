@@ -1,0 +1,23 @@
+<launch>
+  <group ns="frontleft">
+    <node name="srr_radar" pkg="srr_radar" type="srr_radar" output="screen">
+    <rosparam file="$(find srr_radar)/FrontLeftConf.yaml"/>
+    </node>
+  </group>
+  <group ns="frontright">
+    <node name="srr_radar" pkg="srr_radar" type="srr_radar" output="screen">
+    <rosparam file="$(find srr_radar)/FrontRightConf.yaml"/>
+    </node>
+  </group>
+  <group ns="rearleft">
+    <node name="srr_radar" pkg="srr_radar" type="srr_radar" output="screen">
+    <rosparam file="$(find srr_radar)/RearLeftConf.yaml"/>
+    </node>
+  </group>
+  <group ns="rearright">
+    <node name="srr_radar" pkg="srr_radar" type="srr_radar" output="screen">
+    <rosparam file="$(find srr_radar)/RearRightConf.yaml"/>
+    </node>
+  </group>
+</launch>
+

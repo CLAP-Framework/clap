@@ -78,7 +78,6 @@ class NearestLocator:
         if not self._ego_vehicle_state_buffer:
             rospy.logwarn("Cognition Model not receive Ego pose")
             return None
-
         with self._ego_vehicle_state_lock:
             tstates.ego_state = copy.deepcopy(self._ego_vehicle_state_buffer) 
 

@@ -10,7 +10,7 @@ namespace inference {
 
 TRTNet::TRTNet(const std::string &net_file) {
     if(!DeserializeEngine(net_file)) {
-        spdlog::error("error: could not deserialize or build engine");
+        spdlog::error("error: could not deserialize from {}.", net_file);
     } else {
         spdlog::info("create execute context and malloc device memory...");
         InitEngine();
@@ -35,6 +35,17 @@ void TRTNet::SetInputTensor(const int &bindIndex, std::vector<float> &shapes) {
     DataTransfer(shapes, bindIndex, true);
 }
 
+void TRTNet::SetInputTensor(const int &bindIndex, \
+     float *shapes, int dataSize, bool isHostToDevice) {
+    assert(dataSize * sizeof(float) == mBindingSize_[bindIndex]);
+    if (isHostToDevice) {
+        CUDA_CHECK(cudaMemcpy(mBinding_[bindIndex], shapes, \
+                   mBindingSize_[bindIndex], cudaMemcpyHostToDevice));
+    } else {
+        mBinding_[bindIndex] = (void *)shapes;
+    }
+}
+
 void TRTNet::Infer() {
     cudaEvent_t start,stop;
     float elapsedTime;
@@ -51,6 +62,12 @@ void TRTNet::Infer() {
 
 void TRTNet::GetOutputTensor(const int &bindIndex, std::vector<float> &shapes) {
     DataTransfer(shapes, bindIndex, false);
+}
+
+void TRTNet::GetOutputTensor(const int &bindIndex, float *outputData, int dataSize) {
+    assert(dataSize * sizeof(float) == mBindingSize_[bindIndex]);
+    CUDA_CHECK(cudaMemcpy(outputData, mBinding_[bindIndex], \
+                mBindingSize_[bindIndex], cudaMemcpyDeviceToHost));
 }
 
 void TRTNet::DataTransfer(std::vector<float>& data, int bindIndex, bool isHostToDevice) {

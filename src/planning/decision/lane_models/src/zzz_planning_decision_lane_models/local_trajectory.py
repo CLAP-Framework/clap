@@ -427,10 +427,11 @@ class Werling_planner(object):
 
         if self.last_target_lane_index < 0:
             self.lanes = []
-            for lane in dynamic_map.mmap.lanes:
+            lane_num = len(dynamic_map.mmap.lanes)
+            for lane_idx,lane in enumerate(dynamic_map.mmap.lanes):
                 central_path = lane.map_lane.central_path_points
                 extend_centrol_path = self.extend_path(central_path)
-                self.lanes.append(Werling(extend_centrol_path))
+                self.lanes.append(Werling(extend_centrol_path,lane_idx,lane_num))
 
         if target_lane_index != self.last_target_lane_index:
             for werlinglane in self.lanes:

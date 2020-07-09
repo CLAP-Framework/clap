@@ -1,0 +1,6 @@
+Host_Addr: 192.168.110.105
+Host_Port: 4008
+Target_Addr: 192.168.110.104
+Target_Port: 4008
+Topic_Name: SrrRadarMsg
+Frame_ID: srr_radar

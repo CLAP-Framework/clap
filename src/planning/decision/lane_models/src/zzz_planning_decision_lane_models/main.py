@@ -46,8 +46,8 @@ class MainDecision(object):
 
         trajectory = None
         changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
-        if desired_speed < 0: # TODO: clean this
-            desired_speed = 0
+        if desired_speed <= 0: # TODO: clean this
+            desired_speed = 1/3.6
 
         ego_speed = get_speed(dynamic_map.ego_state)
 

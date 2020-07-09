@@ -16,9 +16,15 @@
 #ifndef CNN_SEGMENTATION_H
 #define CNN_SEGMENTATION_H
 
+#define __USE_GPU__ 1
+
+#ifdef __USE_GPU__
+  #include "feature_generator_cuda.h"
+#else
+  #include "feature_generator.h"
+#endif
 #include "cluster2d.h"
-#include "feature_generator.h"
-// #include "Trt.h"
+
 #include "inference.h"
 #include "inference_factory.h"
 #include <chrono>
@@ -45,28 +51,36 @@ class CNNSegmentation
 {
 public:
   CNNSegmentation();
-  ~CNNSegmentation() {
-
-  }
+  ~CNNSegmentation() {}
 
   void run();
-
   void test_run();
 
 private:
   std::string benchmark_path_;
   std::string duration_path_;
-  double range_;
-  double score_threshold_;
-  double ground_height_;
+
   int width_;
   int height_;
   int channel_;
   int batch_;
   int channel_size_;
 
+  float score_threshold_;
+  float ground_height_;  
+  float range_;
+  bool intensity_normalized_;
+  float min_height_;
+  float max_height_;
+  float objectness_thresh_;
+  float height_thresh_;
+  int min_pts_num_; 
+  bool use_all_grids_for_clustering_;
+
   std_msgs::Header message_header_;
   std::string topic_src_;
+  std::string topic_pub_objects_;
+  std::string topic_pub_points_;
 
   int gpu_device_id_;
   bool use_gpu_;

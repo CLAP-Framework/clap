@@ -25,20 +25,15 @@ class RLSNode(object):
         )
 
         self._rate = rospy.Rate(params.hz)
-	self._enable_carla = False
-
         model_lon = IDM()
         model_lat = RLSDecision()
-        # model_local = PolylineTrajectory()
-	model_local = Werling_planner()
+        model_local = Werling_planner()
         self._decision_instance = MainDecision(lon_decision=model_lon, lat_decision=model_lat, local_trajectory=model_local)
         self._last_decision_time = 0
 
         # ROS messages
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
-	if self._enable_carla is True:        
-	    self._collision_subscriber = rospy.Subscriber(params.collision_topic, CarlaCollisionEvent, self.collision_callback)
-
+        # self._collision_subscriber = rospy.Subscriber(params.collision_topic, CarlaCollisionEvent, self.collision_callback)
         # self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self.dynamic_map_callback)
 
         self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
@@ -62,7 +57,6 @@ class RLSNode(object):
 
             self._rate.sleep()
             
-    
     def collision_callback(self, msg):
         # collision_id = msg.other_actor_id
         self._decision_instance._lateral_model_instance.collision_signal = True

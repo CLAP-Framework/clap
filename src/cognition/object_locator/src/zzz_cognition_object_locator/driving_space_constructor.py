@@ -64,6 +64,7 @@ class DrivingSpaceConstructor:
         with self._surrounding_object_list_lock:
             if self._ego_vehicle_state_buffer != None:
                 self._surrounding_object_list_buffer = convert_tracking_box(object_list, self._ego_vehicle_state_buffer)
+                print('++++ _surrounding_object_list_buffer len ', len(self._surrounding_object_list_buffer))
                 #jxy: the converted objects are in the RoadObstacle() format
 
     def receive_ego_state(self, state):
@@ -118,7 +119,6 @@ class DrivingSpaceConstructor:
             self.locate_stop_sign_in_lanes(tstates)
             self.locate_speed_limit_in_lanes(tstates)
             self.calculate_drivable_area(tstates)
-	    # TODO(disable it under xiaopeng)
             # self.calculate_next_drivable_area(tstates)
         
         self._driving_space.header.frame_id = "map"

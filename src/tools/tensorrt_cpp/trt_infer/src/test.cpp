@@ -6,7 +6,11 @@
 #include <memory>
 
 int main(int argc, char *argv[]) {
-    loadYamlFile("../config.yaml");
+    if (argc < 2) {
+        spdlog::error("Please input the configuration file path.");
+        return 0;
+    }
+    loadYamlFile(argv[1]);
     std::vector<float> input_data(gChannel * gHeight * gWidth, 1.0);
     std::vector<std::vector<float> >output_data(gOutputNode.size());
     std::shared_ptr<novauto::tensorrt::inference::Inference> inference;

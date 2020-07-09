@@ -24,14 +24,14 @@ from zzz_common.geometry import dist_from_point_to_polyline2d
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 10.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 500.0  # maximum curvature [1/m]
-MAX_ROAD_WIDTH = 4.0   # maximum road width [m] # related to RL action space
-D_ROAD_W = 1  # road width sampling length [m]
-DT = 0.3  # time tick [s]
-MAXT = 4.6  # max prediction time [m]
-MINT = 4.0  # min prediction time [m]
-TARGET_SPEED = 15.0 / 3.6  # target speed [m/s]
-D_T_S = 5.0 / 3.6  # target speed sampling length [m/s]
-N_S_SAMPLE = 2  # sampling number of target speed
+MAX_ROAD_WIDTH = 2.4   # maximum road width [m] # related to RL action space
+D_ROAD_W = 0.4  # road width sampling length [m]
+DT = 0.6  # time tick [s]
+MAXT = 8.6  # max prediction time [m]
+MINT = 8.0  # min prediction time [m]
+TARGET_SPEED = 12.0 / 3.6  # target speed [m/s]
+D_T_S = 3.0 / 3.6  # target speed sampling length [m/s]
+N_S_SAMPLE = 4  # sampling number of target speed
 
 # collision check
 OBSTACLES_CONSIDERED = 3
@@ -249,7 +249,7 @@ class Werling(object):
 
                 lat_qp = quintic_polynomial(c_d, c_d_d, c_d_dd, di, 0.0, 0.0, Ti) 
 
-                fp.t = [t for t in np.arange(0.0, Ti, DT)]
+                fp.t = np.arange(0.0, Ti, DT).tolist() # [t for t in np.arange(0.0, Ti, DT)]
                 fp.d = [lat_qp.calc_point(t) for t in fp.t]                        
                 fp.d_d = [lat_qp.calc_first_derivative(t) for t in fp.t]
                 fp.d_dd = [lat_qp.calc_second_derivative(t) for t in fp.t]
@@ -296,12 +296,16 @@ class Werling(object):
                 fp.y.append(fy)
 
             # calc yaw and ds
-            for i in range(len(fp.x) - 1):
-                dx = fp.x[i + 1] - fp.x[i]
-                dy = fp.y[i + 1] - fp.y[i]
-                fp.yaw.append(math.atan2(dy, dx))
-                fp.ds.append(math.sqrt(dx**2 + dy**2))
+            dx = np.diff(np.array(fp.x))
+            dy = np.diff(np.array(fp.y))
+            fp.yaw = np.arctan2(dy,dx).tolist()
+            fp.ds = np.sqrt(dx**2+dy**2).tolist()
 
+            # for i in range(len(fp.x) - 1):
+            #     dx = fp.x[i + 1] - fp.x[i]
+            #     dy = fp.y[i + 1] - fp.y[i]
+            #     fp.yaw.append(math.atan2(dy, dx))
+            #     fp.ds.append(math.sqrt(dx**2 + dy**2))
             
             try:
                 fp.yaw.append(fp.yaw[-1])
@@ -311,6 +315,8 @@ class Werling(object):
                 fp.ds.append(0.1)
 
             # calc curvature
+            # fp.c = (np.diff(fp.yaw) / np.array(fp.ds)).tolist()
+
             for i in range(len(fp.yaw) - 1):
                 fp.c.append((fp.yaw[i + 1] - fp.yaw[i]) / fp.ds[i])
 

@@ -1,10 +1,13 @@
-#include "assignment.h"
+
 #include "lidar_track.h"
 #include "ukf.h"
 #include "trajectory.h"
+#include "assignment.hpp"
 #include "Eigen/Dense"
 #include <vector>
 #include <iostream>
+
+#define DEBUG_OUTPUT 0
 
 namespace ele {
 
@@ -56,7 +59,7 @@ bool LidarTrack::Track() {
     // TODO: if (in_objs_.size() == 0)
     int rows = trajs_.size();
     int cols = in_objs_.size();
-    std::cout << "trajs size " << rows << "objs size " << cols  << std::endl;
+    // std::cout << "trajs size " << rows << "objs size " << cols  << std::endl;
     // if in_objs_.size() != 0
     std::vector<bool> obj_matched(in_objs_.size(), false);
     // init
@@ -69,7 +72,9 @@ bool LidarTrack::Track() {
             trajs_[i].ProcessPrediction(timestamp_);
         }
         /** Match */
+#if DEBUG_OUTPUT
         std::cout << "create Assingment" << std::endl;
+#endif // DEBUG_OUTPUT
         ele::Assignment<ele::TrajectoryUKF, ele::LidarTrackObject> assign_engine(&trajs_, &in_objs_, 
                 [](ele::TrajectoryUKF& left_class, ele::LidarTrackObject& right_class) -> double {
                     return ( (left_class.traj_.obj.features.c.x - right_class.features.c.x) 
@@ -78,17 +83,26 @@ bool LidarTrack::Track() {
                             * (left_class.traj_.obj.features.c.y - right_class.features.c.y) );
                 } ,
                 dis_sqrt_thres_ );
+
+#if DEBUG_OUTPUT
         std::cout << "Assingment created and start Solve" << std::endl;
+#endif // DEBUG_OUTPUT
         assign_engine.Solve();
+#if DEBUG_OUTPUT
         std::cout << "Assingment Solved and get result" << std::endl;
+#endif // DEBUG_OUTPUT
         std::vector<int> result = assign_engine.Assign(); 
+#if DEBUG_OUTPUT
         std::cout << "get result and print" << std::endl;
+#endif // DEBUG_OUTPUT
         for (auto i = 0; i < result.size(); ++i){
             if ( -1 != result[i] ){
                 trajs_[i].traj_.matched = true;
                 trajs_[i].traj_.obj = in_objs_[result[i]];
                 obj_matched[result[i]] = true;
+#if DEBUG_OUTPUT
                 std::cout << "traj " << i << " matched obj " << result[i] << std::endl;
+#endif // DEBUG_OUTPUT   
             }  
         }
 #else

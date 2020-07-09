@@ -1,0 +1,16 @@
+1、功能包xpmotors：控制节点
+auto_state_node 车辆状态反馈节点
+auto_control_node 接受控制指令发送给小鹏车
+follower_cz  路径跟踪程序,路径文件索引～/vehicle/vehicle data/Path.txt
+getPath2txt  路径采集程序，数据存储位置～/vehicle/vehicle data/Path.txt
+
+2、功能包oxford_gps_eth
+gps_node 输出GPS和IMU信息。
+
+
+3.launch文件说明
+打开GetPath.launch即可进行路径采集，采集前将~/vehicle/vehicle data 中的Path.txt删除
+打开cxfollower.launch,开启路径跟踪功能。targetspeed为目标速度设置，单位m/s,建议测试低速开始。
+
+
+

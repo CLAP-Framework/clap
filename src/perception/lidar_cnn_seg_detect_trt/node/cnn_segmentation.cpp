@@ -18,7 +18,7 @@
 #include "inference_factory.h"
 #include "cnn_segmentation.h"
 #include <fstream>
-
+#include "benchmark.h"
 
 static std::string GetTypeString(MetaType meta_type)  {
   switch (meta_type) {
@@ -41,88 +41,51 @@ CNNSegmentation::CNNSegmentation() : nh_()
 {
 }
 
-bool CNNSegmentation::init()
-{
-  std::string proto_file_;
-  std::string weight_file_;
-  std::string deploy_mode_;
+bool CNNSegmentation::init() {
+  std::string engine_file;
   ros::NodeHandle private_node_handle("~");//to receive args
   benchmark_path_.clear();
+  duration_path_.clear();
   if (private_node_handle.getParam("benchmark_path", benchmark_path_)){
     ROS_INFO("[%s] benchmark_path: %s", __APP_NAME__, benchmark_path_.c_str());
   }
-  duration_path_.clear();
   if (private_node_handle.getParam("duration_path", duration_path_)){
     ROS_INFO("[%s] duration_path: %s", __APP_NAME__, duration_path_.c_str());
   }
-  if (private_node_handle.getParam("network_definition_file", proto_file_)){
-    ROS_INFO("[%s] network_definition_file: %s", __APP_NAME__, proto_file_.c_str());
+  if (private_node_handle.getParam("engine_file", engine_file)){
+    ROS_INFO("[%s] duration_path: %s", __APP_NAME__, duration_path_.c_str());
   } else {
-    ROS_INFO("[%s] No Network Definition File was received. Finishing execution.", __APP_NAME__);
+    ROS_ERROR("[%s] error path for engine_file.", __APP_NAME__);
     return false;
   }
-  if (private_node_handle.getParam("pretrained_model_file", weight_file_)){
-    ROS_INFO("[%s] Pretrained Model File: %s", __APP_NAME__, weight_file_.c_str());
-  } else{
-    ROS_INFO("[%s] No Pretrained Model File was received. Finishing execution.", __APP_NAME__);
-    return false;
-  }
+  // private_node_handle.param<std::string>("benchmark_path", benchmark_path_, "");
+  // private_node_handle.param<std::string>("duration_path", duration_path_, "");
+  // private_node_handle.param<std::string>("engine_file", engine_file, "");  
 
-  private_node_handle.param<std::string>("points_src", topic_src_, "points_raw");
-  ROS_INFO("[%s] points_src: %s", __APP_NAME__, topic_src_.c_str());
+  private_node_handle.param<std::string>("publish_objects", 
+      topic_pub_objects_, "/detection/lidar_detector/objects");
+  // private_node_handle.param<std::string>("publish_points", 
+  //     topic_pub_points_, "/detection/lidar_detector/points_cluster");
+  private_node_handle.param<std::string>("points_src", topic_src_, "/points_raw");
+  private_node_handle.param<float>("range", range_, 50.);
+  private_node_handle.param<float>("min_height", min_height_, -5.);
+  private_node_handle.param<float>("max_height", max_height_, 5.);
+  private_node_handle.param<bool>("intensity_normalized", intensity_normalized_, false);
+  private_node_handle.param<float>("score_threshold", score_threshold_, 0.6);
 
-  private_node_handle.param<double>("range", range_, 60.);
-  ROS_INFO("[%s] range: %.2f", __APP_NAME__, range_);
-
-  private_node_handle.param<double>("score_threshold", score_threshold_, 0.6);
-  ROS_INFO("[%s] score_threshold: %.2f", __APP_NAME__, score_threshold_);
-
-  private_node_handle.param<int>("width", width_, 640);
-  ROS_INFO("[%s] width: %d", __APP_NAME__, width_);
-
-  private_node_handle.param<int>("height", height_, 640);
-  ROS_INFO("[%s] height: %d", __APP_NAME__, height_);
-
-  private_node_handle.param<bool>("use_gpu", use_gpu_, false);
-  ROS_INFO("[%s] use_gpu: %d", __APP_NAME__, use_gpu_);
-
-  private_node_handle.param<int>("gpu_device_id", gpu_device_id_, 0);
-  ROS_INFO("[%s] gpu_device_id: %d", __APP_NAME__, gpu_device_id_);
-
-  private_node_handle.param<double>("ground_height", ground_height_, -1.73);
-  ROS_INFO("[%s] gpu_device_id: %d", __APP_NAME__, ground_height_);
-
-  private_node_handle.param<std::string>("deploy_mode", deploy_mode_, "FP32");
-  ROS_INFO("[%s] deploy_mode: %d", __APP_NAME__, deploy_mode_.c_str());
-
-  batch_ = 1;
-  channel_size_ = height_ * width_;
-
-  cluster2d_.reset(new Cluster2D());
-  if (!cluster2d_->init(height_, width_, range_)) {
-    ROS_ERROR("[%s] Fail to Initialize cluster2d for CNNSegmentation", __APP_NAME__);
-    return false;
-  }
-
-  feature_generator_.reset(new FeatureGenerator());
-  feature_blob_.reset(new std::vector<float>());
-  if (!feature_generator_->init(feature_blob_.get())) {
-    ROS_ERROR("[%s] Fail to Initialize feature generator for CNNSegmentation", __APP_NAME__);
-    return false;
-  }
-
-  int mode = 0;
-  std::string engine_file;
-  if (deploy_mode_ == "FP16") {
-    engine_file = weight_file_+"_FP16.trt";
-    mode = 1;
-  } else if (deploy_mode_ == "INT8") {
-    engine_file = weight_file_+"_INT8.trt";
-    mode = 2;
-  } else { // deploy_mode_ == "FP32"
-    engine_file = weight_file_+"_FP32.trt";
-    mode = 0;
-  }
+  private_node_handle.param<float>("objectness_thresh", objectness_thresh_, 0.5);
+  private_node_handle.param<float>("height_thresh", height_thresh_, 0.5);
+  private_node_handle.param<int>("min_pts_num", min_pts_num_, 3);
+  private_node_handle.param<bool>("use_all_grids_for_clustering", use_all_grids_for_clustering_, false);
+  // private_node_handle.param<float>("ground_height", ground_height_, -1.8);
+  
+  // channel_ = 8;
+  // batch_ = 1;
+  // channel_size_ = height_ * width_;
+  // objectness_thresh_ = 0.5;
+  // height_thresh_ = 0.5;
+  // min_pts_num_ = 3; 
+  // use_all_grids_for_clustering_ = true;
 
   std::vector<std::string> outputBlobName{
       "category_score",
@@ -131,21 +94,62 @@ bool CNNSegmentation::init()
       "classify_score", 
       "heading_pt", 
       "height_pt"};
-  output_blob_name_.clear();
   output_blob_name_ = outputBlobName;
   std::vector<std::string> input_blob_name_{"input"};
+
   trt_net_.reset(novauto::tensorrt::inference::CreateInferenceByName(
     "TRTNet", engine_file, input_blob_name_, outputBlobName)); 
-  
 
-  // caffe_net_.reset(new Trt());
-  // caffe_net_->CreateEngine(proto_file_, weight_file_, 
-  //     engine_file, outputBlobName, batch_, mode);
+  std::vector<int> dims = (*trt_net_).GetBindingDims(0);
+  width_   = dims[dims.size() - 1];
+  height_  = dims[dims.size() - 2];
+  channel_ = dims[dims.size() - 3];  
+  batch_   = (*trt_net_).GetMaxBatchSize();
+	channel_size_  = height_ * width_;
+
+  feature_generator_.reset(new FeatureGenerator());
+
+#ifdef __USE_GPU__
+  ROS_INFO("[%s] preprocess use GPU.", __APP_NAME__);
+  if ( !feature_generator_->init((*trt_net_).GetBindingPtr(0), height_,
+       width_, range_, min_height_, max_height_, intensity_normalized_, 
+       batch_, channel_) ) {
+    ROS_ERROR("[%s] Fail to Initialize feature generator for CNNSegmentation", __APP_NAME__);
+    return false;
+  }
+#else
+  feature_blob_.reset(new std::vector<float>());
+  if ( !feature_generator_->init(feature_blob_.get(), height_, width_, range_, 
+      min_height_, max_height_, intensity_normalized_, batch_, channel_) ) {
+    ROS_ERROR("[%s] Fail to Initialize feature generator for CNNSegmentation", __APP_NAME__);
+    return false;
+  }  
+#endif
+
+  cluster2d_.reset(new Cluster2D());
+  if (!cluster2d_->init(height_, width_, range_)) {
+    ROS_ERROR("[%s] Fail to Initialize cluster2d for CNNSegmentation", __APP_NAME__);
+    return false;
+  }
   output_data_.resize(output_blob_name_.size());
+
+  ROS_INFO("[%s] engine_file: %s", __APP_NAME__, engine_file.c_str());
+  ROS_INFO("[%s] publish_objects: %s", __APP_NAME__, topic_pub_objects_.c_str());
+  // ROS_INFO("[%s] publish_points: %s", __APP_NAME__, topic_pub_points_.c_str());
+  ROS_INFO("[%s] points_src: %s", __APP_NAME__, topic_src_.c_str());
+  ROS_INFO("[%s] range: %.2f", __APP_NAME__, range_);
+  ROS_INFO("[%s] min_height: %.2f", __APP_NAME__, min_height_);
+  ROS_INFO("[%s] max_height: %.2f", __APP_NAME__, max_height_);
+  ROS_INFO("[%s] intensity_normalized: %d", __APP_NAME__, int(intensity_normalized_));
+  ROS_INFO("[%s] score_threshold: %.2f", __APP_NAME__, score_threshold_);
+  // ROS_INFO("[%s] width: %d", __APP_NAME__, width_);
+  // ROS_INFO("[%s] height: %d", __APP_NAME__, height_);
+  // ROS_INFO("[%s] use_gpu: %d", __APP_NAME__, use_gpu_);
+  // ROS_INFO("[%s] gpu_device_id: %d", __APP_NAME__, gpu_device_id_);
+  // ROS_INFO("[%s] ground height: %.2f", __APP_NAME__, ground_height_);
 
   return true;
 }
-
 
 bool CNNSegmentation::segment(const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_ptr,
     const pcl::PointIndices &valid_idx, autoware_msgs::DetectedObjectArray &objects) {
@@ -156,16 +160,21 @@ bool CNNSegmentation::segment(const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_ptr
   }
   _TCSV_INIT();
   _TCSV_START();
+#ifdef __USE_GPU__
+  (*feature_generator_).generate((void*)pc_ptr->points.data(), 
+      pc_ptr->points.size());
+#else
 	feature_generator_.get()->generate(pc_ptr);
   trt_net_->SetInputTensor(0, *feature_blob_);
+#endif
   _TCSV_END();
   _TCSV_START();
+
   trt_net_->Infer();
-  for(int output_idx = 0; 
-      output_idx < output_blob_name_.size(); 
+#if 1
+  for(int output_idx = 0; output_idx < output_blob_name_.size(); 
       ++output_idx) {
-    trt_net_->GetOutputTensor(output_idx + 1, output_data_[output_idx]);
-    // caffe_net_->DataTransfer(output_data_[output_idx - 1], output_idx, false);    
+    trt_net_->GetOutputTensor(output_idx + 1, output_data_[output_idx]);  
   }
   _TCSV_END();
   _TCSV_START();
@@ -177,30 +186,26 @@ bool CNNSegmentation::segment(const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_ptr
   float *height_pt = output_data_[5].data();
 
   // clutser points and construct segments/objects
-  float objectness_thresh = 0.5;
-  bool use_all_grids_for_clustering = true;
-  cluster2d_->cluster(category_pt,
-      instance_pt,
-      pc_ptr,
-      valid_idx,
-      objectness_thresh, 
-      use_all_grids_for_clustering);
+  // float objectness_thresh = 0.5;
+  // float height_thresh = 0.5;
+  // int min_pts_num = 3; 
+  // bool use_all_grids_for_clustering = true;
+
+  cluster2d_->cluster(category_pt, instance_pt, pc_ptr,
+      valid_idx, objectness_thresh_,  use_all_grids_for_clustering_);
   cluster2d_->filter(confidence_pt, height_pt);
   cluster2d_->classify(classify_pt);
   cluster2d_->heading(heading_pt);
-  float height_thresh = 0.5;
-  int min_pts_num = 3;
+
   std::vector<nova::Object>  objects_loc;
   nova::Header  in_header;
-  cluster2d_->getObjects(score_threshold_,
-      height_thresh,
-      min_pts_num,
-      objects_loc,
-      in_header);
+  cluster2d_->getObjects(score_threshold_, height_thresh_,
+      min_pts_num_, objects_loc, in_header);
+	// std::cout << "objects size : " << objects_loc.size() << std::endl;
 
-	std::cout << "objects size : " << objects_loc.size() << std::endl;
   _TCSV_END();
   _TCSV_PRINT(duration_path_, (!duration_path_.empty()) );
+
   for (auto& obj: objects_loc) {
     autoware_msgs::DetectedObject resulting_object;
     resulting_object.header = message_header_;
@@ -226,7 +231,8 @@ bool CNNSegmentation::segment(const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_ptr
     resulting_object.space_frame = message_header_.frame_id;
     objects.objects.push_back(resulting_object);
   }
-  
+
+#endif
   return true;
 }
 
@@ -239,11 +245,15 @@ void CNNSegmentation::test_run() {
 	}
 
   for (int k=0; k<100; k++) {  
-    
+#ifdef __USE_GPU__
+    (*feature_generator_).generate((void*)pc_ptr->points.data(), pc_ptr->size());
+#else
     feature_generator_.get()->generate(pc_ptr);
+    trt_net_->SetInputTensor(0, *feature_blob_);
+#endif
     trt_net_->Infer();
-    for(int output_idx = 1; 
-        output_idx <= output_blob_name_.size(); 
+    for(int output_idx = 0; 
+        output_idx < output_blob_name_.size(); 
         ++output_idx) {
       trt_net_->GetOutputTensor(output_idx + 1, output_data_[output_idx]);   
     }
@@ -272,15 +282,18 @@ void CNNSegmentation::test_run() {
     cluster->getObjects(0.6,
         0.5, min_pts_num, objects, in_header);
 
-    std::cout << "objects size : " << objects.size() << std::endl;
+    // std::cout << "objects size : " << objects.size() << std::endl;
   }
 }
 
 void CNNSegmentation::run() {
   init();
-  points_sub_ = nh_.subscribe(topic_src_, 1, &CNNSegmentation::pointsCallback, this);
-  points_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/detection/lidar_detector/points_cluster", 1);
-  objects_pub_ = nh_.advertise<autoware_msgs::DetectedObjectArray>("/detection/lidar_detector/objects", 1);
+  points_sub_ = nh_.subscribe(topic_src_, 1, 
+      &CNNSegmentation::pointsCallback, this);
+  // points_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(
+  //     topic_pub_points_, 2);
+  objects_pub_ = nh_.advertise<autoware_msgs::DetectedObjectArray>(
+      topic_pub_objects_, 2);
   ROS_INFO("[%s] Ready. Waiting for data...", __APP_NAME__);
 }
 
@@ -302,31 +315,9 @@ void CNNSegmentation::pointsCallback(const sensor_msgs::PointCloud2 &msg)
   objects_pub_.publish(objects);
 
   if (!benchmark_path_.empty()) {
-      std::stringstream s_file;
-      s_file << std::setw(4) 
-          << std::setfill('0') 
-          << objects.header.seq ;
-      std::string file = benchmark_path_ + s_file.str() + ".txt";
-      std::remove(file.c_str());
-      std::ofstream outputfile(file, 
-          std::ofstream::out | std::ofstream::app);
-      for (auto& obj : objects.objects) {
-        if (obj.pose.position.x > 50.0 || obj.pose.position.x < 0.0 
-            || obj.pose.position.y > 25.0 || obj.pose.position.y < -25.0
-            || obj.dimensions.x > 10.0 || obj.dimensions.y > 4.0) {
-          continue;
-        }
-        outputfile << obj.label << " " 
-            << obj.score << " " 
-            << obj.pose.position.x << " "
-            << obj.pose.position.y << " "
-            << obj.pose.position.z << " "
-            << obj.dimensions.x << " "
-            << obj.dimensions.y << " "
-            << obj.dimensions.z << " "
-            // << 0.0 << std::endl;
-            << -obj.angle << std::endl;
-      }
+    // std::cout << "record" << std::endl;
+    nova::Benchmark bench(nova::Benchmark::Dataset::Waymo, benchmark_path_);
+    bench.record(objects);
   }
 }
 

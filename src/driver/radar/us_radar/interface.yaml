@@ -1,0 +1,3 @@
+- name: /detections[]
+  publish: [0backleft, 1backmiddleleft, 2backmiddleright, 3backright, 4frontright, 5frontmiddleright, 6frontmiddleleft, 7frontleft]
+  subscribe: []

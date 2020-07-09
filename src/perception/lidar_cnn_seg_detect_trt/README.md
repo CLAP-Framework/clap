@@ -1,64 +1,146 @@
-# CNN LiDAR Baidu Object Segmenter
+# CNN Segmentation Lidar Objects detection
 
-Autoware package based on Baidu's object segmenter.
+lidar detection package based on Baidu's object segmenter.
 
 ## Pre requisites
 
-Caffe distributable installed in your home (`~/caffe/distribute`).
+TensorRT 7.0.0.11 installed in `/opt/TensorRT-7.0.0.11`.
 
-```
-$ cd
-$ git clone https://github.com/BVLC/caffe
-$ cd caffe
-```
-Follow instructions from [Installing Caffe from source](http://caffe.berkeleyvision.org/installation.html).
+## TensorRT install : [Tar File Installation for TensorRT](https://docs.nvidia.com/deeplearning/sdk/tensorrt-install-guide/index.html#installing-tar)
 
-* **Use offical Make compilation procedure**. 
-* Do not use thirdparty CMake setup.
+This section contains instructions for installing TensorRT from a tar file. 
 
-Compile and create distributable:
-```
-$ make
-$ make distribute
-```
+Note: Before issuing the following commands, you'll need to replace  7.x.x.x with your specific TensorRT version. The following commands are examples. 
 
-**Recompile Autoware to build the node.**
+1. Install the following dependencies, if not already present:
+
+   - [10.0](https://docs.nvidia.com/cuda/archive/10.0/index.html), or [10.2](https://docs.nvidia.com/cuda/archive/10.2/index.html)
+   - [cuDNN 7.6.5](https://docs.nvidia.com/deeplearning/sdk/cudnn-release-notes/rel_765.html#rel_765)
+   - Python 2 or Python 3 (Optional) 
+
+2. [Download](https://docs.nvidia.com/deeplearning/sdk/tensorrt-install-guide/index.html#downloading) the TensorRT tar file  that matches the Linux distribution you are using.
+
+3. Choose where you want to install TensorRT. This tar file will  install everything into a subdirectory called TensorRT-7.x.x.x.
+
+4. Unpack the tar file.
+
+   ```
+   version=”7.x.x.x”
+   os=”<os>”
+   arch=$(uname -m)
+   cuda=”cuda-x.x”
+   cudnn=”cudnn7.x”
+   tar xzvf TensorRT-${version}.${os}.${arch}-gnu.${cuda}.${cudnn}.tar.gz
+   ```
+
+​       **Where: **
+
+   - 7.x.x.x is your TensorRT version                                 
+
+   - <os>is:                         
+
+- Ubuntu-16.04
+      - Ubuntu-18.04
+
+- CentOS-7.6
+
+  - cuda-x.x is CUDA version 10.0, or 10.2.                                 
+
+  - cudnn7.x is cuDNN version 7.6. This directory will have sub-directories like lib ,                              include , data,  etc…
+
+  ```
+  ls TensorRT-${version}
+  bin  data  doc  graphsurgeon  include  lib  python  samples  targets  TensorRT-Release-Notes.pdf  uff
+  ```
+
+5. Add the absolute path to the TensorRTlib directory to the environment variable                                 LD_LIBRARY_PATH:
+
+   ```
+   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<TensorRT-${version}/lib>
+   ```
+
+6. Install the Python TensorRT wheel file.
+
+   ```
+   cd TensorRT-${version}/python
+   ```
+
+   If using Python  2.7:
+
+   ```
+   sudo pip2 install tensorrt-*-cp27-none-linux_x86_64.whl
+   ```
+
+   If using Python 3.x:
+
+   ```
+   sudo pip3 install tensorrt-*-cp3x-none-linux_x86_64.whl
+   ```
+
+7. Install the Python UFF wheel file. This is only required if you plan to use TensorRT with TensorFlow.
+
+   ```
+   cd TensorRT-${version}/uff
+   ```
+
+   If using Python  2.7:
+
+   ```
+   sudo pip2 install uff-0.6.5-py2.py3-none-any.whl
+   ```
+
+   If using Python 3.x:
+
+   ```
+   sudo pip3 install uff-0.6.5-py2.py3-none-any.whl
+   ```
+
+   In either case, check the installation  with:
+
+   ```
+   which convert-to-uff
+   ```
+
+8. Install the Python graphsurgeon wheel file.
+
+   ```
+   cd TensorRT-${version}/graphsurgeon
+   ```
+
+   If using Python 2.7:
+
+   ```
+   sudo pip2 install graphsurgeon-0.4.1-py2.py3-none-any.whl
+   ```
+
+   If using Python 3.x:
+
+   ```
+   sudo pip3 install graphsurgeon-0.4.1-py2.py3-none-any.whl
+   ```
+
+9. Verify the installation:
+
+   1. Ensure that the installed files are located in the correct directories.                                       For example, run the tree -d command to check whether all supported installed files are in place in the lib, include, data, etc…  directories.
+
+10. Build and run one of the shipped samples, for example, sampleMNIST in the installed directory. You should be able to compile and execute the sample without additional settings. For more information, see the [“Hello World” For TensorRT (sampleMNIST)](https://github.com/NVIDIA/TensorRT/tree/release/7.0/samples/opensource/sampleMNIST).
+
+    3. The Python samples are in the samples/python directory.
+
+**Recompile autoware_msgs to build the node.**
 
 ## How to launch
 
-* From a sourced terminal:
+* build trt model:
 
-Using rosrun:
-`rosrun lidar_apollo_cnn_seg_detect lidar_apollo_cnn_seg_detect _network_definition_file:=/PATH/TO/FILE.prototxt _pretrained_model_file:=/PATH/TO/WEIGHTS.caffemodel _points_src:=/points_raw`
+```
+./scripts/cnnseg_trt_builder.sh
+```
+
+the trt model will be ready at `./model/cnnseg/deploy.caffemodel_FP32.trt`
 
 Using launch file:
-`roslaunch lidar_apollo_cnn_seg_detect lidar_apollo_cnn_seg_detect.launch network_definition_file:=/PATH/TO/FILE.prototxt pretrained_model_file:=/PATH/TO/WEIGHTS.caffemodel points_src:=/points_raw`
-
-* From Runtime Manager:
-
-Computing Tab -> Detection/ lidar_detector -> `lidar_cnn_baidu_detect`. Configure parameters using the `[app]` button.
-
-## Parameters
-
-|Parameter| Type| Description|Default|
-----------|-----|--------|----|
-|`network_definition_file`|*String*|Path to the network definition file (prototxt)||
-|`pretrained_model_file`|*String* |Path to the Pretrained model (weights)||
-|`points_src`|*String*|Input topic Pointcloud. Default.|`/points_raw`|
-|`score_threshold`|*Double*|Minimum score required as given by the network to include the result (0.-1.)|0.6|
-|`use_gpu`|*Bool*|Whether ot not to use a GPU device|`true`|
-|`gpu_device_id`|*Int*|GPU ID|`0`|
-
-## Outputs
-
-|Topic|Type|Description|
-|---|---|---|
-|`/detection/lidar_detector/points_cluster`|`sensor_msgs/PointCloud2`|Colored PointCloud of the resulting detected objects|
-|`/detection/lidar_detector/objects`|`autoware_msgs/DetectedObjetArray`|Array of Detected Objects in Autoware format|
-
-## Notes
+`roslaunch lidar_cnn_seg_detect_trt lidar_cnn_seg_detect_trt.launch`
 
 * To display the results in Rviz `objects_visualizer` is required.
 (Launch file launches automatically this node).
-
-* Pre trained models can be downloaded from the Apollo project repository.

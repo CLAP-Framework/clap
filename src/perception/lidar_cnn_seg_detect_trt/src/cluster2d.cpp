@@ -456,15 +456,17 @@ void Cluster2D::getObjects(const float confidence_thresh,
          obstacle_id++)
     {
         Obstacle *obs = &obstacles_[obstacle_id];
-        if (static_cast<int>(obs->cloud_ptr->size()) < min_pts_num)
-        {
+        if (static_cast<int>(obs->cloud_ptr->size()) < min_pts_num) {
             continue;
         }
 
         nova::Object out_obj = obstacleToObject(*obs, in_header);
-        if ( abs(out_obj.pose.x()) < 2.0 && abs(out_obj.pose.y()) < 1.0 ) {
-            continue;
-        }
+
+        // if ( std::abs(out_obj.pose.x()) < 2.0 
+        //         && std::abs(out_obj.pose.y()) < 1.0) {
+        //     continue;
+        // }
+
         objects.push_back(out_obj);
     }
 }

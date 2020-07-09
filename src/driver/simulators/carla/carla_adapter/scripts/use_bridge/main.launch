@@ -1,8 +1,6 @@
 <launch>
-    <!-- <include file="$(env ZZZ_ROOT)/zzz/config/launch/full_stack/perception.launch">
-        <arg name="enable_camera" value="false"/>
-        <arg name="enable_lidar" value="true"/>
-    </include> -->
+    <include file="$(env ZZZ_ROOT)/zzz/config/launch/full_stack/perception.launch">
+    </include> 
     <include file="$(env ZZZ_ROOT)/zzz/config/launch/full_stack/planning.launch">
         <arg name="objects_topic" value="/zzz/perception/objects_tracked"/>
     </include>

@@ -1,0 +1,79 @@
+syntax = "proto2";
+
+package drivers;
+
+// import "header.proto";
+// import "conti_radar_conf.proto";
+
+message RadarState_60A {
+  optional uint32 actl_mode = 1;
+  optional uint32 radar_cfg_status = 2;
+  optional uint32 radarst_rollcount = 3;  
+}
+
+message TrackListStatus_60B {
+  optional int32 num_of_tracks = 1 [default = 0];
+  optional int32 trackst_rollcount = 2 [default = 0];
+}
+
+message ClusterListStatus_70B {
+  optional int32 num_of_cluster = 1 [default = 0];
+  optional int32 clusterst_rollcount = 2 [default = 0];
+}
+
+message SrrRadarObs {
+  //                x axis  ^
+  //                        | longitude_dist
+  //                        |
+  //                        |
+  //                        |
+  //          lateral_dist  |
+  //          y axis        |
+  //        <----------------
+  //        ooooooooooooo   //radar front surface
+  optional uint64 header = 1;
+  optional bool clusterortrack = 2;  // 0 = track, 1 = cluster
+  optional int32 obstacle_id = 3;    // obstacle Id
+
+  //track1
+  //Longitudinal displacement; unit = m
+  optional double longitude_displ = 4; 
+  //Lateral displacement; unit = m
+  optional double lateral_displ = 5; 
+  //Current index of the track in the track list
+  optional int32 track_index = 6; 
+  //Relative longitudinal velocity; unit = m/s
+  optional double longitude_vel = 7; 
+  //Relative lateral velocity; unit = m/s
+  optional double lateral_vel = 8; 
+  //The rolling counter is incremented with each valid message
+  optional int32 track1_rollcount = 9; 
+
+  //track2
+  // obstacle Radar Cross-Section; unit = dBsm
+  optional double rcs_value = 10;
+  //The current lifetime of the track; unit = s
+  optional double track_lifetime = 11; 
+  //Current track list index of this track
+  optional int32 track2_index = 12; 
+  //The rolling counter is incremented with each valid message
+  optional int32 track2_rollcount = 13; 
+
+  //cluster
+  optional int32 cluster_index = 14;    // cluster Index  
+  optional int32 cluster1_rollcount = 15;    // 0->3
+  //Radial distance of the cluster; unit = m
+  optional double range = 16;  
+  //Cluster angle; unit = deg
+  optional int32 azimuth = 17;  
+  //Relative velocity of the cluster; unit = m/s
+  optional double vrel = 18; 
+}
+
+message SrrRadar {
+  optional uint64 header = 1;
+  repeated SrrRadarObs srrobs = 2;  // srr radar obstacle array
+  optional RadarState_60A radar_state = 3;
+  optional TrackListStatus_60B track_list_status = 4;
+  optional ClusterListStatus_70B cluster_list_status = 5;
+}

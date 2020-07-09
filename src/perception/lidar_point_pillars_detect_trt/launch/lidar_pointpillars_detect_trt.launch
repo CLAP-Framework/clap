@@ -1,0 +1,109 @@
+<!-- -->
+<launch>
+  <arg name="engine_file" default="$(find lidar_pointpillars_detect_trt)/../../../models/pointpillars/pointpillars-1-x86.onnx_FP32.trt"/>
+  <!-- <arg name="points_src" default="/points_raw" /> -->
+  <arg name="points_src" default="/middle/rslidar_points" />
+  <arg name="publish_objects" default="/detection/lidar_detector/objects" />
+  <arg name="use_gpu" default="true" />
+  <arg name="gpu_device_id" default="0" />
+
+  <arg name="min_horizontal" default="-25.0" /> 
+  <arg name="max_horizontal" default="25.0" />
+  <arg name="min_vertical" default="-50.0" />
+  <arg name="max_vertical" default="50.0" />
+  <arg name="min_height" default="-0.5" />
+  <arg name="max_height" default="3.5" /> 
+  <arg name="max_pillar_num" default="20000" />
+  <arg name="max_point_num" default="32" />
+  <arg name="feature_channel" default="3" />
+  <arg name="width" default="320" />
+  <arg name="height" default="640" />
+  <arg name="channel" default="32" />
+
+  <arg name="score_car_threshold" default="0.4" />
+  <arg name="score_ped_cyc_threshold" default="0.3" />
+  <arg name="nms_threshold" default="0.2" /> 
+  <arg name="class_num" default="2" />
+  <arg name="dims_car_channel" default="9" />
+  <arg name="dims_car_height" default="320" />
+  <arg name="dims_car_width" default="160" />
+  <arg name="dims_ped_cyc_channel" default="22" />
+  <arg name="dims_ped_cyc_height" default="640" />
+  <arg name="dims_ped_cyc_width" default="320" />
+  <arg name="cls0_anchor_x" default="10.24" /> 
+  <arg name="cls0_anchor_y" default="24.96" />
+  <arg name="cls0_anchor_z" default="0.0" />  
+  <arg name="cls1_anchor_x" default="3.84" /> 
+  <arg name="cls1_anchor_y" default="5.12" />
+  <arg name="cls1_anchor_z" default="0.0" />  
+  <arg name="cls2_anchor_x" default="3.84" /> 
+  <arg name="cls2_anchor_y" default="11.264" />
+  <arg name="cls2_anchor_z" default="0.0" />
+  <arg name="NUM_THREADS" default="64" />
+
+  <!-- <arg name="benchmark_path" default="/home/nvidia/zhaosai/ros_ws/benchmark-0516" /> -->
+  <arg name="benchmark_path" default="" />
+  
+  <!-- <arg name="duration_path" default="" />  -->
+
+  <arg name="duration_path" default="" />
+  
+  <node pkg="lidar_pointpillars_detect_trt" 
+      type="lidar_pointpillars_detect_trt" 
+      name="lidar_pointpillars_detect_trt_arm64" 
+      output="screen">
+    <param name="engine_file" value="$(arg engine_file)"/>
+    <param name="points_src" value="$(arg points_src)" />
+    <param name="publish_objects" value="$(arg publish_objects)" />
+    <param name="use_gpu" value="$(arg use_gpu)" />
+    <param name="gpu_device_id" value="$(arg gpu_device_id)" />
+
+    <param name="min_horizontal" value="$(arg min_horizontal)" /> 
+    <param name="max_horizontal" value="$(arg max_horizontal)" />
+    <param name="min_vertical" value="$(arg min_vertical)" />
+    <param name="max_vertical" value="$(arg max_vertical)" />
+    <param name="min_height" value="$(arg min_height)" />
+    <param name="max_height" value="$(arg max_height)" /> 
+    <param name="max_pillar_num" value="$(arg max_pillar_num)" />
+    <param name="max_point_num" value="$(arg max_point_num)" />
+    <param name="feature_channel" value="$(arg feature_channel)" />
+    <param name="width" value="$(arg width)" />
+    <param name="height" value="$(arg height)" />
+    <param name="channel" value="$(arg channel)" />
+
+    <param name="score_car_threshold" value="$(arg score_car_threshold)" />
+    <param name="score_ped_cyc_threshold" value="$(arg score_ped_cyc_threshold)" />
+    <param name="nms_threshold" value="$(arg nms_threshold)" /> 
+    <param name="class_num" value="$(arg class_num)" />
+    <param name="dims_car_channel" value="$(arg dims_car_channel)" />
+    <param name="dims_car_height" value="$(arg dims_car_height)" />
+    <param name="dims_car_width" value="$(arg dims_car_width)" />
+    <param name="dims_ped_cyc_channel" value="$(arg dims_ped_cyc_channel)" />
+    <param name="dims_ped_cyc_height" value="$(arg dims_ped_cyc_height)" />
+    <param name="dims_ped_cyc_width" value="$(arg dims_ped_cyc_width)" />
+    <param name="cls0_anchor_x" value="$(arg cls0_anchor_x)" /> 
+    <param name="cls0_anchor_y" value="$(arg cls0_anchor_y)" />
+    <param name="cls0_anchor_z" value="$(arg cls0_anchor_z)" />
+    <param name="cls1_anchor_x" value="$(arg cls1_anchor_x)" /> 
+    <param name="cls1_anchor_y" value="$(arg cls1_anchor_y)" />
+    <param name="cls1_anchor_z" value="$(arg cls1_anchor_z)" />
+    <param name="cls2_anchor_x" value="$(arg cls2_anchor_x)" /> 
+    <param name="cls2_anchor_y" value="$(arg cls2_anchor_y)" />
+    <param name="cls2_anchor_z" value="$(arg cls2_anchor_z)" />
+    <param name="NUM_THREADS" value="$(arg NUM_THREADS)" />
+
+    <param name="benchmark_path" value="$(arg benchmark_path)" />
+    <param name="duration_path" value="$(arg duration_path)" />  
+  </node>
+
+  <node pkg="detected_objects_visualizer" 
+      type="visualize_detected_objects" 
+      name="cluster_detect_visualization_01"
+      output="screen" ns="/detection/lidar_detector" />
+
+  <!-- <node name="rviz" 
+        pkg="rviz" 
+        type="rviz" 
+        />   -->
+
+</launch>

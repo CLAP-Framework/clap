@@ -1,0 +1,6 @@
+Host_Addr: 192.168.110.105
+Host_Port: 4004
+Target_Addr: 192.168.110.102
+Target_Port: 4004
+Topic_Name: RadarMsg
+Frame_ID: continental_radar

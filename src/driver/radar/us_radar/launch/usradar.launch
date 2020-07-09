@@ -1,0 +1,6 @@
+<launch>
+  <node name="us_radar" pkg="us_radar" type="us_radar_node" output="screen">
+  <rosparam file="$(find us_radar)/conf.yaml"/>
+  </node>
+
+</launch>
