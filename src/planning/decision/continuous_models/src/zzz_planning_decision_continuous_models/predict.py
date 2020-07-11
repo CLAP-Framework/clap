@@ -40,12 +40,14 @@ class predict():
         
         
     def check_collision(self, fp):
+
         if len(self.obs_paths) == 0 or len(fp.t) < 2 :
             return True
             
         # two circles for a vehicle
         fp_front = copy.deepcopy(fp)
         fp_back = copy.deepcopy(fp)
+        
         try:
             # for t in range(len(fp.yaw)):
             #     fp_front.x[t] = fp.x[t] + math.cos(fp.yaw[t]) * self.move_gap
@@ -57,8 +59,7 @@ class predict():
             fp_front.y = (np.array(fp.y)+np.sin(np.array(fp.yaw))*self.move_gap).tolist()
             fp_back.x = (np.array(fp.x)-np.cos(np.array(fp.yaw))*self.move_gap).tolist()
             fp_back.y = (np.array(fp.y)-np.sin(np.array(fp.yaw))*self.move_gap).tolist()
-            
-            
+
             for obsp in self.obs_paths:
                 for t in range(len(fp.t)):
                     d = (obsp.x[t] - fp_front.x[t])**2 + (obsp.y[t] - fp_front.y[t])**2

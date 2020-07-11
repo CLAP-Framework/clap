@@ -35,7 +35,7 @@ N_S_SAMPLE = 2  # sampling number of target speed
 
 # collision check
 OBSTACLES_CONSIDERED = 5
-ROBOT_RADIUS = 3.0  # robot radius [m]
+ROBOT_RADIUS = 2.4  # robot radius [m]
 RADIUS_SPEED_RATIO = 0.0 # higher speed, bigger circle
 MOVE_GAP = 1.0
 ONLY_SAMPLE_TO_RIGHT = True
@@ -150,8 +150,8 @@ class Werling(object):
                 Frenetrefy = self.ref_path[:,1]
                 tx, ty, tyaw, tc, self.csp = self.generate_target_course(Frenetrefx,Frenetrefy)
             # initialize prediction module
-            # self.obs_prediction = predict(dynamic_map, OBSTACLES_CONSIDERED, MAXT, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
-            #                             get_speed(dynamic_map.ego_state))
+            self.obs_prediction = predict(dynamic_map, OBSTACLES_CONSIDERED, MAXT, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
+                                        get_speed(dynamic_map.ego_state))
             rospy.logdebug("------> Lane_Werling: Initialize successful ")
             return True
 
@@ -224,13 +224,26 @@ class Werling(object):
         self.all_trajectory = fplist
 
         # find minimum cost path
-        mincost = float("inf")
-        bestpath = None
+        # mincost = float("inf")
+        # bestpath = None
+        # for fp in fplist:
+        #     if mincost >= fp.cf:
+        #         mincost = fp.cf
+        #         bestpath = fp
+        # return bestpath
+
+        path_tuples = []
         for fp in fplist:
-            if mincost >= fp.cf:
-                mincost = fp.cf
-                bestpath = fp
-        return bestpath
+            one_path = [fp, fp.cf]
+            path_tuples.append(one_path)
+        
+        sorted_fplist = sorted(path_tuples, key=lambda path_tuples: path_tuples[1])
+
+        for fp, score in sorted_fplist:
+            if self.obs_prediction.check_collision(fp):
+                return fp
+
+        return None
 
     def generate_target_course(self, x, y):
         csp = Spline2D(x, y)
@@ -261,9 +274,9 @@ class Werling(object):
         # else:
         #     left_sample_bound = MAX_ROAD_WIDTH 
 
-        right_bound = -RIGHT_SAMPLE_BOUND
-        left_bound = LEFT_SAMPLE_BOUND
-        sampled_width_d = D_ROAD_W
+        # right_bound = -RIGHT_SAMPLE_BOUND
+        # left_bound = LEFT_SAMPLE_BOUND
+        # sampled_width_d = D_ROAD_W
 
         right_bound = -(self._lane_idx*self._lane_idx + 0.5*self._lane_width)
         left_bound = ((self._lane_num-1) - self._lane_idx)*self._lane_width + 0.5*self._lane_width
@@ -284,26 +297,28 @@ class Werling(object):
                 fp.d_ddd = [lat_qp.calc_third_derivative(t) for t in fp.t]
 
                 # Loongitudinal motion planning (Velocity keeping)
-                for tv in np.arange(self.target_speed - D_T_S * N_S_SAMPLE, self.target_speed + D_T_S * N_S_SAMPLE, D_T_S):
-                    tfp = copy.deepcopy(fp)
-                    lon_qp = quartic_polynomial(s0, c_speed, 0.0, tv, 0.0, Ti)
+                #for tv in np.arange(self.target_speed - D_T_S * N_S_SAMPLE, self.target_speed + D_T_S * N_S_SAMPLE, D_T_S):
+                
+                tv = self.target_speed
+                tfp = copy.deepcopy(fp)
+                lon_qp = quartic_polynomial(s0, c_speed, 0.0, tv, 0.0, Ti)
 
-                    tfp.s = [lon_qp.calc_point(t) for t in fp.t]
-                    tfp.s_d = [lon_qp.calc_first_derivative(t) for t in fp.t]
-                    tfp.s_dd = [lon_qp.calc_second_derivative(t) for t in fp.t]
-                    tfp.s_ddd = [lon_qp.calc_third_derivative(t) for t in fp.t]
+                tfp.s = [lon_qp.calc_point(t) for t in fp.t]
+                tfp.s_d = [lon_qp.calc_first_derivative(t) for t in fp.t]
+                tfp.s_dd = [lon_qp.calc_second_derivative(t) for t in fp.t]
+                tfp.s_ddd = [lon_qp.calc_third_derivative(t) for t in fp.t]
 
-                    Jp = sum(np.power(tfp.d_ddd, 2))  # square of jerk
-                    Js = sum(np.power(tfp.s_ddd, 2))  # square of jerk
+                Jp = sum(np.power(tfp.d_ddd, 2))  # square of jerk
+                Js = sum(np.power(tfp.s_ddd, 2))  # square of jerk
 
-                    # square of diff from target speed
-                    ds = (self.target_speed - tfp.s_d[-1])**2
+                # square of diff from target speed
+                ds = (self.target_speed - tfp.s_d[-1])**2
 
-                    tfp.cd = KJ * Jp + KT * Ti + KD * tfp.d[-1]**2
-                    tfp.cv = KJ * Js + KT * Ti + KD * ds
-                    tfp.cf = KLAT * tfp.cd + KLON * tfp.cv
+                tfp.cd = KJ * Jp + KT * Ti + KD * tfp.d[-1]**2
+                tfp.cv = KJ * Js + KT * Ti + KD * ds
+                tfp.cf = KLAT * tfp.cd + KLON * tfp.cv
 
-                    frenet_paths.append(tfp)
+                frenet_paths.append(tfp)
 
         return frenet_paths
 

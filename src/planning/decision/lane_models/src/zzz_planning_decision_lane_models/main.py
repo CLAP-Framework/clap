@@ -40,9 +40,16 @@ class MainDecision(object):
         else:
             dynamic_map = self._dynamic_map_buffer
 
-        if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:        
-            self._local_trajectory_instance.last_target_lane_index = -1
+        close_to_lane = 1
+
+        if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP: 
+            self._local_trajectory_instance.clean_frenet_lane()
+            # if dynamic_map.jmap.distance_to_lane_head < close_to_lane:
+            #     self._local_trajectory_instance.build_frenet_lane(dynamic_map)
+            # else:
+            #     self._local_trajectory_instance.clean_frenet_lane()
             return None
+        
 
         trajectory = None
         changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)

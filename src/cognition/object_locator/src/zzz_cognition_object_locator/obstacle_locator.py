@@ -181,7 +181,10 @@ class NearestLocator:
             tstates.dynamic_map.jmap.obstacles.append(obj)
 
     # TODO: adjust lane_end_dist_thres to class variable
-    def locate_ego_vehicle_in_lanes(self, tstates, lane_end_dist_thres=15, lane_dist_thres=5):
+    def locate_ego_vehicle_in_lanes(self, tstates, 
+                            lane_end_dist_thres=15,
+                            lane_head_thres = 3, 
+                            lane_dist_thres = 5):
         dist_list = np.array([dist_from_point_to_polyline2d(
             tstates.ego_state.state.pose.pose.position.x, tstates.ego_state.state.pose.pose.position.y,
             lane, return_end_distance=True)
@@ -197,7 +200,7 @@ class NearestLocator:
         
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
         self._ego_vehicle_distance_to_lane_tail = dist_list[:, 4]
-
+        
         if (self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded] <= lane_end_dist_thres 
                 and tstates.dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane.stop_state == Lane.STOP_STATE_THRU):
             # Drive into junction, wait until next map
@@ -205,22 +208,31 @@ class NearestLocator:
             tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             # TODO: Calculate frenet coordinate here or in put_buffer?
             return
-        else:
-            tstates.dynamic_map.model = MapState.MODEL_MULTILANE_MAP
-            tstates.dynamic_map.ego_ffstate = get_frenet_state(tstates.ego_state, 
-                tstates.static_map_lane_path_array[ego_lane_index_rounded],
-                tstates.static_map_lane_tangets[ego_lane_index_rounded])
-            tstates.dynamic_map.mmap.ego_lane_index = ego_lane_index
-            tstates.dynamic_map.mmap.distance_to_junction = self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded]
+        
+        if (self._ego_vehicle_distance_to_lane_head[int(ego_lane_index)] <= lane_head_thres):
+            rospy.logdebug("Preparing lane decision, ego_lane_index = %f, dist_to_lane_head = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_head[int(ego_lane_index)])
+            tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
+            return
+
+        tstates.dynamic_map.model = MapState.MODEL_MULTILANE_MAP
+        tstates.dynamic_map.ego_ffstate = get_frenet_state(tstates.ego_state, 
+            tstates.static_map_lane_path_array[ego_lane_index_rounded],
+            tstates.static_map_lane_tangets[ego_lane_index_rounded])
+        tstates.dynamic_map.mmap.ego_lane_index = ego_lane_index
+        tstates.dynamic_map.mmap.distance_to_junction = self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded]
+        
         rospy.logdebug("Distance to end: (lane %f) %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded])
 
-    def locate_surrounding_objects_in_lanes(self, tstates, lane_dist_thres=3):
+    def locate_surrounding_objects_in_lanes(self, tstates, lane_width=3):
         lane_front_vehicle_list = [[] for _ in tstates.static_map.lanes]
         lane_rear_vehicle_list = [[] for _ in tstates.static_map.lanes]
 
-        # TODO: separate vehicle and other objects?
+        
         if tstates.surrounding_object_list is not None:
             for vehicle_idx, vehicle in enumerate(tstates.surrounding_object_list):
+                # TODO: separate vehicle and other objects?
+                # if vehicle.cls.classid != vehicle.cls.VEHICLE:
+                #     continue
                 dist_list = np.array([dist_from_point_to_polyline2d(
                     vehicle.state.pose.pose.position.x,
                     vehicle.state.pose.pose.position.y,
@@ -229,7 +241,8 @@ class NearestLocator:
                 closest_lane = np.argmin(np.abs(dist_list[:, 0]))
 
                 # Determine if the vehicle is close to lane enough
-                if abs(dist_list[closest_lane, 0]) > lane_dist_thres:
+                vehicle_width = 1.7
+                if abs(dist_list[closest_lane, 0]) > lane_width*0.5+vehicle_width*0.5:
                     continue 
                 if dist_list[closest_lane, 3] < self._ego_vehicle_distance_to_lane_head[closest_lane]:
                     # The vehicle is behind if its distance to lane start is smaller

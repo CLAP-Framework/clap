@@ -10,11 +10,12 @@ from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import LanePoint
 from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
 import copy
 from threading import Lock
 
 class PathBuffer:
-    def __init__(self, buffer_size=200):
+    def __init__(self, buffer_size=150):
         self._buffer_size = buffer_size
 
         # Buffer for updating states
@@ -25,10 +26,12 @@ class PathBuffer:
         self._ego_vehicle_state_lock = Lock()
 
         self._reference_path_buffer = None
+        self._reference_path_received = None
         self._reference_path_lock = Lock()
 
         self._reference_path_segment = deque(maxlen=buffer_size)
         self._reference_path_changed = False # Use this flag to avoid race condition on self._reference_path_segment
+        self.ref_path_msg = None
 
         self._judge_lane_change_threshold = 3
         self._reference_path = None
@@ -59,29 +62,21 @@ class PathBuffer:
 
         # Here reference path is appended reversely in order to easy move points in a FIFO way
         with self._reference_path_lock:
-            self._reference_path_buffer = [(waypoint.pose.position.x, waypoint.pose.position.y) 
-                                        for waypoint in reversed(reference_path.poses)]
+            _reference_path_received = [(waypoint.pose.position.x, waypoint.pose.position.y) 
+                                        for waypoint in reference_path.poses]
             self._reference_path_changed = True
-            self._reference_path_buffer_t = dense_polyline2d(np.array(self._reference_path_buffer),2).tolist()
+            self._reference_path_received = dense_polyline2d(np.array(_reference_path_received),2)
         rospy.loginfo("Received reference path, length:%d", len(reference_path.poses))
 
     def _relocate_dense_reference_path_buffer(self, ego_state, resolution = 2):
         
-        _reference_path_buffer_t = np.array(self._reference_path_buffer)
-            
+        _reference_path_buffer_t = self._reference_path_received
         _, nearest_idx, _ = dist_from_point_to_polyline2d(
                 ego_state.pose.pose.position.x,
                 ego_state.pose.pose.position.y,
                 _reference_path_buffer_t
             )
-        
-        self._reference_path_buffer = _reference_path_buffer_t.tolist()
-
-        # print(self._reference_path_buffer)
-        # print(_reference_path_buffer_t[max(0,nearest_idx-100):].tolist())
-        # self._reference_path_buffer = (_reference_path_buffer_t.tolist()[max(0,nearest_idx-100):])
-        # print("------------abcdefg",len((_reference_path_buffer_t[max(0,nearest_idx-3):]).tolist()))
-        
+        self._reference_path_buffer = copy.deepcopy(_reference_path_buffer_t[max(0,nearest_idx-100):]).tolist()
     
     def update(self, required_reference_path_length = 10, 
                 front_vehicle_avoidance_require_thres = 2,
@@ -106,14 +101,18 @@ class PathBuffer:
         dynamic_map = tstates.dynamic_map # for easy access
         ego_state = tstates.ego_state # for easy access
 
+        if self._reference_path_received is None:
+            return None
+
         # Process segment clear request
         if self._reference_path_changed:
             self._reference_path_segment.clear()
             self._reference_path_changed = False
-            
-            # self._relocate_dense_reference_path_buffer(ego_state)
+            self._relocate_dense_reference_path_buffer(ego_state)
         # tstates.reference_path = self._reference_path_buffer
         # reference_path = tstates.reference_path # for easy access
+
+        
 
         # Remove passed waypoints - dequeue
         if len(self._reference_path_segment) > 1:
@@ -122,6 +121,7 @@ class PathBuffer:
                 ego_state.pose.pose.position.y,
                 np.array(self._reference_path_segment)
             )
+
             for _ in range(nearest_idx-remained_passed_point):
                 removed_point = self._reference_path_segment.popleft()
                 rospy.logdebug("removed waypoint: %s, remaining count: %d", str(removed_point), len(self._reference_path_buffer))
@@ -135,11 +135,11 @@ class PathBuffer:
         #     self._rerouting_sent = False # reset flag
 
         # Choose points from reference path to buffer - enqueue
-        with self._reference_path_lock:
-            while self._reference_path_buffer and len(self._reference_path_segment) < self._buffer_size:
-                wp = self._reference_path_buffer.pop() # notice that the points are inserted reversely
-                # self.lane_change_smoothen(wp) # TODO(zhcao): find some bugs in this function, also change this to a planning module
-                self._reference_path_segment.append(wp)
+        while self._reference_path_buffer and len(self._reference_path_segment) < self._buffer_size:
+            wp = self._reference_path_buffer.pop(0) # notice that the points are inserted reversely
+            self._reference_path_segment.append(wp)
+
+        self.draw_ref_path()
 
         # Put buffer into dynamic map
         for wp in self._reference_path_segment:
@@ -152,36 +152,25 @@ class PathBuffer:
 
         # Calculate vehicles on the reference path 
         # TODO: find all vehicles near enough on reference_path
-        if len(dynamic_map.jmap.reference_path.map_lane.central_path_points) > front_vehicle_avoidance_require_thres:
-            front_vehicle = self.get_front_vehicle_on_reference_path(tstates)
-            if front_vehicle is not None:
-                dynamic_map.jmap.reference_path.front_vehicles = [front_vehicle]
+        #if len(dynamic_map.jmap.reference_path.map_lane.central_path_points) > front_vehicle_avoidance_require_thres:
+        #    front_vehicle = self.get_front_vehicle_on_reference_path(tstates)
+        #    if front_vehicle is not None:
+        #        dynamic_map.jmap.reference_path.front_vehicles = [front_vehicle]
 
         # TODO: read or detect speed limit
         dynamic_map.jmap.reference_path.map_lane.speed_limit = 30
         return dynamic_map
 
-    def lane_change_smoothen(self, wp):
-        """
-        Avoid suddenly lane change
-        """
-        if self._reference_path_segment:
-            last_wp = np.array(self._reference_path_segment[-1])
-        else:
-            return
-        if np.linalg.norm(last_wp - wp) < self._judge_lane_change_threshold:
-            return
+    def draw_ref_path(self):
 
-        # Smoothen the reference path
-        rospy.logdebug("Reference Path Smoothing")
+        self.ref_path_msg = Path()
+        self.ref_path_msg.header.frame_id = "map"
 
-        lane_change_distance = min(20, len(self._reference_path_segment)) # TODO: Dynamic LC distance
-        last_wp = wp
-        first_wp = self._reference_path_segment[-lane_change_distance]
-        loc_xs = np.linspace(last_wp[0], first_wp[0], num = lane_change_distance+1)
-        loc_ys = np.linspace(last_wp[1], first_wp[1], num = lane_change_distance+1)
-        for i in range(1, lane_change_distance):
-            self._reference_path_segment[-1] = (loc_xs[i], loc_ys[i]) 
+        for wp in self._reference_path_segment:
+            pose = PoseStamped()
+            pose.pose.position.x = wp[0]
+            pose.pose.position.y = wp[1]
+            self.ref_path_msg.poses.append(pose)
 
     def get_front_vehicle_on_reference_path(self, tstates, lane_dist_thres=2):
         """

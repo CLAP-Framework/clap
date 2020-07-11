@@ -416,7 +416,22 @@ class PolylineTrajectory(object):
 class Werling_planner(object):
     def __init__(self):
         self.last_target_lane_index = -10
+        self.lanes = []
 
+
+    def build_frenet_lane(self,dynamic_map):
+        if len(self.lanes) > 0:
+            return
+
+        lane_num = len(dynamic_map.mmap.lanes)
+        for lane_idx,lane in enumerate(dynamic_map.mmap.lanes):
+            central_path = lane.map_lane.central_path_points
+            extend_centrol_path = self.extend_path(central_path)
+            self.lanes.append(Werling(extend_centrol_path,lane_idx,lane_num))
+
+    def clean_frenet_lane(self):
+        self.lanes = []
+        self.last_target_lane_index = -1
 
     def get_trajectory(self, dynamic_map, target_lane_index, desired_speed,
                 resolution=2.0, time_ahead=5, distance_ahead=10, rectify_thres=2,
@@ -425,13 +440,9 @@ class Werling_planner(object):
         ego_x = dynamic_map.ego_state.pose.pose.position.x
         ego_y = dynamic_map.ego_state.pose.pose.position.y
 
+        # if len(self.lanes) <= 0:
         if self.last_target_lane_index < 0:
-            self.lanes = []
-            lane_num = len(dynamic_map.mmap.lanes)
-            for lane_idx,lane in enumerate(dynamic_map.mmap.lanes):
-                central_path = lane.map_lane.central_path_points
-                extend_centrol_path = self.extend_path(central_path)
-                self.lanes.append(Werling(extend_centrol_path,lane_idx,lane_num))
+            self.build_frenet_lane(dynamic_map)
 
         if target_lane_index != self.last_target_lane_index:
             for werlinglane in self.lanes:

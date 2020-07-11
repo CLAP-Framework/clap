@@ -35,7 +35,7 @@ N_S_SAMPLE = 4  # sampling number of target speed
 
 # collision check
 OBSTACLES_CONSIDERED = 3
-ROBOT_RADIUS = 3.5  # robot radius [m]
+ROBOT_RADIUS = 3.0  # robot radius [m]
 RADIUS_SPEED_RATIO = 0.25 # higher speed, bigger circle
 MOVE_GAP = 1.0
 ONLY_SAMPLE_TO_RIGHT = False
@@ -57,6 +57,7 @@ class Werling(object):
         self.last_trajectory_array_rule = np.c_[0, 0]
         self.last_trajectory_rule = Frenet_path()
         self.reference_path = None
+        self.ref_path_rviz = None
 
         self.rviz_all_trajectory = None
 
@@ -128,15 +129,24 @@ class Werling(object):
                 self.dist_to_end = dist_from_point_to_polyline2d(dynamic_map.ego_state.pose.pose.position.x, dynamic_map.ego_state.pose.pose.position.y, self.ref_path, return_end_distance=True)
                 
             # estabilish frenet frame
-            if self.csp is None or self.dist_to_end[4] < 10:
+            if self.csp is None or self.dist_to_end[4] < 10 or self.dist_to_end[0] > 20:
                 self.reference_path = dynamic_map.jmap.reference_path.map_lane.central_path_points
                 ref_path_ori = convert_path_to_ndarray(self.reference_path)
                 self.ref_path = dense_polyline2d(ref_path_ori, 2)
                 self.ref_path_tangets = np.zeros(len(self.ref_path))
+                self.ref_path_rviz = convert_ndarray_to_pathmsg(self.ref_path)
 
                 Frenetrefx = self.ref_path[:,0]
                 Frenetrefy = self.ref_path[:,1]
                 tx, ty, tyaw, tc, self.csp = self.generate_target_course(Frenetrefx,Frenetrefy)
+            
+            else: 
+                reference_path = dynamic_map.jmap.reference_path.map_lane.central_path_points
+                ref_path_ori = convert_path_to_ndarray(reference_path)
+                ref_path = dense_polyline2d(ref_path_ori, 2)
+                rospy.logdebug("working_here")
+                self.ref_path_rviz = convert_ndarray_to_pathmsg(ref_path)
+            
             # initialize prediction module
             self.obs_prediction = predict(dynamic_map, OBSTACLES_CONSIDERED, MAXT, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
                                         get_speed(dynamic_map.ego_state))
@@ -154,7 +164,7 @@ class Werling(object):
             # find closest point on the last trajectory
             mindist = float("inf")
             bestpoint = 0
-            for t in range(len(self.last_trajectory_rule.t)):
+            for t in range(len(self.last_trajectory_rule.x)):
                 pointdist = (self.last_trajectory_rule.x[t] - dynamic_map.ego_state.pose.pose.position.x) ** 2 + (self.last_trajectory_rule.y[t] - dynamic_map.ego_state.pose.pose.position.y) ** 2
                 if mindist >= pointdist:
                     mindist = pointdist
@@ -205,13 +215,26 @@ class Werling(object):
         self.all_trajectory = fplist
 
         # find minimum cost path
-        mincost = float("inf")
-        bestpath = None
+        # mincost = float("inf")
+        # bestpath = None
+        # for fp in fplist:
+        #     if mincost >= fp.cf:
+        #         mincost = fp.cf
+        #         bestpath = fp
+        # return bestpath
+
+        path_tuples = []
         for fp in fplist:
-            if mincost >= fp.cf:
-                mincost = fp.cf
-                bestpath = fp
-        return bestpath
+            one_path = [fp, fp.cf]
+            path_tuples.append(one_path)
+        
+        sorted_fplist = sorted(path_tuples, key=lambda path_tuples: path_tuples[1])
+
+        for fp, score in sorted_fplist:
+            if self.obs_prediction.check_collision(fp):
+                return fp
+        
+        return None
 
     def generate_target_course(self, x, y):
         csp = Spline2D(x, y)
@@ -335,8 +358,8 @@ class Werling(object):
             elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
                 # rospy.logdebug("exceeding max curvature")
                 continue
-            if not self.obs_prediction.check_collision(fplist[i]):
-                continue
+            # if not self.obs_prediction.check_collision(fplist[i]):
+            #     continue
 
             okind.append(i)
 
