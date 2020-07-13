@@ -466,6 +466,16 @@ class Werling_planner(object):
 
         return path
 
+    def get_rviz_info(self):
+        
+        if self.last_target_lane_index < 0:
+            return None, None, None
+        
+        all_trajectory = self.lanes[self.last_target_lane_index].rivz_element.candidates_trajectory
+        obs_paths = self.lanes[self.last_target_lane_index].rivz_element.prediciton_trajectory
+        collision_circle = self.lanes[self.last_target_lane_index].rivz_element.collision_circle
+
+        return all_trajectory, obs_paths, collision_circle
 
     # TODO(zyxin): Add these to zzz_navigation_msgs.utils
     def convert_path_to_ndarray(self, path):

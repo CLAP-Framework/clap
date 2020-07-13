@@ -105,7 +105,7 @@ class Werling(object):
             generated_trajectory = self.frenet_optimal_planning(self.csp, self.c_speed, start_state)
 
             if generated_trajectory is not None:
-                desired_speed = generated_trajectory.s_d[-1]
+                local_desired_speed = generated_trajectory.s_d[-1]
                 trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
                 trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori,1)
                 self.last_trajectory_array_rule = trajectory_array
@@ -115,24 +115,20 @@ class Werling(object):
             elif len(self.last_trajectory_array_rule) > 100 and self.c_speed > 1:
                 trajectory_array = self.last_trajectory_array_rule
                 generated_trajectory = self.last_trajectory_rule
-                desired_speed =  0 
+                local_desired_speed =  0 
                 rospy.logdebug("----> Lane_Werling: Fail to find a solution")
 
             else:
                 trajectory_array =  self.ref_path
-                desired_speed = 0
+                local_desired_speed = 0
                 rospy.logdebug("----> Lane_Werling: Output ref path")           
-            
-            # msg = DecisionTrajectory()
-            # msg.trajectory = convert_ndarray_to_pathmsg(trajectory_array)
-            # msg.desired_speed = desired_speed
 
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
-            # self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
-            # self.rivz_element.collision_circle = self.obs_prediction.rviz_collision_checking_circle
-            return trajectory_array
+            self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
+            self.rivz_element.collision_circle = self.obs_prediction.rviz_collision_checking_circle
+            return trajectory_array, local_desired_speed
         else:
-            return None
+            return None, None
 
     def initialize(self, dynamic_map):
         self._dynamic_map = dynamic_map
@@ -185,13 +181,6 @@ class Werling(object):
             start_state.c_d = -ffstate.d # current lateral position [m]
             start_state.c_d_d = ffstate.vd # current lateral speed [m/s]
             start_state.c_d_dd = 0   # current latral acceleration [m/s]
-
-            # print(self.target_line)
-
-            # print("ego_state", ego_state)
-            # print("start state.s", start_state.s0)
-            # print("start state.c_d", start_state.c_d)
-            # print("start state.c_d_d", start_state.c_d_d)
             
         return start_state
 
@@ -222,15 +211,6 @@ class Werling(object):
                                             time_consume3, candidate_len3)
 
         self.all_trajectory = fplist
-
-        # find minimum cost path
-        # mincost = float("inf")
-        # bestpath = None
-        # for fp in fplist:
-        #     if mincost >= fp.cf:
-        #         mincost = fp.cf
-        #         bestpath = fp
-        # return bestpath
 
         path_tuples = []
         for fp in fplist:
@@ -267,16 +247,6 @@ class Werling(object):
         c_d = start_state.c_d
         c_d_d = start_state.c_d_d
         c_d_dd = start_state.c_d_dd
-
-        # generate path to each offset goal
-        # if ONLY_SAMPLE_TO_RIGHT:
-        #     left_sample_bound = D_ROAD_W
-        # else:
-        #     left_sample_bound = MAX_ROAD_WIDTH 
-
-        # right_bound = -RIGHT_SAMPLE_BOUND
-        # left_bound = LEFT_SAMPLE_BOUND
-        # sampled_width_d = D_ROAD_W
 
         right_bound = -(self._lane_idx*self._lane_idx + 0.5*self._lane_width)
         left_bound = ((self._lane_num-1) - self._lane_idx)*self._lane_width + 0.5*self._lane_width

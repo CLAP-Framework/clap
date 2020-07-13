@@ -60,11 +60,11 @@ class MainDecision(object):
 
         rospy.logdebug("target_lane_index = %d, target_speed = %f km/h, current_speed: %f km/h", changing_lane_index, desired_speed*3.6, ego_speed*3.6)
         
-        trajectory = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
+        trajectory, local_desired_speed = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
 
         msg = DecisionTrajectory()
         msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory) # TODO: move to library
-        msg.desired_speed = desired_speed
+        msg.desired_speed = desired_speed # TODO: Multi-resolution Planning
 
         return msg
 
