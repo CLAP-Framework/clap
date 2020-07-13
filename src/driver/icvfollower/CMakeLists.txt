@@ -22,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   geodesy
   message_runtime
   nav_msgs
+  xpmotors_can_msgs
 )
 
 ## System dependencies are found with CMake's conventions
