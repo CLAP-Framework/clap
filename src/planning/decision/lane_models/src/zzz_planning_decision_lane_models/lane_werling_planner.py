@@ -97,9 +97,10 @@ class Werling(object):
         self.last_trajectory_rule = Frenet_path()
 
     
-    def trajectory_update(self, dynamic_map, target_speed):
+    def trajectory_update(self, dynamic_map, target_speed, ego_lane_index):
         if self.initialize(dynamic_map):
 
+            self._ego_lane_index = ego_lane_index
             start_state = self.calculate_start_state(dynamic_map)
             self.target_speed = target_speed
             generated_trajectory = self.frenet_optimal_planning(self.csp, self.c_speed, start_state)
@@ -205,10 +206,10 @@ class Werling(object):
         time_consume3 = t3 - t2
         candidate_len3 = len(fplist)
 
-        rospy.logdebug("frenet time consume step1: %.1f(candidate: %d), step2: %.1f(candidate: %d), step3: %.1f(candidate: %d)",
-                                            time_consume1, candidate_len1,
-                                            time_consume2, candidate_len2,
-                                            time_consume3, candidate_len3)
+        rospy.logdebug("frenet time consume step1: %.1fms(candidate: %d), step2: %.1fms(candidate: %d), step3: %.1fms(candidate: %d)",
+                                            time_consume1*1000, candidate_len1,
+                                            time_consume2*1000, candidate_len2,
+                                            time_consume3*1000, candidate_len3)
 
         self.all_trajectory = fplist
 
@@ -248,8 +249,15 @@ class Werling(object):
         c_d_d = start_state.c_d_d
         c_d_dd = start_state.c_d_dd
 
-        right_bound = -(self._lane_idx*self._lane_idx + 0.5*self._lane_width)
-        left_bound = ((self._lane_num-1) - self._lane_idx)*self._lane_width + 0.5*self._lane_width
+        self._lane_idx
+        self._ego_lane_index
+
+        max((self._lane_idx - self._ego_lane_index),0)
+        
+        max((self._lane_idx - self._ego_lane_index),0)*self._lane_width
+
+        right_bound = - (max((self._lane_idx - self._ego_lane_index),0)*self._lane_width + 0.5*self._lane_width)
+        left_bound = max(self._ego_lane_index - self._lane_idx, 0)*self._lane_width + 0.5*self._lane_width
         sample_width_d = 0.125*self._lane_width
 
         for di in np.arange(right_bound, left_bound, sample_width_d):

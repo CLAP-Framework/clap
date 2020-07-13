@@ -35,7 +35,7 @@ N_S_SAMPLE = 4  # sampling number of target speed
 
 # collision check
 OBSTACLES_CONSIDERED = 3
-ROBOT_RADIUS = 3.0  # robot radius [m]
+ROBOT_RADIUS = 2.0  # robot radius [m]
 RADIUS_SPEED_RATIO = 0.25 # higher speed, bigger circle
 MOVE_GAP = 1.0
 ONLY_SAMPLE_TO_RIGHT = False

@@ -437,8 +437,10 @@ class Werling_planner(object):
                 resolution=2.0, time_ahead=5, distance_ahead=10, rectify_thres=2,
                 lc_dt = 1.5, lc_v = 2.67):
         # TODO: get smooth spline (write another module to generate spline)
-        ego_x = dynamic_map.ego_state.pose.pose.position.x
-        ego_y = dynamic_map.ego_state.pose.pose.position.y
+        # ego_x = dynamic_map.ego_state.pose.pose.position.x
+        # ego_y = dynamic_map.ego_state.pose.pose.position.y
+
+        ego_lane_idx = int(round(dynamic_map.mmap.ego_lane_index))
 
         # if len(self.lanes) <= 0:
         if self.last_target_lane_index < 0:
@@ -451,7 +453,7 @@ class Werling_planner(object):
             self.last_target_lane_index = target_lane_index
             
         desired_speed = 15 / 3.6
-        return self.lanes[int(target_lane_index)].trajectory_update(dynamic_map, desired_speed)
+        return self.lanes[int(target_lane_index)].trajectory_update(dynamic_map, desired_speed, ego_lane_idx)
 
     def extend_path(self, path):
         

@@ -40,7 +40,7 @@ class MainDecision(object):
         else:
             dynamic_map = self._dynamic_map_buffer
 
-        close_to_lane = 1
+        # close_to_lane = 1
 
         if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP: 
             self._local_trajectory_instance.clean_frenet_lane()
