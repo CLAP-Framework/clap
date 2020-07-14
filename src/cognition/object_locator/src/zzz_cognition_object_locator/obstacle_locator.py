@@ -354,8 +354,6 @@ class NearestLocator:
         for i in range(total_lane_num):
             tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 20
 
-
-
     def temp_speed_limit(self, tstates, straight_speed = 15, left_turn_speed = 10):
         ego_x = tstates.ego_state.state.pose.pose.position.x
         ego_y = tstates.ego_state.state.pose.pose.position.y

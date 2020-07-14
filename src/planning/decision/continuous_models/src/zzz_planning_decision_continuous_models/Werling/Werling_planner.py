@@ -87,7 +87,7 @@ class Werling(object):
         self.rivz_element.prediciton_trajectory = None
         self.rivz_element.collision_circle = None
     
-    def build_frenet_path(self，dynamic_map, clean_current_csp = False):
+    def build_frenet_path(self, dynamic_map,clean_current_csp = False):
 
         if self.csp is None or clean_current_csp:
             self.reference_path = dynamic_map.jmap.reference_path.map_lane.central_path_points

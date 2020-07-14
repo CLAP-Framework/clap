@@ -270,8 +270,11 @@ class Werling(object):
                 fp.d_ddd = [lat_qp.calc_third_derivative(t) for t in fp.t]
 
                 # Loongitudinal motion planning (Velocity keeping)
-                #for tv in np.arange(self.target_speed - D_T_S * N_S_SAMPLE, self.target_speed + D_T_S * N_S_SAMPLE, D_T_S):
+                # for tv in np.arange(self.target_speed - D_T_S * N_S_SAMPLE, self.target_speed, D_T_S):
                 
+                #     if tv < 0:
+                #         continue
+
                 tv = self.target_speed
                 tfp = copy.deepcopy(fp)
                 lon_qp = quartic_polynomial(s0, c_speed, 0.0, tv, 0.0, Ti)

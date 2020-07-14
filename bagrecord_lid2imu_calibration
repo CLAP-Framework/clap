@@ -1,0 +1,2 @@
+rosbag record -b 512 /middle/rslidar_packets /middle/rslidar_packets_difop /middle/rslidar_points /ox_gps/fix /ox_gps/gga /ox_gps/nav_status /ox_gps/odom /ox_gps/pos_type /ox_gps/time_ref /ox_gps/vel /ox_imu/data /localization/gps/fix /localization/gps/nav_status /localization/gps/odom /localization/gps/pos_type /localization/gps/time_ref /localization/gps/vel /localization/imu/data /left_usb_cam/image_raw/compressed /right_usb_cam/image_raw/compressed /xp/auto_control /xp/auto_state /xp/auto_state_ex /xp/eps_status /xp/esc_status
+
