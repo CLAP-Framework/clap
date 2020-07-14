@@ -50,7 +50,7 @@ void icvCarlaControl::controlInit()
     strcat(config_path, "/src/control/icvfollower/config/Controlconfig.yaml");
 
     // src/driver/icvfollower/config/Controlconfig.yaml
-    YAML::Node dset_config = YAML::LoadFile("/home/icv/zzz/src/driver/icvfollower/config/Controlconfig.yaml");
+    YAML::Node dset_config = YAML::LoadFile(config_path);
 
     //Vehiclemodel,Controlparam two key_value
     YAML::Node Vehiclemodel = dset_config["Vehiclemodel"];

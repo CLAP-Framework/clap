@@ -1,3 +1,4 @@
 source ~/.bashrc
+export RUN_PLATFORM=xiaopeng
 source devel/setup.bash
-roslaunch src/driver/simulators/carla/carla_adapter/scripts/use_bridge/main.launch
+roslaunch config/launch/full_stack/main.launch
