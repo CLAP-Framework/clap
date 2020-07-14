@@ -1,0 +1,36 @@
+###### option:caffe, onnx, uff ######
+# gChannel: 8
+# gHeight: 640
+# gWidth: 640
+# gEngineName: ../models/deploy.caffemodel_FP16.trt
+# gInputNode: [input]
+# gOutputNode: [category_score, instance_pt, confidence_score, 
+#               classify_score, heading_pt, height_pt]
+
+# gChannel: 4
+# gHeight: 8000
+# gWidth: 32
+# gEngineName: ../models/part1.onnx_FP16.trt
+# gInputNode: [input]
+# gOutputNode: [pointpillars_part1/features]
+
+# gChannel: 16
+# gHeight: 320
+# gWidth: 320
+# gEngineName: ../models/part2.onnx_FP16.trt
+# gInputNode: [input]
+# gOutputNode: [pointpillars_part2/features]
+
+# gChannel: 3
+# gHeight: 20000
+# gWidth: 32
+# gEngineName: ../models/part1-0421.onnx_FP16.trt
+# gInputNode: [input]
+# gOutputNode: [pointpillars_part1/features]
+
+gChannel: 32
+gHeight: 320
+gWidth: 320
+gEngineName: ../models/part2-0421.onnx_FP16.trt
+gInputNode: [input]
+gOutputNode: [pointpillars_part2/features]
