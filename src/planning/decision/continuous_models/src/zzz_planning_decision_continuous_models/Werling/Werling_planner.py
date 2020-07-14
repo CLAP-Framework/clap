@@ -72,6 +72,10 @@ class Werling(object):
         self.rivz_element = rviz_display()
     
     def clear_buff(self, dynamic_map):
+
+        if self.csp is None:
+            return
+
         self.last_trajectory_array = np.c_[0, 0]
         self.last_trajectory = Frenet_path()
         self.last_trajectory_array_rule = np.c_[0, 0]
@@ -82,7 +86,19 @@ class Werling(object):
         self.rivz_element.candidates_trajectory = None
         self.rivz_element.prediciton_trajectory = None
         self.rivz_element.collision_circle = None
-        return None
+    
+    def build_frenet_path(self，dynamic_map, clean_current_csp = False):
+
+        if self.csp is None or clean_current_csp:
+            self.reference_path = dynamic_map.jmap.reference_path.map_lane.central_path_points
+            ref_path_ori = convert_path_to_ndarray(self.reference_path)
+            self.ref_path = dense_polyline2d(ref_path_ori, 2)
+            self.ref_path_tangets = np.zeros(len(self.ref_path))
+            self.ref_path_rviz = convert_ndarray_to_pathmsg(self.ref_path)
+
+            Frenetrefx = self.ref_path[:,0]
+            Frenetrefy = self.ref_path[:,1]
+            tx, ty, tyaw, tc, self.csp = self.generate_target_course(Frenetrefx,Frenetrefy)
     
     def trajectory_update(self, dynamic_map):
         if self.initialize(dynamic_map):
@@ -122,7 +138,6 @@ class Werling(object):
 
     def initialize(self, dynamic_map):
         self._dynamic_map = dynamic_map
-        
         try:
             # calculate dist to the end of ref path 
             if self.ref_path is not None:
@@ -130,23 +145,8 @@ class Werling(object):
                 
             # estabilish frenet frame
             if self.csp is None or self.dist_to_end[4] < 10 or self.dist_to_end[0] > 20:
-                self.reference_path = dynamic_map.jmap.reference_path.map_lane.central_path_points
-                ref_path_ori = convert_path_to_ndarray(self.reference_path)
-                self.ref_path = dense_polyline2d(ref_path_ori, 2)
-                self.ref_path_tangets = np.zeros(len(self.ref_path))
-                self.ref_path_rviz = convert_ndarray_to_pathmsg(self.ref_path)
-
-                Frenetrefx = self.ref_path[:,0]
-                Frenetrefy = self.ref_path[:,1]
-                tx, ty, tyaw, tc, self.csp = self.generate_target_course(Frenetrefx,Frenetrefy)
-            
-            else: 
-                reference_path = dynamic_map.jmap.reference_path.map_lane.central_path_points
-                ref_path_ori = convert_path_to_ndarray(reference_path)
-                ref_path = dense_polyline2d(ref_path_ori, 2)
-                rospy.logdebug("working_here")
-                self.ref_path_rviz = convert_ndarray_to_pathmsg(ref_path)
-            
+                self.build_frenet_path(dynamic_map, True)
+                
             # initialize prediction module
             self.obs_prediction = predict(dynamic_map, OBSTACLES_CONSIDERED, MAXT, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
                                         get_speed(dynamic_map.ego_state))

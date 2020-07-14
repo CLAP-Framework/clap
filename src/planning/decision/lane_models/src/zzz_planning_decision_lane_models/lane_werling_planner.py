@@ -56,16 +56,15 @@ class Werling(object):
         self.last_trajectory = Frenet_path()
         self.last_trajectory_array_rule = np.c_[0, 0]
         self.last_trajectory_rule = Frenet_path()
-        self.reference_path = None
+        # self.reference_path = None
 
         self.rviz_all_trajectory = None
 
-        self._dynamic_map = None
+        # self._dynamic_map = None
         self.ref_path = None
         self.ref_path_tangets = None
         self.ob = None
         self.csp = None
-        self.target_line = target_line
         self.target_speed = 0
 
         self._lane_num = lane_num
@@ -73,21 +72,23 @@ class Werling(object):
         self._lane_width = lane_width
 
         self.rivz_element = rviz_display()
+
+        self.build_frenet_path(target_line)
     
-    def clear_buff(self, dynamic_map):
-        self.last_trajectory_array = np.c_[0, 0]
-        self.last_trajectory = Frenet_path()
-        self.last_trajectory_array_rule = np.c_[0, 0]
-        self.last_trajectory_rule = Frenet_path()
-        self.reference_path = None
-        self.csp = None
-        self.target_line = dynamic_map.jmap.reference_path.map_lane.central_path_points
+    # def clear_buff(self, dynamic_map):
+    #     self.last_trajectory_array = np.c_[0, 0]
+    #     self.last_trajectory = Frenet_path()
+    #     self.last_trajectory_array_rule = np.c_[0, 0]
+    #     self.last_trajectory_rule = Frenet_path()
+    #     self.reference_path = None
+    #     self.csp = None
+    #     self.target_line = dynamic_map.jmap.reference_path.map_lane.central_path_points
 
 
-        self.rivz_element.candidates_trajectory = None
-        self.rivz_element.prediciton_trajectory = None
-        self.rivz_element.collision_circle = None
-        return None
+    #     self.rivz_element.candidates_trajectory = None
+    #     self.rivz_element.prediciton_trajectory = None
+    #     self.rivz_element.collision_circle = None
+    #     return None
 
     def lane_change_clean_buff(self):
         
@@ -96,9 +97,20 @@ class Werling(object):
         self.last_trajectory_array_rule = np.c_[0, 0]
         self.last_trajectory_rule = Frenet_path()
 
+    def build_frenet_path(self, target_line):
+
+        if self.csp is None:
+            ref_path_ori = convert_path_to_ndarray(target_line)
+            self.ref_path = dense_polyline2d(ref_path_ori, 2)
+            self.ref_path_tangets = np.zeros(len(self.ref_path))
+
+            Frenetrefx = self.ref_path[:,0]
+            Frenetrefy = self.ref_path[:,1]
+            tx, ty, tyaw, tc, self.csp = self.generate_target_course(Frenetrefx,Frenetrefy)
     
     def trajectory_update(self, dynamic_map, target_speed, ego_lane_index):
-        if self.initialize(dynamic_map):
+        
+        if self.initialize_obj_predict(dynamic_map):
 
             self._ego_lane_index = ego_lane_index
             start_state = self.calculate_start_state(dynamic_map)
@@ -131,21 +143,11 @@ class Werling(object):
         else:
             return None, None
 
-    def initialize(self, dynamic_map):
-        self._dynamic_map = dynamic_map
+    def initialize_obj_predict(self, dynamic_map):
+        # self._dynamic_map = dynamic_map
         try:
-            # estabilish frenet frame
-
             if self.csp is None:
-                self.reference_path = self.target_line
-
-                ref_path_ori = convert_path_to_ndarray(self.reference_path)
-                self.ref_path = dense_polyline2d(ref_path_ori, 2)
-                self.ref_path_tangets = np.zeros(len(self.ref_path))
-
-                Frenetrefx = self.ref_path[:,0]
-                Frenetrefy = self.ref_path[:,1]
-                tx, ty, tyaw, tc, self.csp = self.generate_target_course(Frenetrefx,Frenetrefy)
+                self.build_frenet_path()
             # initialize prediction module
             self.obs_prediction = predict(dynamic_map, OBSTACLES_CONSIDERED, MAXT, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
                                         get_speed(dynamic_map.ego_state))
@@ -248,13 +250,6 @@ class Werling(object):
         c_d = start_state.c_d
         c_d_d = start_state.c_d_d
         c_d_dd = start_state.c_d_dd
-
-        self._lane_idx
-        self._ego_lane_index
-
-        max((self._lane_idx - self._ego_lane_index),0)
-        
-        max((self._lane_idx - self._ego_lane_index),0)*self._lane_width
 
         right_bound = - (max((self._lane_idx - self._ego_lane_index),0)*self._lane_width + 0.5*self._lane_width)
         left_bound = max(self._ego_lane_index - self._lane_idx, 0)*self._lane_width + 0.5*self._lane_width
