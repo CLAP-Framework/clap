@@ -47,7 +47,7 @@ void icvCarlaControl::controlInit()
 
     strcpy(config_path, getenv("ZZZ_ROOT"));
    
-    strcat(config_path, "/src/control/icvfollower/config/Controlconfig.yaml");
+    strcat(config_path, "/zzz/src/control/icvfollower/config/Controlconfig.yaml");
 
     // src/driver/icvfollower/config/Controlconfig.yaml
     YAML::Node dset_config = YAML::LoadFile(config_path);
