@@ -23,9 +23,9 @@ from zzz_planning_decision_continuous_models.predict import predict
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 10.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 500.0  # maximum curvature [1/m]
-MAX_ROAD_WIDTH = 4.0   # maximum road width [m] # related to RL action space
-LEFT_SAMPLE_BOUND = 4.0
-RIGHT_SAMPLE_BOUND = 4.0
+# MAX_ROAD_WIDTH = 4.0   # maximum road width [m] # related to RL action space
+# LEFT_SAMPLE_BOUND = 4.0
+# RIGHT_SAMPLE_BOUND = 4.0
 D_ROAD_W = 1  # road width sampling length [m]
 DT = 0.3  # time tick [s]
 MAXT = 8.6  # max prediction time [m]
@@ -38,7 +38,6 @@ OBSTACLES_CONSIDERED = 5
 ROBOT_RADIUS = 2.4  # robot radius [m]
 RADIUS_SPEED_RATIO = 0.0 # higher speed, bigger circle
 MOVE_GAP = 1.0
-ONLY_SAMPLE_TO_RIGHT = True
 
 # Cost weights
 KJ = 0.1 * 2
@@ -125,7 +124,7 @@ class Werling(object):
                 self.last_trajectory_rule = generated_trajectory              
                 rospy.logdebug("----> Lane_Werling: Successful Planning")
 
-            elif len(self.last_trajectory_array_rule) > 100 and self.c_speed > 1:
+            elif len(self.last_trajectory_array_rule) > 5: # and self.c_speed > 1:
                 trajectory_array = self.last_trajectory_array_rule
                 generated_trajectory = self.last_trajectory_rule
                 local_desired_speed =  0 
@@ -174,7 +173,9 @@ class Werling(object):
             start_state.c_d = self.last_trajectory_rule.d[bestpoint]
             start_state.c_d_d = self.last_trajectory_rule.d_d[bestpoint]
             start_state.c_d_dd = self.last_trajectory_rule.d_dd[bestpoint]
-            self.c_speed = self.last_trajectory_rule.s_d[bestpoint]
+            # self.c_speed = self.last_trajectory_rule.s_d[bestpoint]
+            ego_state = dynamic_map.ego_state
+            self.c_speed = get_speed(ego_state) 
         else:
             ego_state = dynamic_map.ego_state
             self.c_speed = get_speed(ego_state)       # current speed [m/s]

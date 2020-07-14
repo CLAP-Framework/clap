@@ -231,8 +231,8 @@ class NearestLocator:
         if tstates.surrounding_object_list is not None:
             for vehicle_idx, vehicle in enumerate(tstates.surrounding_object_list):
                 # TODO: separate vehicle and other objects?
-                # if vehicle.cls.classid != vehicle.cls.VEHICLE:
-                #     continue
+                if vehicle.cls.classid != vehicle.cls.VEHICLE:
+                    continue
                 dist_list = np.array([dist_from_point_to_polyline2d(
                     vehicle.state.pose.pose.position.x,
                     vehicle.state.pose.pose.position.y,

@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <chrono>
+#include <string.h>
 #include <stdio.h>
 #include <ros/ros.h>
 #include <ros/package.h>
@@ -43,10 +44,10 @@ static std::string Label2Classification[5] = {
     "Truck"
 };
 int LidarClassification2Label(std::string c) {
-    if (c == "car") return 1;
-    if (c == "truck") return 4;
-    if (c == "person") return 2;
-    if (c == "cyclist") return 3;
+    if (c == "Car") return 1;
+    if (c == "Truck") return 4;
+    if (c == "Pedestrian") return 2;
+    if (c == "Cyclist") return 3;
     // else if (c == "nothing") return 0;
     return 0;
 }
@@ -161,19 +162,22 @@ void convert_DetectedObject2TrackingBox(
   zzz_perception_msgs::TrackingBox &obs_box )
 {
   zzz_perception_msgs::ObjectClass t;
-  if (!strcmp("car", input.label.c_str())) {
+
+  if (!strcasecmp("car", input.label.c_str())) {
     t.classid = 1;
-  } else if (!strcmp("truck", input.label.c_str())) {
-    t.classid = 4;
-  } else if (!strcmp("person", input.label.c_str())) {
+  } else if (!strcasecmp("truck", input.label.c_str())) {
+    t.classid = 49;
+  } else if (!strcasecmp("Pedestrian", input.label.c_str())) {
     t.classid = 2;
-  } else if (!strcmp("cyclist", input.label.c_str())) {
+  } else if (!strcasecmp("cyclist", input.label.c_str())) {
     t.classid = 3;
   } else {
     // unknown id
-    t.classid = 1;
+    t.classid = 0;
   }
-  
+
+  //std::cout << "$$$$$$$ " << t.classid << ", " << input.label << std::endl;
+
   obs_box.classes.push_back(t);
   obs_box.classes[0].score = input.score;
   obs_box.uid = input.id;
@@ -255,6 +259,7 @@ void LidarTrackRos::SetDetectedObjects(const autoware_msgs::DetectedObjectArray&
 
   for (size_t i=0; i<input.objects.size(); i++) {
     autoware_msgs::DetectedObject obj = input.objects.at(i);
+    // std::cout << "++++++++++++ " << obj.label << std::endl;
     bool has_same_obj = false;
     for (size_t j=0; j<i; j++) {
       if( fabs(obj.pose.position.x - input.objects.at(j).pose.position.x) < 0.1 
