@@ -22,7 +22,7 @@ class MainDecision(object):
         
         # This function generate trajectory
 
-        close_to_junction = 30
+        close_to_junction = 40
 
         # Update_dynamic_local_map
         if self._dynamic_map_buffer is None:

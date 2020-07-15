@@ -186,7 +186,7 @@ class NearestLocator:
 
     # TODO: adjust lane_end_dist_thres to class variable
     def locate_ego_vehicle_in_lanes(self, tstates, 
-                            lane_end_dist_thres=2,
+                            lane_end_dist_thres=15,
                             lane_head_thres = 3, 
                             lane_dist_thres = 5):
         dist_list = np.array([dist_from_point_to_polyline2d(

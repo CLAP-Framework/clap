@@ -74,21 +74,6 @@ class Werling(object):
 
         self.build_frenet_path(target_line)
     
-    # def clear_buff(self, dynamic_map):
-    #     self.last_trajectory_array = np.c_[0, 0]
-    #     self.last_trajectory = Frenet_path()
-    #     self.last_trajectory_array_rule = np.c_[0, 0]
-    #     self.last_trajectory_rule = Frenet_path()
-    #     self.reference_path = None
-    #     self.csp = None
-    #     self.target_line = dynamic_map.jmap.reference_path.map_lane.central_path_points
-
-
-    #     self.rivz_element.candidates_trajectory = None
-    #     self.rivz_element.prediciton_trajectory = None
-    #     self.rivz_element.collision_circle = None
-    #     return None
-
     def lane_change_clean_buff(self):
         
         self.last_trajectory_array = np.c_[0, 0]
@@ -115,13 +100,12 @@ class Werling(object):
             start_state = self.calculate_start_state(dynamic_map)
             self.target_speed = target_speed
             generated_trajectory = self.frenet_optimal_planning(self.csp, self.c_speed, start_state)
-
             if generated_trajectory is not None:
                 local_desired_speed = generated_trajectory.s_d[-1]
                 trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
                 trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori,1)
                 self.last_trajectory_array_rule = trajectory_array
-                self.last_trajectory_rule = generated_trajectory              
+                self.last_trajectory_rule = generated_trajectory
                 rospy.logdebug("----> Lane_Werling: Successful Planning")
 
             elif len(self.last_trajectory_array_rule) > 5: # and self.c_speed > 1:
@@ -143,18 +127,15 @@ class Werling(object):
             return None, None
 
     def initialize_obj_predict(self, dynamic_map):
-        # self._dynamic_map = dynamic_map
+
         try:
             if self.csp is None:
                 self.build_frenet_path()
             # initialize prediction module
             self.obs_prediction = predict(dynamic_map, OBSTACLES_CONSIDERED, MAXT, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
                                         get_speed(dynamic_map.ego_state))
-            rospy.logdebug("------> Lane_Werling: Initialize successful ")
             return True
-
         except:
-            rospy.logdebug("------> Lane_Werling: Initialize fail ")
             return False
 
     def calculate_start_state(self, dynamic_map):
@@ -164,7 +145,7 @@ class Werling(object):
             # find closest point on the last trajectory
             mindist = float("inf")
             bestpoint = 0
-            for t in range(len(self.last_trajectory_rule.t)):
+            for t in range(len(self.last_trajectory_rule.x)):
                 pointdist = (self.last_trajectory_rule.x[t] - dynamic_map.ego_state.pose.pose.position.x) ** 2 + (self.last_trajectory_rule.y[t] - dynamic_map.ego_state.pose.pose.position.y) ** 2
                 if mindist >= pointdist:
                     mindist = pointdist

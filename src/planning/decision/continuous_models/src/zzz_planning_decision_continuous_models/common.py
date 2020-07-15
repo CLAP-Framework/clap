@@ -39,7 +39,7 @@ class rviz_display():
                 tempmarker.color.b = 0.5
                 tempmarker.color.a = 0.5
                 tempmarker.lifetime = rospy.Duration(1.0)
-                for t in range(len(fp.t)):
+                for t in range(len(fp.x)):
                     p = Point()
                     p.x = fp.x[t]
                     p.y = fp.y[t]
@@ -118,7 +118,7 @@ class rviz_display():
             tempmarker.color.a = 0.5
             tempmarker.lifetime = rospy.Duration(1.0)
             tempmarker.lifetime = rospy.Duration(1.0)
-            for t in range(len(fp.t)):
+            for t in range(len(fp.x)):
                 tempmarker.pose.position.x = fp.x[0]
                 tempmarker.pose.position.y = fp.y[0]
                 tempmarkerarray.markers.append(tempmarker)

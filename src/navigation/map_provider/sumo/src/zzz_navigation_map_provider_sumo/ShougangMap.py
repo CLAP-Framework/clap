@@ -27,43 +27,40 @@ class ShougangMap(object):
         self._reference_lane_list = deque(maxlen=20000)
         self._lanes = []
         self.load_lanes() # load lanes
-        self._next_road_id_list = [1, 2, 3, 4, 5, 8, 6, 7, 9, 0]
+        self._next_road_id_list = [1, 2, 3, 4, 5, 6, 7, 8, 0]
 
         self._current_road_id = -1
         self._next_road_id = -1
 
     def load_lanes(self):
         
-        road1_0 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road1_0.dat',delimiter=',')
-        road1_1 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road1_1.dat',delimiter=',')
+        road1_0 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road1_0.txt',delimiter=',')
+        road1_1 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road1_1.txt',delimiter=',')
         road2 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road2.txt',delimiter=',')
         road3 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road3.txt',delimiter=',')
         road4 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road4.txt',delimiter=',')
         road5 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road5.txt',delimiter=',')
         road6 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road6.txt',delimiter=',')
-        road7_0 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road7_0.txt',delimiter=',')
-        road7_1 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road7_1.txt',delimiter=',')
-        road8_0 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road8_0.dat',delimiter=',')
-        road8_1 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road8_1.dat',delimiter=',')
-        road9 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road9.txt',delimiter=',')
-        road10_0 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road10_0.dat',delimiter=',')
-        road10_1 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road10_1.dat',delimiter=',')
+        road7 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road7.txt',delimiter=',')
 
+        road8_0 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road8_0.txt',delimiter=',')
+        road8_1 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road8_1.txt',delimiter=',')
+        road9_0 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road9_0.txt',delimiter=',')
+        road9_1 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road9_1.txt',delimiter=',')
+        
         self._lanes.append(dense_polyline2d(road1_0,1))
         self._lanes.append(dense_polyline2d(road2,1))
         self._lanes.append(dense_polyline2d(road3,1))
         self._lanes.append(dense_polyline2d(road4,1))
         self._lanes.append(dense_polyline2d(road5,1))
         self._lanes.append(dense_polyline2d(road6,1))
-        self._lanes.append(dense_polyline2d(road7_0,1))
+        self._lanes.append(dense_polyline2d(road7,1))
         self._lanes.append(dense_polyline2d(road8_0,1))
-        self._lanes.append(dense_polyline2d(road9,1))
-        self._lanes.append(dense_polyline2d(road10_0,1))
+        self._lanes.append(dense_polyline2d(road9_0,1))
 
         self.road1_1 = dense_polyline2d(road1_1,1)
-        self.road7_1 = dense_polyline2d(road7_1,1)
         self.road8_1 = dense_polyline2d(road8_1,1)
-        self.road10_1 = dense_polyline2d(road10_1,1)
+        self.road9_1 = dense_polyline2d(road9_1,1)
 
     def ego_road(self):
 
@@ -82,6 +79,7 @@ class ShougangMap(object):
         self._ego_vehicle_x = self._ego_vehicle_x_buffer
         self._ego_vehicle_y = self._ego_vehicle_y_buffer
         self.ego_road_id = self.ego_road()
+
         if self.should_update_static_map():
             self._current_road_id = self.ego_road_id
             self._next_road_id = self._next_road_id_list[self.ego_road_id]
@@ -125,7 +123,7 @@ class ShougangMap(object):
 
         self.static_local_map = self.init_static_map()  ## Return this one
         self.update_lane_list(self.ego_road_id)
-        self.update_next_road_list(next_road_id)
+        self.update_next_road_list(self._next_road_id)
 
     def update_lane_list(self, road_id):
         '''
@@ -140,21 +138,19 @@ class ShougangMap(object):
         if road_id == (1-1):
             self.static_local_map.lanes.append(self.get_lane(self.road1_1))
             self.static_local_map.target_lane_index = 1
-        if road_id == (7-1):
-            self.static_local_map.lanes.append(self.get_lane(self.road7_1))
 
         if road_id == (8-1):
             self.static_local_map.lanes.append(self.get_lane(self.road8_1))
 
-        if road_id == (10-1):
+        if road_id == (9-1):
             self.static_local_map.target_lane_index = 1
-            self.static_local_map.lanes.append(self.get_lane(self.road10_1))
+            self.static_local_map.lanes.append(self.get_lane(self.road9_1))
 
         for lane in self.static_local_map.lanes:
             if road_id == (1-1):
                 lane.speed_limit = 35
             if road_id == (2-1):
-                lane.speed_limit = 20
+                lane.speed_limit = 30
             if road_id == (3-1):
                 lane.speed_limit = 20
             if road_id == (4-1):
@@ -164,12 +160,10 @@ class ShougangMap(object):
             if road_id == (6-1):
                 lane.speed_limit = 30
             if road_id == (7-1):
-                lane.speed_limit = 30
+                lane.speed_limit = 35
             if road_id == (8-1):
-                lane.speed_limit = 30
+                lane.speed_limit = 35
             if road_id == (9-1):
-                lane.speed_limit = 30
-            if road_id == (10-1):
                 lane.speed_limit = 35
 
     def update_next_road_list(self, next_road_id):
@@ -179,14 +173,11 @@ class ShougangMap(object):
         if next_road_id == (1-1):
             self.static_local_map.next_lanes.append(self.get_lane(self.road1_1))
 
-        if next_road_id == (7-1):
-            self.static_local_map.next_lanes.append(self.get_lane(self.road7_1))
-
         if next_road_id == (8-1):
             self.static_local_map.next_lanes.append(self.get_lane(self.road8_1))
 
-        if next_road_id == (10-1):
-            self.static_local_map.next_lanes.append(self.get_lane(self.road10_1))
+        if next_road_id == (9-1):
+            self.static_local_map.next_lanes.append(self.get_lane(self.road9_1))
         
     def get_lane(self, central_points): # outside
 
