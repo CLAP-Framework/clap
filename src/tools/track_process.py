@@ -28,8 +28,8 @@ import rosbag
 import argparse
 
 import tf
-
-import queue
+ 
+from queue import Queue
 
 """
 origin definations 
@@ -245,12 +245,23 @@ def process_bags(args):
     
     input_list = []
     orientation = None
+    last_point = None
     
-    for topic, msg, t in input_bag.read_messages(topics=['/gps/fix', '/imu/data', '/localization/gps/fix', '/localization/imu/data']):
+    for topic, msg, _ in input_bag.read_messages(topics=[
+        '/gps/fix', '/imu/data', '/localization/gps/fix', '/localization/imu/data']):
+
         if topic == '/gps/fix' or topic == '/localization/gps/fix':
             point = utm.from_latlon(msg.latitude, msg.longitude)
-            if orientation is not None:
-                input_list.append([point[0]-ox, point[1]-oy, orientation.x, orientation.y, orientation.z, orientation.w])
+            if last_point is None:
+                last_point = point
+
+            vb = np.array([point[0], point[1]])
+            va = np.array([last_point[0], last_point[1]])
+            gap = np.linalg.norm(vb - va)
+            if gap > 0.5 and orientation is not None:
+                last_point = point
+                input_list.append([point[0]-ox, point[1]-oy, 
+                    orientation.x, orientation.y, orientation.z, orientation.w])
                 
         if topic == '/imu/data' or topic == '/localization/imu/data':
             orientation = msg.orientation
@@ -263,8 +274,8 @@ def process_bags(args):
     x_array = input_data[:, 0]
     y_array = input_data[:, 1]
 
-    spatial_x_array = x_array[1 : len(x_array) : 400]
-    spatial_y_array = y_array[1 : len(y_array) : 400]
+    spatial_x_array = x_array[1 : len(x_array) : 4]
+    spatial_y_array = y_array[1 : len(y_array) : 4]
     
     x, y = spatial_x_array, spatial_y_array
     sp = Spline2D(x, y)
@@ -272,17 +283,20 @@ def process_bags(args):
     s = np.arange(0, sp.s[-1], 0.2)
     
     # curvature
-    points3_x = []
-    points3_y = []
+    points3_x, points3_y = Queue(3), Queue(3)
     
     output_data = []
+    output2 = []
+
+    # re-sample as 0.2m
     rx, ry, ryaw, rk = [], [], [], []
     for i_s in s:
         ix, iy = sp.calc_position(i_s)
         rx.append(ix)
         ry.append(iy)
+        
         yaw = sp.calc_yaw(i_s) 
-        if yaw < 0.0 :
+        if yaw < 0.0 : # to [0, 2*PI)
             yaw += 2 * math.pi
             
         ryaw.append(yaw)
@@ -297,27 +311,29 @@ def process_bags(args):
         else:
             r = 1.0 / sp.calc_curvature(i_s)
             
-        if len(points3_x) == 3 and len(points3_y) == 3:
-            points3_x.pop(0)
-            points3_y.pop(0)
+        if points3_x.full() and points3_y.full():
+            points3_x.get()
+            points3_y.get()
         
-        points3_x.append(ix)
-        points3_y.append(iy)
+        points3_x.put(ix)
+        points3_y.put(iy)
         
-        if len(points3_x) == 3 and len(points3_y) == 3:
-            kappa, _ = calc_curvature_with3points(np.array(points3_x), np.array(points3_y))
+        if points3_x.full() and points3_y.full():
+            kappa, _ = calc_curvature_with3points(
+                np.array(points3_x.queue), np.array(points3_y.queue))
             if kappa == 0.0:
                 r = 999999
             else:
                 r = 1.0 / kappa
         
         output_data.append([ix, iy, q[0], q[1], q[2], q[3], r])
+        output2.append([ix, iy])
         
     if show_image:
         flg, ax = plt.subplots(1)
         plt.plot(spatial_x_array, spatial_y_array, "xb", label="input")
-        plt.plot(rx, ry, "-r", label="spline")
-        plt.plot(x_array, y_array, color="-b", label="gps-track")
+        plt.plot(rx, ry, "red", label="spline")
+        plt.plot(x_array, y_array, color="blue", label="gps-track")
         plt.plot()
         
         plt.grid(True)
@@ -333,6 +349,9 @@ def process_bags(args):
         
     # save output_data
     np.savetxt(args.output, output_data, fmt="%.8f,%.8f,%.8f,%.8f,%.8f,%.8f,%.8f", delimiter=',', newline='\n')
+    
+    if args.o2 is not None:
+        np.savetxt(args.o2, output2, fmt="%.8f,%.8f", delimiter=',', newline='\n')
     print('track process done!\n')
     
 
@@ -340,10 +359,12 @@ def process_bags(args):
 if __name__ == '__main__':
     # help : convert -origin 
     # shougang new origin 426660.51591584098, 4417656.7450509444
+    # 428191,4417667
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('--origin', required=True, help='origin point like 426660.51591584098,4417656.7450509444')
+    arg_parser.add_argument('--origin', required=True, help='like 426660.51591584098,4417656.7450509444  428191,4417667')
     arg_parser.add_argument('--input',  required=True, help='gps track bag file path')
-    arg_parser.add_argument('--output', required=True, help='points file path')
+    arg_parser.add_argument('--output', required=True, help='points(x,y,w) file path')
+    arg_parser.add_argument('--o2', required=False, help='points(x,y) file path')
 
     args = arg_parser.parse_args()
     process_bags(args)
