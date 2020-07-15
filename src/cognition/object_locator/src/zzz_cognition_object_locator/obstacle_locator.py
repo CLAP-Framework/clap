@@ -122,6 +122,10 @@ class NearestLocator:
             self.locate_stop_sign_in_lanes(tstates)
             self.locate_speed_limit_in_lanes(tstates)
 
+        if tstates.dynamic_map.model == MapState.MODEL_JUNCTION_MAP:
+            # Build the next lane frenet
+            pass
+
         rospy.logdebug("Updated Dynamic Map: lanes_num = %d, in_junction = %s, lane_index = %.2f, distance_to_end = %f",
             len(dynamic_map.mmap.lanes), str(dynamic_map.model == MapState.MODEL_JUNCTION_MAP),
             dynamic_map.mmap.ego_lane_index, dynamic_map.mmap.distance_to_junction)
@@ -182,7 +186,7 @@ class NearestLocator:
 
     # TODO: adjust lane_end_dist_thres to class variable
     def locate_ego_vehicle_in_lanes(self, tstates, 
-                            lane_end_dist_thres=15,
+                            lane_end_dist_thres=2,
                             lane_head_thres = 3, 
                             lane_dist_thres = 5):
         dist_list = np.array([dist_from_point_to_polyline2d(
@@ -352,24 +356,7 @@ class NearestLocator:
         # Now we set the multilane speed limit as 40 km/h.
         total_lane_num = len(tstates.static_map.lanes)
         for i in range(total_lane_num):
-            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 20
-
-    def temp_speed_limit(self, tstates, straight_speed = 15, left_turn_speed = 10):
-        ego_x = tstates.ego_state.state.pose.pose.position.x
-        ego_y = tstates.ego_state.state.pose.pose.position.y
-
-        # using outside lane points
-        xs = [ -0.831381298776 , -94.2308302094, -138.179321156 , -30.152690624 ] # four start point x
-        ys = [ 66.5153233064 , 95.5921675395 , 22.5298581934 ,-9.34686440229 ] # four start point y
-        xe = [ -17.4927126079 , -140.218473702 , -119.012291822 , 0.184996323485 ] # four end point x
-        ye = [ 98.7037232528 , 73.8257115977 , -9.48885849956 , 14.3186893491 ] # four end point y
-
-        for i in range(4):
-            if ((ego_x - xs[i]) * (ego_x - xe[i])<0) and ((ego_y - ys[i]) * (ego_y - ye[i])<0):
-                return left_turn_speed
-
-        return straight_speed
-
+            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = tstates.static_map.lanes[i].speed_limit
 
     # TODO(zyxin): Move this function into separate prediction module
     def predict_vehicle_behavior(self, vehicle, tstates, lane_change_thres = 0.2):

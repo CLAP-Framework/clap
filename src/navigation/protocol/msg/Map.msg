@@ -22,3 +22,4 @@ geometry_msgs/Polygon drivable_area
 # Next unit
 geometry_msgs/Polygon next_drivable_area
 Lane[] next_lanes
+int8 next_road_id
