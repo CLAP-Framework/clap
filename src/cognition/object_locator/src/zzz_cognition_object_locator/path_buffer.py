@@ -77,9 +77,9 @@ class PathBuffer:
                 _reference_path_buffer_t
             )
         self._reference_path_buffer = copy.deepcopy(_reference_path_buffer_t[max(0,nearest_idx-100):]).tolist()
-    
-    def update(self, required_reference_path_length = 10, 
-                front_vehicle_avoidance_require_thres = 2,
+
+    def update(self, required_reference_path_length = 10,
+                prepare_stop_path_length = 30,
                 remained_passed_point = 5):
         """
         Delete the passed point and add more point to the reference path
@@ -112,8 +112,6 @@ class PathBuffer:
         # tstates.reference_path = self._reference_path_buffer
         # reference_path = tstates.reference_path # for easy access
 
-        
-
         # Remove passed waypoints - dequeue
         if len(self._reference_path_segment) > 1:
             _, nearest_idx, _ = dist_from_point_to_polyline2d(
@@ -125,14 +123,6 @@ class PathBuffer:
             for _ in range(nearest_idx-remained_passed_point):
                 removed_point = self._reference_path_segment.popleft()
                 rospy.logdebug("removed waypoint: %s, remaining count: %d", str(removed_point), len(self._reference_path_buffer))
-
-        # Current reference path is too short, require a new reference path
-        # if len(reference_path) < required_reference_path_length and not self._rerouting_sent:
-        #     if not self._rerouting_trigger:
-        #         self._rerouting_trigger()
-        #         self._rerouting_sent = True
-        # else:
-        #     self._rerouting_sent = False # reset flag
 
         # Choose points from reference path to buffer - enqueue
         while self._reference_path_buffer and len(self._reference_path_segment) < self._buffer_size:
@@ -150,12 +140,14 @@ class PathBuffer:
         
         dynamic_map.jmap.reference_path.map_lane.index = -1
 
-        # Calculate vehicles on the reference path 
-        # TODO: find all vehicles near enough on reference_path
-        #if len(dynamic_map.jmap.reference_path.map_lane.central_path_points) > front_vehicle_avoidance_require_thres:
-        #    front_vehicle = self.get_front_vehicle_on_reference_path(tstates)
-        #    if front_vehicle is not None:
-        #        dynamic_map.jmap.reference_path.front_vehicles = [front_vehicle]
+
+        # Reference Path Tail Part:
+        # Current reference path is too short, require a new reference path
+        # if len(self._reference_path_buffer)+len(self._reference_path_segment) < required_reference_path_length:
+        #     self.renew_ref_path() # should get from navigation module
+        
+        # if len(self._reference_path_buffer)+len(self._reference_path_segment) < prepare_stop_path_length:
+        #     dynamic_map.model = MapState.MODEL_JUNCTION_MAP
 
         # TODO: read or detect speed limit
         dynamic_map.jmap.reference_path.map_lane.speed_limit = 30
@@ -172,37 +164,15 @@ class PathBuffer:
             pose.pose.position.y = wp[1]
             self.ref_path_msg.poses.append(pose)
 
-    def get_front_vehicle_on_reference_path(self, tstates, lane_dist_thres=2):
-        """
-        Get front vehicle on the reference path
-        """
+    def renew_ref_path(self):
 
-        front_vehicle = None
-        nearest_dis = float('inf')
-        reference_path = np.array(self._reference_path_segment)
+        _reference_path_buffer_t = self._reference_path_received
+        self._reference_path_buffer = copy.deepcopy(_reference_path_buffer_t.tolist())
 
-        for vehicle in tstates.dynamic_map.jmap.obstacles:
-            dist_list = np.linalg.norm(reference_path - [
-                    vehicle.state.pose.pose.position.x,
-                    vehicle.state.pose.pose.position.y
-                ], axis = 1)
-
-            min_dis = np.min(dist_list)
-            if min_dis > lane_dist_thres:
-                continue
-
-            d = np.linalg.norm([
-                vehicle.state.pose.pose.position.x - tstates.ego_state.pose.pose.position.x,
-                vehicle.state.pose.pose.position.y - tstates.ego_state.pose.pose.position.y
-            ])
-
-            if d < nearest_dis:
-                front_vehicle = vehicle
-                nearest_dis = d
-
-        if front_vehicle is not None:
-            rospy.loginfo("front vehicle pos {}-{}, ego pos {}-{}, front distance {}".format(
-                vehicle.state.pose.pose.position.x, vehicle.state.pose.pose.position.y,
-                tstates.ego_state.pose.pose.position.x, tstates.ego_state.pose.pose.position.y, nearest_dis))
-
-        return front_vehicle
+    # Current reference path is too short, require a new reference path
+        # if len(reference_path) < required_reference_path_length
+        #     if not self._rerouting_trigger:
+        #         self._rerouting_trigger()
+        #         self._rerouting_sent = True
+        # else:
+        #     self._rerouting_sent = False # reset flag
