@@ -9,8 +9,8 @@ from zzz_cognition_msgs.msg import RoadObstacle
 class IDM(object):
 
     def __init__(self):
-        self.T = 1.6
-        self.g0 = 7 + 8
+        self.T = 3.6
+        self.g0 = 7 + 12
         self.a = 2.73 
         self.b = 1.65 + 5
         self.delta = 4

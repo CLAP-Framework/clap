@@ -102,14 +102,14 @@ class Werling(object):
             generated_trajectory, best_free_fp = self.frenet_optimal_planning(self.csp, self.c_speed, start_state)
 
             if generated_trajectory is not None:
-                local_desired_speed = generated_trajectory.s_d[-1]
+                local_desired_speed = target_speed #generated_trajectory.s_d[-1]
                 trajectory_array = np.c_[generated_trajectory.x, generated_trajectory.y]
                 self.last_trajectory_array_rule = trajectory_array
                 self.last_trajectory_rule = generated_trajectory
                 rospy.logdebug("----> Lane_Werling: Successful Planning")
             else:
                 generated_trajectory = best_free_fp
-                local_desired_speed = 1/3.6
+                local_desired_speed = 0
                 trajectory_array = np.c_[generated_trajectory.x, generated_trajectory.y]
                 self.last_trajectory_array_rule = trajectory_array
                 self.last_trajectory_rule = generated_trajectory

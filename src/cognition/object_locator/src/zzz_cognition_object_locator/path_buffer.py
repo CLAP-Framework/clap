@@ -169,6 +169,8 @@ class PathBuffer:
 
         _reference_path_buffer_t = self._reference_path_received
         self._reference_path_buffer = copy.deepcopy(_reference_path_buffer_t.tolist())
+        self._reference_path_segment.clear()
+
 
     # Current reference path is too short, require a new reference path
         # if len(reference_path) < required_reference_path_length

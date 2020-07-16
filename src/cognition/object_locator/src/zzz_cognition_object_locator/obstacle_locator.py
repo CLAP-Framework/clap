@@ -233,10 +233,13 @@ class NearestLocator:
 
         
         if tstates.surrounding_object_list is not None:
+
+            ego_v = get_speed(tstates.ego_state.state)
+
             for vehicle_idx, vehicle in enumerate(tstates.surrounding_object_list):
                 # TODO: separate vehicle and other objects?
-                # if vehicle.cls.classid != vehicle.cls.VEHICLE:
-                #     continue
+                if vehicle.cls.classid == vehicle.cls.HUMAN and ego_v < 20/3.6:
+                    continue
                 dist_list = np.array([dist_from_point_to_polyline2d(
                     vehicle.state.pose.pose.position.x,
                     vehicle.state.pose.pose.position.y,

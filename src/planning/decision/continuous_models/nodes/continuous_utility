@@ -47,8 +47,6 @@ class DecisionNode(object):
         while not rospy.is_shutdown():
             publish_msg = self._decision_instance.update_trajectory()
             if publish_msg:
-                if publish_msg.desired_speed <= 0:
-                    publish_msg.desired_speed = 1/3.6
                 self._decision_trajectory_publisher.publish(publish_msg)
                 publish_msg2 = publish_msg.trajectory
                 self._rviz_decision_trajectory_publisher.publish(publish_msg2)

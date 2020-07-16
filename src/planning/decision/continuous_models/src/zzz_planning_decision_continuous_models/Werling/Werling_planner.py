@@ -125,8 +125,8 @@ class Werling(object):
                 desired_speed = 0
                 rospy.logdebug("----> Werling: Output ref path")
             
-            if desired_speed <= 1/3.6:
-                desired_speed = 1/3.6
+            if desired_speed <= 0.1/3.6:
+                desired_speed = 0.1/3.6
         
             msg = DecisionTrajectory()
             msg.trajectory = convert_ndarray_to_pathmsg(trajectory_array)
@@ -147,7 +147,7 @@ class Werling(object):
                 self.dist_to_end = dist_from_point_to_polyline2d(dynamic_map.ego_state.pose.pose.position.x, dynamic_map.ego_state.pose.pose.position.y, self.ref_path, return_end_distance=True)
                 
             # estabilish frenet frame
-            if self.csp is None： # or self.dist_to_end[4] < 10 or self.dist_to_end[0] > 20:
+            if self.csp is None: # or self.dist_to_end[4] < 10 or self.dist_to_end[0] > 20:
                 self.build_frenet_path(dynamic_map, True)
                 
             # initialize prediction module
@@ -165,22 +165,23 @@ class Werling(object):
         if self.ref_path is None:
             return 0
 
-        if self.dist_to_end <= 0:
+        if self.dist_to_end[4] <= 15:
             return 0
 
-        dec = 0.4
-        available_speed = math.sqrt(2*dec*self.dist_to_end) # m/s
+        dec = 0.1
+
+        available_speed = math.sqrt(2*dec*self.dist_to_end[4]) # m/s
         ego_v = get_speed(dynamic_map.ego_state)
 
         if available_speed > ego_v:
             return desired_speed
         
         dt = 0.2
-        vehicle_dec = (ego_v - available_speed)*5
+        vehicle_dec = (ego_v - available_speed)*10
         tail_speed = ego_v - vehicle_dec*dt
         
         if desired_speed > tail_speed:
-            return tail_speed
+            return max(0, tail_speed)
 
         return desired_speed
 

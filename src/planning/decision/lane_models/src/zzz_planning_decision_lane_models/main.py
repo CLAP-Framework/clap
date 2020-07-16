@@ -49,14 +49,15 @@ class MainDecision(object):
 
         trajectory = None
         changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
-        if desired_speed <= 0: # TODO: clean this
-            desired_speed = 1/3.6
-
+        
         ego_speed = get_speed(dynamic_map.ego_state)
 
         rospy.logdebug("target_lane_index = %d, target_speed = %f km/h, current_speed: %f km/h", changing_lane_index, desired_speed*3.6, ego_speed*3.6)
         
         trajectory, local_desired_speed = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
+
+        if local_desired_speed <= 1/3.6: # TODO: clean this
+            local_desired_speed = 0.1/3.6
 
         msg = DecisionTrajectory()
         msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory) # TODO: move to library
