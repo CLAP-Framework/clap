@@ -44,10 +44,6 @@ class MainDecision(object):
 
         if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP: 
             self._local_trajectory_instance.clean_frenet_lane()
-            # if dynamic_map.jmap.distance_to_lane_head < close_to_lane:
-            #     self._local_trajectory_instance.build_frenet_lane(dynamic_map)
-            # else:
-            #     self._local_trajectory_instance.clean_frenet_lane()
             return None
         
 
@@ -64,7 +60,7 @@ class MainDecision(object):
 
         msg = DecisionTrajectory()
         msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory) # TODO: move to library
-        msg.desired_speed = desired_speed # TODO: Multi-resolution Planning
+        msg.desired_speed = local_desired_speed # TODO: Multi-resolution Planning
 
         return msg
 

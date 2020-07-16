@@ -123,11 +123,14 @@ class Werling(object):
             else:
                 trajectory_array =  self.ref_path
                 desired_speed = 0
-                rospy.logdebug("----> Werling: Output ref path")           
+                rospy.logdebug("----> Werling: Output ref path")
             
+            if desired_speed <= 1/3.6:
+                desired_speed = 1/3.6
+        
             msg = DecisionTrajectory()
             msg.trajectory = convert_ndarray_to_pathmsg(trajectory_array)
-            msg.desired_speed = desired_speed
+            msg.desired_speed = self.ref_tail_speed(dynamic_map,desired_speed)
 
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
             self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
@@ -144,7 +147,7 @@ class Werling(object):
                 self.dist_to_end = dist_from_point_to_polyline2d(dynamic_map.ego_state.pose.pose.position.x, dynamic_map.ego_state.pose.pose.position.y, self.ref_path, return_end_distance=True)
                 
             # estabilish frenet frame
-            if self.csp is None or self.dist_to_end[4] < 10 or self.dist_to_end[0] > 20:
+            if self.csp is None： # or self.dist_to_end[4] < 10 or self.dist_to_end[0] > 20:
                 self.build_frenet_path(dynamic_map, True)
                 
             # initialize prediction module
@@ -156,6 +159,30 @@ class Werling(object):
         except:
             rospy.logdebug("------> Werling: Initialize fail ")
             return False
+
+    def ref_tail_speed(self, dynamic_map, desired_speed):
+
+        if self.ref_path is None:
+            return 0
+
+        if self.dist_to_end <= 0:
+            return 0
+
+        dec = 0.4
+        available_speed = math.sqrt(2*dec*self.dist_to_end) # m/s
+        ego_v = get_speed(dynamic_map.ego_state)
+
+        if available_speed > ego_v:
+            return desired_speed
+        
+        dt = 0.2
+        vehicle_dec = (ego_v - available_speed)*5
+        tail_speed = ego_v - vehicle_dec*dt
+        
+        if desired_speed > tail_speed:
+            return tail_speed
+
+        return desired_speed
 
     def calculate_start_state(self, dynamic_map):
         start_state = Frenet_state()
@@ -189,7 +216,6 @@ class Werling(object):
     def frenet_optimal_planning(self, csp, c_speed, start_state):
         t0 = rospy.get_rostime().to_sec()
 
-
         fplist = self.calc_frenet_paths(c_speed, start_state)
         t1 = rospy.get_rostime().to_sec()
         time_consume1 = t1 - t0
@@ -213,15 +239,6 @@ class Werling(object):
                                             time_consume3, candidate_len3)
 
         self.all_trajectory = fplist
-
-        # find minimum cost path
-        # mincost = float("inf")
-        # bestpath = None
-        # for fp in fplist:
-        #     if mincost >= fp.cf:
-        #         mincost = fp.cf
-        #         bestpath = fp
-        # return bestpath
 
         path_tuples = []
         for fp in fplist:
@@ -323,12 +340,6 @@ class Werling(object):
             dy = np.diff(np.array(fp.y))
             fp.yaw = np.arctan2(dy,dx).tolist()
             fp.ds = np.sqrt(dx**2+dy**2).tolist()
-
-            # for i in range(len(fp.x) - 1):
-            #     dx = fp.x[i + 1] - fp.x[i]
-            #     dy = fp.y[i + 1] - fp.y[i]
-            #     fp.yaw.append(math.atan2(dy, dx))
-            #     fp.ds.append(math.sqrt(dx**2 + dy**2))
             
             try:
                 fp.yaw.append(fp.yaw[-1])
@@ -358,8 +369,6 @@ class Werling(object):
             elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
                 # rospy.logdebug("exceeding max curvature")
                 continue
-            # if not self.obs_prediction.check_collision(fplist[i]):
-            #     continue
 
             okind.append(i)
 

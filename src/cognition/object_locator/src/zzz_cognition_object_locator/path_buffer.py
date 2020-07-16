@@ -10,6 +10,7 @@ from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import LanePoint
 from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from nav_msgs.msg import Path
+from zzz_driver_msgs.utils import get_speed
 from geometry_msgs.msg import PoseStamped
 import copy
 from threading import Lock
@@ -78,7 +79,7 @@ class PathBuffer:
             )
         self._reference_path_buffer = copy.deepcopy(_reference_path_buffer_t[max(0,nearest_idx-100):]).tolist()
 
-    def update(self, required_reference_path_length = 10,
+    def update(self, required_reference_path_length = 15,
                 prepare_stop_path_length = 30,
                 remained_passed_point = 5):
         """
@@ -140,14 +141,14 @@ class PathBuffer:
         
         dynamic_map.jmap.reference_path.map_lane.index = -1
 
-
         # Reference Path Tail Part:
         # Current reference path is too short, require a new reference path
-        # if len(self._reference_path_buffer)+len(self._reference_path_segment) < required_reference_path_length:
-        #     self.renew_ref_path() # should get from navigation module
+        ego_v = get_speed(dynamic_map.ego_state)
+        if (len(self._reference_path_buffer)+len(self._reference_path_segment) < required_reference_path_length) and ego_v < 1/3.6:
+            self.renew_ref_path() # should get from navigation module
         
-        # if len(self._reference_path_buffer)+len(self._reference_path_segment) < prepare_stop_path_length:
-        #     dynamic_map.model = MapState.MODEL_JUNCTION_MAP
+        if len(self._reference_path_buffer)+len(self._reference_path_segment) < prepare_stop_path_length:
+            dynamic_map.model = MapState.MODEL_JUNCTION_MAP
 
         # TODO: read or detect speed limit
         dynamic_map.jmap.reference_path.map_lane.speed_limit = 30
