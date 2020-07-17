@@ -149,7 +149,7 @@ class LaneUtility(object):
         if available_speed > ego_v:
             return 10000
         
-        dt = 0.2
+        dt = 0.4
         vehicle_dec = (ego_v - available_speed)*5
         
         return ego_v - vehicle_dec*dt

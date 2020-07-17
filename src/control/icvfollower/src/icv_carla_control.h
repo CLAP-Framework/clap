@@ -97,6 +97,7 @@ private:
     float Clf = 66900;      //前轮纵向刚度
     float Clr = 62700;      //后轮纵向刚度
     float delta_f = 0;      //前轮偏角度
+    float delta_f_old = 0;      //前轮偏角度
     float Sf = 0.2;         //前轮纵向滑移率
     float Sr = 0.2;         //后轮纵向滑移率
     float I = 4175;         //车辆质心转动惯量

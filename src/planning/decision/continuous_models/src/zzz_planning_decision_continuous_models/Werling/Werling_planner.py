@@ -129,7 +129,7 @@ class Werling(object):
                 desired_speed = 0.1/3.6
         
             msg = DecisionTrajectory()
-            msg.trajectory = convert_ndarray_to_pathmsg(trajectory_array)
+            msg.trajectory = convert_ndarray_to_pathmsg(dense_polyline2d(trajectory_array,0.2))
             msg.desired_speed = self.ref_tail_speed(dynamic_map,desired_speed)
 
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)

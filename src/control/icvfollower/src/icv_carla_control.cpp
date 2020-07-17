@@ -101,6 +101,7 @@ void icvCarlaControl::controlInit()
     _smoothsteernum = getParam<float>(Controlparam, "_smoothsteernum", 0);
     point_distancemax = getParam<float>(Controlparam, "point_distancemax", 0);
     car_path_dis = getParam<float>(Controlparam, "car_path_dis", 0);
+    path_size_min = getParam<float>(Controlparam, "path_size_min", 0);
     _KK = getParam<float>(Controlparam, "_KK", 0);
     _l1 = getParam<float>(Controlparam, "_l1", 0);
     _l2 = getParam<float>(Controlparam, "_l2", 0);
@@ -118,20 +119,38 @@ void icvCarlaControl::run_follower(double *out_steerangle)
     clock_t begin, end;
     begin = clock();
 
-    //PathSmoothCheck();                 //检测长度和曲率平滑度.
-    //follower_flag = Pathfollowcheck(); //轨迹跟踪检测
+    double check_pathlength = 0;
+    if(Waypoints_size>0)
+        Pathlength(&check_pathlength);     
+    // PathSmoothCheck();                 //检测长度和曲率平滑度.
+    // follower_flag = Pathfollowcheck(); //轨迹跟踪检测
     follower_flag = true;
-    if (follower_flag)
+    if (follower_flag && Waypoints_size>0)
     {
         delta_f = ControlStr(Current_Point.x, Current_Point.y, Current_Point.theta, Current_Point.v) / K /180*PI; //
         // delta_f = ControlStr2(Current_Point.x, Current_Point.y, Current_Point.theta, Current_Point.v); //
 
         delta_f = smoothfilter(delta_f, _smoothsteernum);
-        *out_steerangle = delta_f;
+        float  car_finalpoints_dis = sqrt(pow((Current_Point.x - _path_x[Waypoints_size-1]), 2) + pow((Current_Point.y - _path_y[Waypoints_size-1]), 2));
+        if(car_finalpoints_dis >= path_size_min)
+        {
+            delta_f_old = delta_f;
+            *out_steerangle = delta_f;
+            //TODO::if ~~duang~~duang~~~~~ maybe need limit changrate of steer
+            _dis_pre_max = 40;
+            feedforward_K = 1;
+        }
+        else
+        {
+            // delta_f_old = delta_f_old;       
+            *out_steerangle = delta_f;
+            _dis_pre_max = 0.3;
+        }       
     }
     else
     {
         ROS_ERROR("Pathpoint is error!!! ");
+        *out_steerangle =0;
     }
     end = clock();
     sample_time = (end - begin) / CLOCKS_PER_SEC;
@@ -152,12 +171,12 @@ bool icvCarlaControl::Pathlength(double *pathlength)
         ROS_ERROR("Path is error!!!!  far away egoVehicle !!!!! distance = %lf ", dis_points);
         return false;
     }
-    for (int i = 0; i < (_path_x.size() - 1); i++)
+    for (int i = 0; i < (_path_x.size() - 2); i++)
     {
         dis_points = sqrt(pow((_path_x[i + 1] - _path_x[i]), 2) + pow((_path_y[i + 1] - _path_y[i]), 2));
         path_length += dis_points;
         if (dis_points > point_distancemax)
-            ROS_WARN("somepoints is too far away !!!!!");
+            ROS_DEBUG("somepoints is too far away !!!!!");
     }
     *pathlength = path_length;
     return true;
@@ -188,7 +207,7 @@ bool icvCarlaControl::Pathfollowcheck()
     }
 
     //TODO::check Path distance
-    double check_pathlength = 0;
+    // double check_pathlength = 0;
     // if (!Pathlength(&check_pathlength))
     //     return false;
     //TODO::check the useful of Path;
@@ -330,10 +349,10 @@ double icvCarlaControl::ControlStr2(float _vehicle_x, float _vehicle_y, float _v
     geometry_msgs::Point p1, p2, p3;
     if (nextpoint_num < (_path_x.size() - 20))
     {
-        p1.x = _path_x[nextpoint_num];
+        p1.x = _path_x[nextpoint_num + 1];
         p2.x = _path_x[nextpoint_num + 10];
         p3.x = _path_x[nextpoint_num + 20];
-        p1.y = _path_y[nextpoint_num];
+        p1.y = _path_y[nextpoint_num + 1];
         p2.y = _path_y[nextpoint_num + 10];
         p3.y = _path_y[nextpoint_num + 20];
     }
@@ -528,10 +547,10 @@ double icvCarlaControl::ControlStr(double _vehicle_x, double _vehicle_y, double 
         geometry_msgs::Point p1, p2, p3;
         if (nextpoint_num < (_path_x.size() - 20))
         {
-            p1.x = _path_x[nextpoint_num];
+            p1.x = _path_x[nextpoint_num + 1];
             p2.x = _path_x[nextpoint_num + 10];
             p3.x = _path_x[nextpoint_num + 20];
-            p1.y = _path_y[nextpoint_num];
+            p1.y = _path_y[nextpoint_num + 1];
             p2.y = _path_y[nextpoint_num + 10];
             p3.y = _path_y[nextpoint_num + 20];
         }
@@ -545,13 +564,11 @@ double icvCarlaControl::ControlStr(double _vehicle_x, double _vehicle_y, double 
         {
             _d_dis = _t_preview * _vehicle_v + _d_0;
             _d_dis_min = 2.5;
-            feedforward_K = 1;
         }
         else
         {
             _d_dis = _t_preview_turn * _vehicle_v + _d_0;
             _d_dis_min = 5;
-            feedforward_K = 1;
             feedforward_P = 1;
         }
         _d_dis = limitParamChangeUnit(_d_dis, _dis_pre_max, _d_dis_min);
