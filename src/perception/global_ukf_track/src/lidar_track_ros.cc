@@ -22,6 +22,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf/transform_listener.h>
+#include <tf/transform_broadcaster.h>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
@@ -242,6 +243,30 @@ void LidarTrackRos::objectsCallback(const autoware_msgs::DetectedObjectArray& in
   // publish cnn-seg objects.
   pub_zzz_object_array_.publish(trackingBoxArray);
 
+
+  // tf broadcast from rslidar to map
+  // TODO: zhcao
+  Eigen::Quaterniond q_ego_br(
+      input_odm_.pose.pose.orientation.w,
+      input_odm_.pose.pose.orientation.x,
+      input_odm_.pose.pose.orientation.y,
+      input_odm_.pose.pose.orientation.z);
+  Eigen::Vector3d pose_ego_br(
+          input_odm_.pose.pose.position.x,
+          input_odm_.pose.pose.position.y,
+          input_odm_.pose.pose.position.z);
+
+  Eigen::Vector3d pose_car_global = pose_ego_br + q_ego_br.toRotationMatrix() * lidar2imu_translation_;
+
+  static tf::TransformBroadcaster br;
+  tf::Transform transform;
+  Eigen::Vector3d eulerAngle = q_ego_br.matrix().eulerAngles(2,1,0);
+  transform.setOrigin(tf::Vector3(pose_car_global.x(),pose_car_global.y(), pose_car_global.z()));
+  tf::Quaternion q_br;
+  q_br.setRPY(eulerAngle[2], eulerAngle[1], eulerAngle[0]);
+  transform.setRotation(q_br);
+  br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "map", "rslidar"));
+
   // std::cout << "obj " << detected_objects_output.objects.size() << std::endl;
   if (is_benchmark_) {
     DumpResultText(detected_objects_output);
@@ -313,6 +338,8 @@ void LidarTrackRos::SetDetectedObjects(const autoware_msgs::DetectedObjectArray&
       tmp.orientation.y = q_pbj_global.y();
       tmp.orientation.z = q_pbj_global.z();
       tmp.orientation.w = q_pbj_global.w();  
+
+
 #if DEBUG_OUTPUT
       std::cout << "obj -> global " << i << " : " << obj.pose.position.x << " " << obj.pose.position.y
           << " -> " << tmp.pose.x << " " << tmp.pose.y 
@@ -361,6 +388,7 @@ void LidarTrackRos::SetDetectedObjects(const autoware_msgs::DetectedObjectArray&
     tmp.features.yaw = eulerAngle(0);
     in_objs_.push_back(tmp);
   }
+
 }
 
 void LidarTrackRos::GetTrackObjects(
