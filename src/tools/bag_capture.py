@@ -33,12 +33,17 @@ pose_queue  = Queue(100 * window_seconds)
 obs_queue   = Queue(10 * window_seconds)
 image_queue = Queue(10 * window_seconds) 
 
-bag = None
+def capture(pose_queue, obs_queue, image_queue):
+    t = threading.Thread(
+        target = write2bag, 
+        args = (pose_queue, obs_queue, image_queue))
+    t.setDaemon(True)
+    t.start()
+    rospy.loginfo("*** launch thread record bag file ###")
+    
 
 def write2bag(pose_queue, obs_queue, image_queue):
-
     filename = time.strftime("%Y-%m-%d_%H:%M:%S.bag", time.localtime()) 
-    
     bag = rosbag.Bag(filename, "w")
     for msg in list(pose_queue.queue):
         bag.write(ego_pose_topic, msg)
@@ -52,7 +57,6 @@ def write2bag(pose_queue, obs_queue, image_queue):
     bag.close()
     print('*** write {} done! ***'.format(filename))
 
-    
 
 # 2-autopilot, 0-manually
 last_autostate = 0
@@ -67,15 +71,9 @@ def autostate_callback(msg):
     print('*** autostate {}, last {}'.format(msg.CurDriveMode, last_autostate))
     global last_autostate
     if msg.CurDriveMode == 0 and last_autostate == 2:
-        rospy.loginfo("*** launch thread record bag file ###")
-        t = threading.Thread(
-            target = write2bag, 
-            args = (pose_queue, obs_queue, image_queue))
-        t.setDaemon(True)
-        t.start()
+        capture(pose_queue, obs_queue, image_queue)
 
     last_autostate = msg.CurDriveMode
-
 
 
 def ego_pose_callback(msg):
@@ -103,25 +101,21 @@ def image_callback(msg):
 
 
 def main():
-
     rospy.init_node("bug-catcher", anonymous=True)
-
     try:    
         global auto_topic
         global ego_pose_topic
         global obs_topic
         global left_cam_topic
-        # print('*** ', auto_topic)
 
         rospy.Subscriber(auto_topic, AutoStateEx, autostate_callback)
         rospy.Subscriber(left_cam_topic, CompressedImage, image_callback)
         rospy.Subscriber(ego_pose_topic, RigidBodyStateStamped, ego_pose_callback)
         rospy.Subscriber(obs_topic, TrackingBoxArray, obstacles_callback)
 
-        rospy.loginfo("create sub done, start spin loop...")
+        rospy.loginfo("create Subscribers done, start spin loop...")
         rospy.spin()
     finally:
-
         rospy.loginfo("*** all done ***")
 
 

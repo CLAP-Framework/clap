@@ -311,7 +311,7 @@ class NearestLocator:
 
         traffic_light_detection = DetectionBoxArray()
         traffic_light = DetectionBox()
-        traffic_light.signal = ObjectSignals.TRAFFIC_LIGHT_GREEN
+        traffic_light.signal.flags = ObjectSignals.TRAFFIC_LIGHT_GREEN
         traffic_light_detection.detections.append(traffic_light)
 
         lights = traffic_light_detection.detections
@@ -319,24 +319,24 @@ class NearestLocator:
         total_lane_num = len(tstates.static_map.lanes)
         if len(lights) == 1:
             for i in range(total_lane_num):
-                if lights[0].signal == ObjectSignals.TRAFFIC_LIGHT_RED:
+                if lights[0].signal.flags == ObjectSignals.TRAFFIC_LIGHT_RED:
                     tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_STOP
-                elif lights[0].signal == ObjectSignals.TRAFFIC_LIGHT_YELLOW:
+                elif lights[0].signal.flags == ObjectSignals.TRAFFIC_LIGHT_YELLOW:
                     tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_YIELD
-                elif lights[0].signal == ObjectSignals.TRAFFIC_LIGHT_GREEN:
+                elif lights[0].signal.flags == ObjectSignals.TRAFFIC_LIGHT_GREEN:
                     tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_THRU
         elif len(lights) > 1 and len(lights) == total_lane_num:
             for i in range(total_lane_num):
-                if lights[i].signal == ObjectSignals.TRAFFIC_LIGHT_RED:
+                if lights[i].signal.flags == ObjectSignals.TRAFFIC_LIGHT_RED:
                     tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_STOP
-                elif lights[i].signal == ObjectSignals.TRAFFIC_LIGHT_YELLOW:
+                elif lights[i].signal.flags == ObjectSignals.TRAFFIC_LIGHT_YELLOW:
                     tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_YIELD
-                elif lights[i].signal == ObjectSignals.TRAFFIC_LIGHT_GREEN:
+                elif lights[i].signal.flags == ObjectSignals.TRAFFIC_LIGHT_GREEN:
                     tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_THRU
         elif len(lights) > 1 and len(lights) != total_lane_num:
             red = True
             for i in range(len(lights)):
-                if lights[i].signal == ObjectSignals.TRAFFIC_LIGHT_GREEN:
+                if lights[i].signal.flags == ObjectSignals.TRAFFIC_LIGHT_GREEN:
                     red = False
             for i in range(total_lane_num):
                 if red:
