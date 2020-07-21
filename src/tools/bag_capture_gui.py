@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
-import roslib
+import os
 import sys
 import time
+import threading
+import copy
+import signal
+
 import roslib
 import rospy
 import rosbag
@@ -11,8 +15,8 @@ from sensor_msgs.msg import PointCloud2
 from cv_bridge import CvBridgeError, CvBridge
 from queue import Queue
 import argparse
-import threading
-import copy
+import utm
+import numpy as np
 
 from python_qt_binding.QtGui import *
 from python_qt_binding.QtCore import *
@@ -28,7 +32,7 @@ from xpmotors_can_msgs.msg import AutoStateEx
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_perception_msgs.msg import TrackingBox, TrackingBoxArray, DetectionBox, DetectionBoxArray, ObjectSignals
 
-roslib.load_manifest('rviz-py')
+
 roslib.load_manifest('rosbag')
 
 # parser = argparse.ArgumentParser(description='Reorder a bagfile based on header timestamps.')
@@ -47,7 +51,13 @@ traffic_light_topic = "/zzz/perception/traffic_lights"
 
 # 2-autopilot, 0-manually
 last_autostate = 0
-window_seconds = 10
+take_over_count = 0
+# bag record for 5 minutes
+window_seconds = 60 * 5
+
+last_point = None
+total_distance = 0.0
+
 # ego_pose hz 100
 pose_queue  = Queue(100 * window_seconds)
 # perception obstacle hz 10
@@ -66,60 +76,84 @@ def start_capture(pose_queue, obs_queue, image_queue):
     
 
 def write2bag(pose_queue, obs_queue, image_queue):
-    filename = time.strftime("%Y-%m-%d_%H:%M:%S.bag", time.localtime()) 
+    filename = time.strftime("%Y-%m-%d_%H-%M-%S.bag", time.localtime()) 
+    # time.sleep(60)
     bag = rosbag.Bag(filename, "w")
-    for msg in list(pose_queue.queue):
-        bag.write(ego_pose_topic, msg)
+    for msg, t in list(pose_queue.queue):
+        bag.write(ego_pose_topic, msg, t)
 
-    for msg in list(obs_queue.queue):
-        bag.write(obs_topic, msg)
+    for msg, t in list(obs_queue.queue):
+        bag.write(obs_topic, msg, t)
 
-    for msg in list(image_queue.queue):
-        bag.write(left_cam_topic, msg)
+    for msg, t in list(image_queue.queue):
+        bag.write(left_cam_topic, msg, t)
     
+    bag.flush()
     bag.close()
-    print('*** write {} done! ***'.format(filename))
+    print('*** Bag Write {} Done! ***'.format(filename))
 
 
 
 def autostate_callback(msg):
-    
     global pose_queue
     global obs_queue
     global image_queue
     global last_autostate
-    print('*** autostate {}, last {} ***'.format(msg.CurDriveMode, last_autostate))
+    
+    # print('*** autostate {}, last {} ***'.format(msg.CurDriveMode, last_autostate))
     if msg.CurDriveMode == 0 and last_autostate == 2:
         start_capture(pose_queue, obs_queue, image_queue)
-
+        global take_over_count
+        take_over_count = take_over_count + 1
     last_autostate = msg.CurDriveMode
 
 
 def ego_pose_callback(msg):
     if not pose_queue.full():
-        pose_queue.put(msg)
+        pose_queue.put((msg, rospy.Time.now()))
     else:
         pose_queue.get()
-    print('++++ ego len ', len(pose_queue.queue))
+
+    global last_point
+    point = (msg.state.pose.pose.position.x,
+            msg.state.pose.pose.position.y)
+    if last_point is None:
+        last_point = point
+
+    vb = np.array([point[0], point[1]])
+    va = np.array([last_point[0], last_point[1]])
+    gap = np.linalg.norm(vb - va)
+    # print('*** gap {} ***'.format(gap))
+    last_point = point
+    
+    global total_distance
+    global last_autostate
+    if last_autostate == 2:
+        total_distance = total_distance + gap
+    # print('++++ ego len ', len(pose_queue.queue))
 
 
 def obstacles_callback(msg):
     if not obs_queue.full():
-        obs_queue.put(msg)
+        obs_queue.put((msg, rospy.Time.now()))
     else:
         obs_queue.get()
-    print('++++ obs len ', len(obs_queue.queue))
+    # print('++++ obs len ', len(obs_queue.queue))
 
 
 def image_callback(msg):
     if not image_queue.full():
-        image_queue.put(msg)
+        image_queue.put((msg, rospy.Time.now()))
     else:
         image_queue.get()
-    print('++++ img len ', len(image_queue.queue))
+    # print('++++ img len ', len(image_queue.queue))
 
-
+ros_main_thread_pid = -1
 def ros_main_thread():
+    rospy.loginfo("*** Ros Main Thread ID %d", os.getpid())
+    global ros_main_thread_pid
+    ros_main_thread_pid = os.getpid()
+    
     try:    
         global auto_topic
         global ego_pose_topic
@@ -134,10 +168,10 @@ def ros_main_thread():
         global traffic_publisher
         traffic_publisher = rospy.Publisher(traffic_light_topic, DetectionBoxArray, queue_size=1)
 
-        rospy.loginfo("create Subscribers done, start loop...")
+        rospy.loginfo("*** Create Subscribers Done, Start Loop ***")
         rospy.spin()
     finally:
-        rospy.loginfo("*** all done ***")
+        rospy.loginfo("*** All Done ***")
         
 
 class MyViz(QWidget):
@@ -174,7 +208,7 @@ class MyViz(QWidget):
     def onCaptureButtonClick(self):
         global pose_queue, obs_queue, image_queue
         start_capture(pose_queue, obs_queue, image_queue)
-        print("handle capture done!")
+        print("Capture Done!")
         
         
     def onRedSignalButtonClick(self):
@@ -184,7 +218,7 @@ class MyViz(QWidget):
         traffic_light_detection.detections.append(traffic_light)
         global traffic_publisher
         traffic_publisher.publish(traffic_light_detection)
-        print('send red signal...')
+        print('*** Send RED Signal...')
     
         
     def onGreenSignalButtonClick(self):
@@ -194,7 +228,7 @@ class MyViz(QWidget):
         traffic_light_detection.detections.append(traffic_light)
         global traffic_publisher
         traffic_publisher.publish(traffic_light_detection)
-        print('send green signal...')
+        print('*** Send GREEN Signal...')
         
     
 ## Start the Application
@@ -212,3 +246,11 @@ if __name__ == '__main__':
     myviz.resize(200, 20)
     myviz.show()
     app.exec_()
+    global total_distance
+    print('### Total Distance - {} km ###'.format(total_distance / 1000.0))
+    # kill ros_main_thread
+    global ros_main_thread_pid
+    time.sleep(3)
+    os.kill(ros_main_thread_pid, signal.SIGTERM)
+    print('### kill ros_main_thread {} !!!'.format(ros_main_thread_pid))
+

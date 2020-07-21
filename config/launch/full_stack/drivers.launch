@@ -10,8 +10,8 @@
 
 
   <!-- cannet get car's control/status info  -->
-  <include file="$(find xpmotors)/launch/xpmotors.launch">  
-  </include>
+  <!-- <include file="$(find xpmotors)/launch/xpmotors.launch">  
+  </include> -->
 
 
   <!-- oxford gps imu  -->
