@@ -270,6 +270,7 @@ bool LidarTrack::Track() {
         traj.traj_.obj.id = traj.traj_.id;
         traj.traj_.obj.pose.x = traj.x_(0);
         traj.traj_.obj.pose.y = traj.x_(1);
+        traj.traj_.obj.pose.z = traj.traj_.obj.pose.z;
         traj.traj_.obj.velocity.x = traj.x_(2) * cos(traj.x_(3));
         traj.traj_.obj.velocity.y = traj.x_(2) * sin(traj.x_(3));
         out_objs_.push_back(traj.traj_.obj);

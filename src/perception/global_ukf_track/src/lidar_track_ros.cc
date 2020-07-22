@@ -246,26 +246,26 @@ void LidarTrackRos::objectsCallback(const autoware_msgs::DetectedObjectArray& in
 
   // tf broadcast from rslidar to map
   // TODO: zhcao
-  Eigen::Quaterniond q_ego_br(
-      input_odm_.pose.pose.orientation.w,
-      input_odm_.pose.pose.orientation.x,
-      input_odm_.pose.pose.orientation.y,
-      input_odm_.pose.pose.orientation.z);
-  Eigen::Vector3d pose_ego_br(
-          input_odm_.pose.pose.position.x,
-          input_odm_.pose.pose.position.y,
-          input_odm_.pose.pose.position.z);
+  // Eigen::Quaterniond q_ego_br(
+  //     input_odm_.pose.pose.orientation.w,
+  //     input_odm_.pose.pose.orientation.x,
+  //     input_odm_.pose.pose.orientation.y,
+  //     input_odm_.pose.pose.orientation.z);
+  // Eigen::Vector3d pose_ego_br(
+  //         input_odm_.pose.pose.position.x,
+  //         input_odm_.pose.pose.position.y,
+  //         input_odm_.pose.pose.position.z);
 
-  Eigen::Vector3d pose_car_global = pose_ego_br + q_ego_br.toRotationMatrix() * lidar2imu_translation_;
+  // Eigen::Vector3d pose_car_global = pose_ego_br + q_ego_br.toRotationMatrix() * lidar2imu_translation_;
 
-  static tf::TransformBroadcaster br;
-  tf::Transform transform;
-  Eigen::Vector3d eulerAngle = q_ego_br.matrix().eulerAngles(2,1,0);
-  transform.setOrigin(tf::Vector3(pose_car_global.x(),pose_car_global.y(), pose_car_global.z()));
-  tf::Quaternion q_br;
-  q_br.setRPY(eulerAngle[2], eulerAngle[1], eulerAngle[0]);
-  transform.setRotation(q_br);
-  br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "map", "rslidar"));
+  // static tf::TransformBroadcaster br;
+  // tf::Transform transform;
+  // Eigen::Vector3d eulerAngle = q_ego_br.matrix().eulerAngles(2,1,0);
+  // transform.setOrigin(tf::Vector3(pose_car_global.x(),pose_car_global.y(), pose_car_global.z()));
+  // tf::Quaternion q_br;
+  // q_br.setRPY(eulerAngle[2], eulerAngle[1], eulerAngle[0]);
+  // transform.setRotation(q_br);
+  // br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "map", "rslidar"));
 
   // std::cout << "obj " << detected_objects_output.objects.size() << std::endl;
   if (is_benchmark_) {
@@ -310,7 +310,7 @@ void LidarTrackRos::SetDetectedObjects(const autoware_msgs::DetectedObjectArray&
           input_odm_.pose.pose.orientation.x,
           input_odm_.pose.pose.orientation.y,
           input_odm_.pose.pose.orientation.z);
-#if 1
+#if 0
       Eigen::AngleAxisd rollAngle(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()));
       Eigen::AngleAxisd pitchAngle(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()));
       Eigen::AngleAxisd yawAngle(Eigen::AngleAxisd(-M_PI/2, Eigen::Vector3d::UnitZ())); 

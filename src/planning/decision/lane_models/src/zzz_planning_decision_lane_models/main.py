@@ -56,7 +56,7 @@ class MainDecision(object):
         
         trajectory, local_desired_speed = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
 
-        if local_desired_speed <= 1/3.6: # TODO: clean this
+        if local_desired_speed <= 0.1/3.6 and ego_speed > 3/3.6: # TODO: clean this
             local_desired_speed = 0.1/3.6
 
         msg = DecisionTrajectory()
