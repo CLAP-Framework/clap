@@ -41,44 +41,52 @@ roslib.load_manifest('rosbag')
 # args = parser.parse_args()
 
 # topic sub, pub
-auto_topic = '/xp/auto_state_ex'
-left_cam_topic = '/left_usb_cam/image_raw/compressed'
-ego_pose_topic = '/zzz/navigation/ego_pose'
-obs_topic  = '/zzz/perception/objects_tracked'
+auto_topic      = '/xp/auto_state_ex'
+ego_pose_topic  = '/zzz/navigation/ego_pose'
+obs_topic       = '/zzz/perception/objects_tracked'
+left_cam_topic  = '/left_usb_cam/image_raw/compressed'
+pcl_topic       = '/middle/rslidar_points'
 
-traffic_publisher = None
+traffic_publisher   = None
 traffic_light_topic = "/zzz/perception/traffic_lights"
 
 # 2-autopilot, 0-manually
 last_autostate = 0
 take_over_count = 0
-# bag record for 5 minutes
-window_seconds = 60 * 5
+# bag record for 2 minutes
+window_seconds = 60 * 2
 
 last_point = None
 total_distance = 0.0
 
+# autostate_mode
+auto_queue  = Queue(50 * window_seconds)
 # ego_pose hz 100
 pose_queue  = Queue(100 * window_seconds)
 # perception obstacle hz 10
 obs_queue   = Queue(10 * window_seconds)
 # usb cam hz 10
 image_queue = Queue(10 * window_seconds) 
+# pcl hz 10
+pcl_queue   = Queue(10 * window_seconds)
 
 
-def start_capture(pose_queue, obs_queue, image_queue):
+def start_capture(auto_queue, pose_queue, obs_queue, image_queue, pcl_queue):
     t = threading.Thread(
         target = write2bag, 
-        args = (pose_queue, obs_queue, image_queue))
+        args = (auto_queue, pose_queue, obs_queue, image_queue, pcl_queue))
     t.setDaemon(False)
     t.start()
     rospy.loginfo("*** launch thread record bag file ###")
     
 
-def write2bag(pose_queue, obs_queue, image_queue):
+def write2bag(auto_queue, pose_queue, obs_queue, image_queue, pcl_queue):
     filename = time.strftime("%Y-%m-%d_%H-%M-%S.bag", time.localtime()) 
     # time.sleep(60)
     bag = rosbag.Bag(filename, "w")
+    for msg, t in list(auto_queue.queue):
+        bag.write(auto_topic, msg, t)
+    
     for msg, t in list(pose_queue.queue):
         bag.write(ego_pose_topic, msg, t)
 
@@ -87,13 +95,16 @@ def write2bag(pose_queue, obs_queue, image_queue):
 
     for msg, t in list(image_queue.queue):
         bag.write(left_cam_topic, msg, t)
+        
+    for msg, t in list(pcl_queue.queue):
+        bag.write(pcl_topic, msg, t)
     
     bag.flush()
     bag.close()
     print('*** Bag Write {} Done! ***'.format(filename))
 
 
-
+auto_capture = False
 def autostate_callback(msg):
     global pose_queue
     global obs_queue
@@ -102,10 +113,17 @@ def autostate_callback(msg):
     
     # print('*** autostate {}, last {} ***'.format(msg.CurDriveMode, last_autostate))
     if msg.CurDriveMode == 0 and last_autostate == 2:
-        start_capture(pose_queue, obs_queue, image_queue)
+        global auto_capture
+        if auto_capture:
+            start_capture(auto_queue, pose_queue, obs_queue, image_queue)
         global take_over_count
         take_over_count = take_over_count + 1
     last_autostate = msg.CurDriveMode
+    # 
+    if not auto_queue.full():
+        auto_queue.put((msg, rospy.Time.now()))
+    else:
+        auto_queue.get()
 
 
 def ego_pose_callback(msg):
@@ -148,13 +166,23 @@ def image_callback(msg):
         image_queue.get()
     # print('++++ img len ', len(image_queue.queue))
 
+
+def pcl_callback(msg):
+    if not pcl_queue.full():
+        pcl_queue.put((msg, rospy.Time.now()))
+    else:
+        pcl_queue.get()
+    # print('++++ pcl len ', len(pcl_queue.queue))
+
+
 ros_main_thread_pid = -1
 def ros_main_thread():
+    
     rospy.loginfo("*** Ros Main Thread ID %d", os.getpid())
     global ros_main_thread_pid
     ros_main_thread_pid = os.getpid()
     
-    try:    
+    try:
         global auto_topic
         global ego_pose_topic
         global obs_topic
@@ -164,6 +192,8 @@ def ros_main_thread():
         rospy.Subscriber(left_cam_topic, CompressedImage, image_callback, queue_size=10)
         rospy.Subscriber(ego_pose_topic, RigidBodyStateStamped, ego_pose_callback, queue_size=100)
         rospy.Subscriber(obs_topic, TrackingBoxArray, obstacles_callback, queue_size=10)
+        rospy.Subscriber(pcl_topic, PointCloud2, pcl_callback, queue_size=10)
+        # rospy.Subscriber(pcl_topic, )
 
         global traffic_publisher
         traffic_publisher = rospy.Publisher(traffic_light_topic, DetectionBoxArray, queue_size=1)
@@ -180,9 +210,9 @@ class MyViz(QWidget):
         self.frame = rviz.VisualizationFrame()
         self.frame.initialize()
         self.setWindowTitle("bag-capture")
-        self.frame.setMenuBar( None )
-        self.frame.setStatusBar( None )
-        self.frame.setHideButtonVisibility( False )
+        self.frame.setMenuBar(None)
+        self.frame.setStatusBar(None)
+        self.frame.setHideButtonVisibility(False)
 
         self.manager = self.frame.getManager()
         ## Here we create the layout and other widgets in the usual Qt way.
@@ -206,9 +236,10 @@ class MyViz(QWidget):
 
     ## GUI button event handling
     def onCaptureButtonClick(self):
-        global pose_queue, obs_queue, image_queue
-        start_capture(pose_queue, obs_queue, image_queue)
-        print("Capture Done!")
+        global auto_queue, pose_queue, obs_queue, image_queue
+        start_capture(auto_queue, pose_queue, obs_queue, image_queue, pcl_queue)
+        # QMessageBox.about(self,"消息框标题","这是关于软件的说明",QMessageBox.Yes | QMessageBox.No)
+        print("*** Capture Done ***")
         
         
     def onRedSignalButtonClick(self):
@@ -246,11 +277,11 @@ if __name__ == '__main__':
     myviz.resize(200, 20)
     myviz.show()
     app.exec_()
-    global total_distance
-    print('### Total Distance - {} km ###'.format(total_distance / 1000.0))
+    global total_distance, take_over_count
+    print('### Total Distance - {} km, take over {} times'.format(total_distance / 1000.0, take_over_count))
     # kill ros_main_thread
     global ros_main_thread_pid
-    time.sleep(3)
+    time.sleep(5)
     os.kill(ros_main_thread_pid, signal.SIGTERM)
     print('### kill ros_main_thread {} !!!'.format(ros_main_thread_pid))
 

@@ -452,7 +452,7 @@ class Werling_planner(object):
 
             self.last_target_lane_index = target_lane_index
             
-        return self.lanes[int(target_lane_index)].trajectory_update(dynamic_map, max(10/3.6, desired_speed), ego_lane_idx)
+        return self.lanes[int(target_lane_index)].trajectory_update(dynamic_map, desired_speed, ego_lane_idx)
 
     def extend_path(self, path):
         

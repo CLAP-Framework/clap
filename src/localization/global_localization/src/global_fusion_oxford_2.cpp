@@ -304,7 +304,7 @@ public:
         new_odom.pose.pose.orientation.z = new_imu_msg.orientation.z;
         new_odom.pose.pose.position.x = Odom_msg->pose.pose.position.x - UTMX0;
         new_odom.pose.pose.position.y = Odom_msg->pose.pose.position.y - UTMY0;
-        new_odom.pose.pose.position.z = Odom_msg->pose.pose.position.z - alt0;
+        new_odom.pose.pose.position.z = 1.2; // Odom_msg->pose.pose.position.z - alt0;
         pub_odom.publish(new_odom);
 
         zzz_driver_msgs::RigidBodyStateStamped state;

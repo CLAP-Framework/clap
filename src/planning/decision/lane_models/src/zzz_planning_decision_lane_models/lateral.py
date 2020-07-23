@@ -140,11 +140,11 @@ class LaneUtility(object):
         Calculate the speed when close to the tail
         TODO(zhcao): should merge in Control model
         '''
-        if d <= 0:
+        if d <= 17:
             return 0.0
 
         dec = 0.4
-        available_speed = math.sqrt(2*dec*d) # m/s
+        available_speed = math.sqrt(2*dec*(d-10)) # m/s
         ego_v = get_speed(self.dynamic_map.ego_state)
         if available_speed > ego_v:
             return 10000

@@ -277,7 +277,7 @@ class Werling(object):
                 #     if tv < 0:
                 #         continue
 
-                tv = self.target_speed
+                tv = max(10/3.6, self.target_speed)
                 tfp = copy.deepcopy(fp)
                 lon_qp = quartic_polynomial(s0, c_speed, 0.0, tv, 0.0, Ti)
 
