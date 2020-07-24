@@ -418,7 +418,10 @@ void icvCarlaControlNode::publishVehicleinstruction(double steer, double throttl
 #ifdef __ZZZ_SURPPORT__
 void icvCarlaControlNode::callback_Path(const zzz_planning_msgs::DecisionTrajectory &msg)
 {
-  zz.setWaypoints(msg.trajectory); //轨迹获取
+  zz.setWaypoints(msg.trajectory); 
+  // limit minist speed
+  // if ( msg.desired_speed <= 0.1/3.6 && XpPoint_rec.speed_rec > 3/3.6)
+  //    msg.desired_speed = 0.1/3.6;
   speed_plan_desir = msg.desired_speed;
   callback_Path_flag = true;
   ROS_DEBUG("I hear pointsize %ld",msg.trajectory.poses.size());

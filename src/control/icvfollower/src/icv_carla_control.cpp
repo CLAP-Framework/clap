@@ -139,12 +139,15 @@ void icvCarlaControl::run_follower(double *out_steerangle)
             //TODO::if ~~duang~~duang~~~~~ maybe need limit changrate of steer
             _dis_pre_max = 40;
             feedforward_K = 1;
+            pre_K = 1;
         }
         else
         {
             // delta_f_old = delta_f_old;       
             *out_steerangle = delta_f;
-            _dis_pre_max = 0.3;
+            _dis_pre_max = car_finalpoints_dis; //0.3
+            feedforward_K = 0;
+            pre_K = 0.2;
         }       
     }
     else
@@ -691,20 +694,7 @@ void icvCarlaControl::selectCoefficient(double v_s, double kappa_s, float *G)
         *G = _p8_post;
     }
 
-    //Curvature feedforward parameter selection
-    if (v_s < 0.01)
-    {
-        pre_K = 1;
-        // feedforward_K = 1;
-    }
-    else if (kappa_s < 30)
-    {
-        pre_K = 1;
-    }
-    else
-    {
-        pre_K = 1;
-    }
+
 }
 
 void icvCarlaControl::calcYaw(vector<double> pathx, vector<double> pathy, double *yawangle)

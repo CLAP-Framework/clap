@@ -324,6 +324,22 @@ public:
         Waypoints_size = _path_x.size();
         waypoints_flag = true;
     }
+    //----------------------------------------------------------------
+    void add_waypoint_path()
+    {
+        float dx = 0;
+        float dy = 0;
+        float final_pathpoint_yaw = 0;
+        if(Waypoints_size > 2)
+            final_pathpoint_yaw =atan2((_path_y[Waypoints_size-1]-_path_y[Waypoints_size-2]),(_path_x[Waypoints_size-1]-_path_x[Waypoints_size-2]));
+        for (int i = 1; i <100;i++)
+        {
+            dx = _path_x[Waypoints_size-1]+0.02*i*cos(final_pathpoint_yaw);
+            dy = _path_y[Waypoints_size-1]+0.02*i*sin(final_pathpoint_yaw);
+            _path_x.push_back(dx);
+            _path_y.push_back(dy);   
+        }
+    }
     /*out preview point show in rviz*/
     void sendXYpre(double *x, double *y, float *error)
     {
