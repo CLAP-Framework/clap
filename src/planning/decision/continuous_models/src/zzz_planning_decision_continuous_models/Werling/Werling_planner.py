@@ -107,6 +107,7 @@ class Werling(object):
             generated_trajectory = self.frenet_optimal_planning(self.csp, self.c_speed, start_state)
 
             if generated_trajectory is not None:
+                k = min(len(generated_trajectory.s_d),5)-1
                 desired_speed = generated_trajectory.s_d[-1]
                 trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
                 trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori,1)
@@ -125,9 +126,9 @@ class Werling(object):
                 desired_speed = 0
                 rospy.logdebug("----> Werling: Output ref path")
             
-            if desired_speed <= 0.1/3.6:
+            if desired_speed < 0.1/3.6:
                 desired_speed = 0.1/3.6
-        
+            
             msg = DecisionTrajectory()
             msg.trajectory = convert_ndarray_to_pathmsg(dense_polyline2d(trajectory_array,0.2))
             msg.desired_speed = self.ref_tail_speed(dynamic_map,desired_speed)
@@ -201,7 +202,9 @@ class Werling(object):
             start_state.c_d = self.last_trajectory_rule.d[bestpoint]
             start_state.c_d_d = self.last_trajectory_rule.d_d[bestpoint]
             start_state.c_d_dd = self.last_trajectory_rule.d_dd[bestpoint]
-            self.c_speed = self.last_trajectory_rule.s_d[bestpoint]
+            # self.c_speed = self.last_trajectory_rule.s_d[bestpoint]
+            ego_state = dynamic_map.ego_state
+            self.c_speed = get_speed(ego_state) 
         else:
             ego_state = dynamic_map.ego_state
             self.c_speed = get_speed(ego_state)       # current speed [m/s]

@@ -239,8 +239,8 @@ class NearestLocator:
 
             for vehicle_idx, vehicle in enumerate(tstates.surrounding_object_list):
                 # TODO: separate vehicle and other objects?
-                if vehicle.cls.classid == vehicle.cls.HUMAN and ego_v < 20/3.6:
-                    continue
+                # if vehicle.cls.classid == vehicle.cls.HUMAN and ego_v < 20/3.6:
+                #     continue
                 dist_list = np.array([dist_from_point_to_polyline2d(
                     vehicle.state.pose.pose.position.x,
                     vehicle.state.pose.pose.position.y,
@@ -357,8 +357,23 @@ class NearestLocator:
         # Now we set the multilane speed limit as 40 km/h.
         total_lane_num = len(tstates.static_map.lanes)
         for i in range(total_lane_num):
-            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = tstates.static_map.lanes[i].speed_limit
+            speed_limit = tstates.static_map.lanes[i].speed_limit
+            d = tstates.dynamic_map.mmap.distance_to_junction
+            available_speed = self.traffic_speed_limit(d, tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state == Lane.STOP_STATE_THRU)
+            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = max(0, min(speed_limit,available_speed))
+            
+    def traffic_speed_limit(self, d, traffic_light_thru = True, d_thres = 5, dec = 0.4):
 
+        if traffic_light_thru:
+            return 10000
+
+        if d < d_thres:
+            return 0
+        
+        available_speed = math.sqrt(2*dec*(d - d_thres)) # m/s
+        
+        return available_speed*3.6
+      
     # TODO(zyxin): Move this function into separate prediction module
     def predict_vehicle_behavior(self, vehicle, tstates, lane_change_thres = 0.2):
         '''

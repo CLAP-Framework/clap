@@ -40,7 +40,7 @@ Controlparam:
  _smoothsteernum: 6 #方向盘输出平滑个数
  point_distancemax: 2 #路径点间距检测
  car_path_dis: 20 #车辆当前位置和路径起点的最大值距离
- path_size_min: 10 #判断路径长度的最小阈值
+ path_size_min: 5 #判断路径长度的最小阈值
  _d_0: 1.957 #起始距离.Yamlparam
  _d_dis_min: 2.5  #侧向最小预瞄距离   
  _d_dis_max: 40   #侧向最大预瞄距离

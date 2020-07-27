@@ -132,9 +132,8 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${ZZZ_ROOT}/devel/include
   /usr/include/eigen3
-  ~/follow_carla/devel/include/
-  ~/follow_carla/src/icvfollower/include/carla_msgs
-  ~/follow_carla/src/icvfollower/include/
+  include/carla_msgs
+  include/
 )
 
 ## Declare a C++ library
