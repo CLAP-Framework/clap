@@ -41,7 +41,8 @@ class ShougangMap(object):
         road4 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road4.txt',delimiter=',')
         road5 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road5.txt',delimiter=',')
         road6 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road6.txt',delimiter=',')
-        road7 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road7.txt',delimiter=',')
+        road7_0 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road7_0.txt',delimiter=',')
+        road7_1 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road7_1.txt',delimiter=',')
 
         road8_0 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road8_0.txt',delimiter=',')
         road8_1 = np.loadtxt(os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/road8_1.txt',delimiter=',')
@@ -54,11 +55,12 @@ class ShougangMap(object):
         self._lanes.append(dense_polyline2d(road4,1))
         self._lanes.append(dense_polyline2d(road5,1))
         self._lanes.append(dense_polyline2d(road6,1))
-        self._lanes.append(dense_polyline2d(road7,1))
+        self._lanes.append(dense_polyline2d(road7_0,1))
         self._lanes.append(dense_polyline2d(road8_0,1))
         self._lanes.append(dense_polyline2d(road9_0,1))
 
         self.road1_1 = dense_polyline2d(road1_1,1)
+        self.road7_1 = dense_polyline2d(road7_1,1)
         self.road8_1 = dense_polyline2d(road8_1,1)
         self.road9_1 = dense_polyline2d(road9_1,1)
 
@@ -138,6 +140,9 @@ class ShougangMap(object):
         if road_id == (1-1):
             self.static_local_map.lanes.append(self.get_lane(self.road1_1))
             self.static_local_map.target_lane_index = 1
+        
+        if road_id == (7-1):
+            self.static_local_map.lanes.append(self.get_lane(self.road7_1))
 
         if road_id == (8-1):
             self.static_local_map.lanes.append(self.get_lane(self.road8_1))

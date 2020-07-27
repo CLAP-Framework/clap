@@ -13,6 +13,7 @@ import rosbag
 from sensor_msgs.msg import Image, CompressedImage
 from sensor_msgs.msg import PointCloud2
 from cv_bridge import CvBridgeError, CvBridge
+from visualization_msgs.msg import Marker, MarkerArray
 from queue import Queue
 import argparse
 import utm
@@ -47,6 +48,17 @@ obs_topic       = '/zzz/perception/objects_tracked'
 left_cam_topic  = '/left_usb_cam/image_raw/compressed'
 pcl_topic       = '/middle/rslidar_points'
 
+ego_marker_topic   = '/zzz/cognition/ego_markerarray'
+lanes_marker_topic = '/zzz/cognition/lanes_markerarray'
+next_drivable_area_marker_topic  = '/zzz/cognition/next_drivable_area_markerarray'
+next_lanes_boundary_marker_topic = '/zzz/cognition/next_lanes_boundary_markerarray'
+next_lanes_marker_topic = '/zzz/cognition/next_lanes_markerarray'
+obstacles_label_marker_topic = '/zzz/cognition/obstacles_label_markerarray'
+obstacles_marker_topic    = '/zzz/cognition/obstacles_markerarray'
+sent_ref_path_topic       = '/zzz/cognition/sent_ref_path'
+all_trajectory_path_topic = '/zzz/planning/all_trajectory_path'
+
+
 traffic_publisher   = None
 traffic_light_topic = "/zzz/perception/traffic_lights"
 
@@ -69,6 +81,17 @@ obs_queue   = Queue(10 * window_seconds)
 image_queue = Queue(10 * window_seconds) 
 # pcl hz 10
 pcl_queue   = Queue(10 * window_seconds)
+
+# all marker topics
+ego_marker_queue   = Queue(5 * window_seconds)
+lanes_marker_queue = Queue(5 * window_seconds)
+next_drivable_area_marker_queue  = Queue(5 * window_seconds)
+next_lanes_boundary_marker_queue = Queue(5 * window_seconds)
+next_lanes_marker_queue      = Queue(5 * window_seconds)
+obstacles_label_marker_queue = Queue(5 * window_seconds)
+obstacles_marker_queue       = Queue(5 * window_seconds)
+sent_ref_path_queue          = Queue(20 * window_seconds)
+all_trajectory_path_queue    = Queue(5  * window_seconds)
 
 
 def start_capture(auto_queue, pose_queue, obs_queue, image_queue, pcl_queue):
@@ -193,6 +216,7 @@ def ros_main_thread():
         rospy.Subscriber(ego_pose_topic, RigidBodyStateStamped, ego_pose_callback, queue_size=100)
         rospy.Subscriber(obs_topic, TrackingBoxArray, obstacles_callback, queue_size=10)
         rospy.Subscriber(pcl_topic, PointCloud2, pcl_callback, queue_size=10)
+        # rospy.Subscriber(ego_marker_topic, )
         # rospy.Subscriber(pcl_topic, )
 
         global traffic_publisher
@@ -277,8 +301,8 @@ if __name__ == '__main__':
     myviz.resize(200, 20)
     myviz.show()
     app.exec_()
-    global total_distance
-    print('### Total Distance - {} km ###'.format(total_distance / 1000.0))
+    global total_distance, take_over_count
+    print('### Total Distance - {} km, take over {} times. ###'.format(total_distance / 1000.0, take_over_count))
     # kill ros_main_thread
     global ros_main_thread_pid
     time.sleep(3)

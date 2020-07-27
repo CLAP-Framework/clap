@@ -198,7 +198,9 @@ class Werling(object):
 
         # Speed adjustment
         speed_adjust_thres = 5/3.6
-        speed_low_bound = low_resolution_speed
+        # speed_low_bound = low_resolution_speed
+        # speed_high_bound = max(low_resolution_speed, speed_adjust_thres)
+        speed_low_bound = max(low_resolution_speed, 1/3.6)
         speed_high_bound = max(low_resolution_speed, speed_adjust_thres)
         speed_sample_d = 1/3.6 # m/s
 
@@ -211,7 +213,7 @@ class Werling(object):
 
         if fp_available:
             rospy.logdebug("----> Lane_Werling: Successful Planning (speed adjustment)")
-            return generated_fp, generated_trajectory.s_d[-1]
+            return generated_fp, generated_fp.s_d[-1]
             
         rospy.logdebug("----> Lane_Werling: Fail to find a solution")
         return best_free_fp, 0
