@@ -12,6 +12,7 @@ import rospy
 import rosbag
 from sensor_msgs.msg import Image, CompressedImage
 from sensor_msgs.msg import PointCloud2
+from nav_msgs.msg import Path
 from cv_bridge import CvBridgeError, CvBridge
 from visualization_msgs.msg import Marker, MarkerArray
 from queue import Queue
@@ -240,8 +241,7 @@ def sent_ref_path_callback(msg):
         sent_ref_path_queue.put((msg, rospy.Time.now()))
     else:
         sent_ref_path_queue.get()
-    print('###################### sent ref path ')
-
+    
 
 
 def all_trajectory_path_callback(msg):
@@ -299,11 +299,11 @@ def ros_main_thread():
         rospy.Subscriber(lanes_marker_topic, MarkerArray, lanes_marker_callback, queue_size=5)
         rospy.Subscriber(obstacles_marker_topic, MarkerArray, obstacles_marker_callback, queue_size=10)
 
-        rospy.Subscriber(sent_ref_path_topic, MarkerArray, sent_ref_path_callback, queue_size=20)
+        rospy.Subscriber(sent_ref_path_topic, Path, sent_ref_path_callback, queue_size=20)
         
         rospy.Subscriber(all_trajectory_path_topic, MarkerArray, all_trajectory_path_callback, queue_size=5)
-        rospy.Subscriber(decision_trajectory_path_topic, MarkerArray, decision_trajectory_path_callback, queue_size=5)
-        rospy.Subscriber(prepoint_topic, MarkerArray, prepoint_callback, queue_size=20)
+        rospy.Subscriber(decision_trajectory_path_topic, Path, decision_trajectory_path_callback, queue_size=5)
+        rospy.Subscriber(prepoint_topic, Marker, prepoint_callback, queue_size=20)
         rospy.Subscriber(collision_topic, MarkerArray, collision_callback, queue_size=5)
 
         global traffic_publisher
