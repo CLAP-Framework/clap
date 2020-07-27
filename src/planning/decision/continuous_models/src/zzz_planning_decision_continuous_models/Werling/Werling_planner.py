@@ -126,6 +126,8 @@ class Werling(object):
                 desired_speed = 0
                 rospy.logdebug("----> Werling: Output ref path")
             
+            if desired_speed < 0.1/3.6:
+                desired_speed = 0.1/3.6
             
             msg = DecisionTrajectory()
             msg.trajectory = convert_ndarray_to_pathmsg(dense_polyline2d(trajectory_array,0.2))
@@ -200,7 +202,9 @@ class Werling(object):
             start_state.c_d = self.last_trajectory_rule.d[bestpoint]
             start_state.c_d_d = self.last_trajectory_rule.d_d[bestpoint]
             start_state.c_d_dd = self.last_trajectory_rule.d_dd[bestpoint]
-            self.c_speed = self.last_trajectory_rule.s_d[bestpoint]
+            # self.c_speed = self.last_trajectory_rule.s_d[bestpoint]
+            ego_state = dynamic_map.ego_state
+            self.c_speed = get_speed(ego_state) 
         else:
             ego_state = dynamic_map.ego_state
             self.c_speed = get_speed(ego_state)       # current speed [m/s]
