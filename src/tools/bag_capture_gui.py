@@ -19,6 +19,7 @@ from queue import Queue
 import argparse
 import utm
 import numpy as np
+from tf2_msgs.msg import TFMessage 
 
 from python_qt_binding.QtGui import *
 from python_qt_binding.QtCore import *
@@ -55,6 +56,7 @@ all_trajectory_path_topic = '/zzz/planning/all_trajectory_path'
 decision_trajectory_path_topic = '/zzz/planning/decision_trajectory_path'
 prepoint_topic = '/pre_point'
 collision_topic = '/zzz/planning/collision_circle'
+tf_topic = '/tf'
 
 
 traffic_publisher = None
@@ -65,7 +67,7 @@ last_autostate  = 0
 take_over_count = 0
 
 # bag record default 1 minutes
-window_seconds = 60
+window_seconds = 60*1.5
 
 last_point = None
 total_distance = 0.0
@@ -97,6 +99,8 @@ decision_trajectory_path_queue = Queue(5 * window_seconds)
 prepoint_queue = Queue(20 * window_seconds)
 # 5 hz
 collision_queue = Queue(5 * window_seconds)
+# 100 hz
+tf_queue = Queue(100 * window_seconds)
 
 
 global_topic_queue_pairs = [
@@ -112,7 +116,8 @@ global_topic_queue_pairs = [
     (all_trajectory_path_topic, all_trajectory_path_queue),
     (decision_trajectory_path_topic, decision_trajectory_path_queue),
     (prepoint_topic, prepoint_queue),
-    (collision_topic, collision_queue)]
+    (collision_topic, collision_queue), 
+    (tf_topic, tf_queue)]
 
 
 def start_capture(topic_queue_pairs):
@@ -208,6 +213,7 @@ def pcl_callback(msg):
     # print('++++ pcl len ', len(pcl_queue.queue))
 
 
+
 def ego_marker_callback(msg):
     global ego_marker_queue
     if not ego_marker_queue.full():
@@ -253,12 +259,14 @@ def all_trajectory_path_callback(msg):
 
 
 
+
 def decision_trajectory_path_callback(msg):
     global decision_trajectory_path_queue
     if not decision_trajectory_path_queue.full():
         decision_trajectory_path_queue.put((msg, rospy.Time.now()))
     else:
         decision_trajectory_path_queue.get()
+
 
 
     
@@ -277,6 +285,14 @@ def collision_callback(msg):
         collision_queue.put((msg, rospy.Time.now()))
     else:
         collision_queue.get()
+
+
+def tf_callback(msg):
+    global tf_queue
+    if not tf_queue.full():
+        tf_queue.put((msg, rospy.Time.now()))
+    else:
+        tf_queue.get()
 
 
 
@@ -305,7 +321,7 @@ def ros_main_thread():
         rospy.Subscriber(decision_trajectory_path_topic, Path, decision_trajectory_path_callback, queue_size=5)
         rospy.Subscriber(prepoint_topic, Marker, prepoint_callback, queue_size=20)
         rospy.Subscriber(collision_topic, MarkerArray, collision_callback, queue_size=5)
-
+        rospy.Subscriber(tf_topic, TFMessage, tf_callback, queue_size=100)
         global traffic_publisher
         traffic_publisher = rospy.Publisher(traffic_light_topic, DetectionBoxArray, queue_size=1)
 
