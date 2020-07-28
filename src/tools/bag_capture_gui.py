@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import datetime
 import threading
 import copy
 import signal
@@ -297,6 +298,7 @@ def ros_main_thread():
         
 
 class MyViz(QWidget):
+    
     def __init__(self):
         QWidget.__init__(self)
         self.frame = rviz.VisualizationFrame()
@@ -305,32 +307,67 @@ class MyViz(QWidget):
         self.frame.setMenuBar(None)
         self.frame.setStatusBar(None)
         self.frame.setHideButtonVisibility(False)
+        self.statusBar = QStatusBar()
+        # record number of current bag
+        self.number_of_current_bag = 1
 
         self.manager = self.frame.getManager()
         ## Here we create the layout and other widgets in the usual Qt way.
         layout = QVBoxLayout()        
-        h_layout = QHBoxLayout()
+        save_layout = QHBoxLayout()
+        traffic_signal_layout = QHBoxLayout()
         
-        capture_button = QPushButton("Capture")
-        capture_button.clicked.connect(self.onCaptureButtonClick)
-        h_layout.addWidget(capture_button)
+        capture_question_button = QPushButton("BAD BAG")
+        capture_question_button.setFixedSize(150,40)
+        capture_question_button.setStyleSheet("color:red")
+        capture_question_button.clicked.connect(self.onCaptureQuestionButtonClick)
+        save_layout.addWidget(capture_question_button)
+        
+        capture_showcase_button = QPushButton("GOOD BAG")
+        capture_showcase_button.setFixedSize(100,40)
+        capture_showcase_button.setStyleSheet("color:green")
+        capture_showcase_button.clicked.connect(self.onCaptureShowcaseButtonClick)
+        save_layout.addWidget(capture_showcase_button)
         
         red_button = QPushButton("RedSignal")
+        red_button.setStyleSheet("background:red")
         red_button.clicked.connect( self.onRedSignalButtonClick)
-        h_layout.addWidget(red_button)
+        traffic_signal_layout.addWidget(red_button)
         
         green_button = QPushButton("GreenSignal")
+        green_button.setStyleSheet("background:green")
         green_button.clicked.connect(self.onGreenSignalButtonClick)
-        h_layout.addWidget(green_button)
+        traffic_signal_layout.addWidget(green_button)
         
-        layout.addLayout(h_layout)
+        # ADD a case description 
+        self.case_description = QTextEdit()
+        layout.addWidget(self.case_description)
+        
+        layout.addLayout(save_layout)
+        layout.addLayout(traffic_signal_layout)
+        layout.addWidget(self.statusBar)
         self.setLayout(layout)
 
+        self.statusBar.showMessage('Initialize Successfully')
     ## GUI button event handling
-    def onCaptureButtonClick(self):
+    def onCaptureQuestionButtonClick(self):
         global global_topic_queue_pairs
         start_capture(global_topic_queue_pairs)
-        # QMessageBox.about(self,"消息框标题","这是关于软件的说明",QMessageBox.Yes | QMessageBox.No)
+        with open('Record.txt', 'a+') as f:
+            f.write('BAG NO.{0} | Question bag | {1}'.format(str(self.number_of_current_bag), self.case_description.toPlainText()) + '\n')
+        self.case_description.clear()
+        self.statusBar.showMessage('No.{0} bag captured'.format(str(self.number_of_current_bag)), 5000)
+        self.number_of_current_bag += 1
+        print("### Capture Done! ###")
+    
+    def onCaptureShowcaseButtonClick(self):
+        global global_topic_queue_pairs
+        start_capture(global_topic_queue_pairs)
+        with open('Record.txt', 'a+') as f:
+            f.write('BAG NO.{0} | ShowCase bag | {1}'.format(str(self.number_of_current_bag), self.case_description.toPlainText()) + '\n')
+        self.case_description.clear()
+        self.statusBar.showMessage('No.{0} bag captured'.format(str(self.number_of_current_bag)), 5000)
+        self.number_of_current_bag += 1
         print("### Capture Done! ###")
         
         
@@ -363,15 +400,24 @@ if __name__ == '__main__':
     ros_thread.setDaemon(True)
     ros_thread.start()
     
+    # open a new text file to record testing result
+    with open('Record.txt', 'w+') as f:
+        f.write('Today is :{0}\n'.format(datetime.date.today()))
+        f.write('This testing begin from:{0}\n'.format(datetime.datetime.now().strftime('%H:%M:%S')))
+        f.write('---------------------------\n')
     # qt-gui
     app = QApplication(sys.argv)
     myviz = MyViz()
-    myviz.resize(200, 20)
+    myviz.resize(260, 300)
     myviz.show()
     app.exec_()
     global total_distance, take_over_count
     print('### Total Distance - {} km, Take over {} times ###'.format(total_distance / 1000.0, take_over_count))
     # kill ros_main_thread
+    with open('Record.txt', 'a+') as f:
+        f.write('---------------------------\n')
+        f.write('This testing end at:{0}\n'.format(datetime.datetime.now().strftime('%H:%M:%S')))
+        f.write('Today we droved {}km, Take over {} times'.format(total_distance / 1000.0, take_over_count))
     global ros_main_thread_pid
     time.sleep(5)
     os.kill(ros_main_thread_pid, signal.SIGTERM)
