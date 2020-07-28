@@ -42,7 +42,20 @@ roslib.load_manifest('rosbag')
 # parser.add_argument('--window_seconds', nargs=1, help='max time offset (sec) to correct.', default='120', type=int)
 # args = parser.parse_args()
 
-# topic sub, pub
+traffic_publisher = None
+traffic_light_topic = "/zzz/perception/traffic_lights"
+
+# 2-autopilot, 0-manually
+last_autostate  = 0
+take_over_count = 0
+
+# bag record default 1 minutes
+window_seconds = 60*1.5
+
+last_point = None
+total_distance = 0.0
+
+# all topics
 auto_topic = '/xp/auto_state_ex'
 ego_pose_topic  = '/zzz/navigation/ego_pose'
 obs_topic = '/zzz/perception/objects_tracked'
@@ -58,21 +71,7 @@ prepoint_topic = '/pre_point'
 collision_topic = '/zzz/planning/collision_circle'
 tf_topic = '/tf'
 
-
-traffic_publisher = None
-traffic_light_topic = "/zzz/perception/traffic_lights"
-
-# 2-autopilot, 0-manually
-last_autostate  = 0
-take_over_count = 0
-
-# bag record default 1 minutes
-window_seconds = 60*1.5
-
-last_point = None
-total_distance = 0.0
-
-# all topics
+# queue
 # autostate_mode, 50 hz
 auto_queue = Queue(50 * window_seconds)
 # ego_pose hz 100
@@ -80,7 +79,7 @@ pose_queue = Queue(100 * window_seconds)
 # perception obstacle hz 10
 obs_queue = Queue(10 * window_seconds)
 # usb cam hz 10
-image_queue = Queue(10 * window_seconds) 
+image_queue = Queue(10 * window_seconds)
 # pcl hz 10
 pcl_queue = Queue(10 * window_seconds)
 # 5 hz
@@ -103,23 +102,6 @@ collision_queue = Queue(5 * window_seconds)
 tf_queue = Queue(100 * window_seconds)
 
 
-global_topic_queue_pairs = [
-    (auto_topic, auto_queue),
-    (ego_pose_topic, pose_queue), 
-    (obs_topic, obs_queue),
-    (left_cam_topic, image_queue),
-    (pcl_topic, pcl_queue),
-    (ego_marker_topic, ego_marker_queue),
-    (lanes_marker_topic, lanes_marker_queue),
-    (obstacles_marker_topic, obstacles_marker_queue),
-    (sent_ref_path_topic, sent_ref_path_queue),
-    (all_trajectory_path_topic, all_trajectory_path_queue),
-    (decision_trajectory_path_topic, decision_trajectory_path_queue),
-    (prepoint_topic, prepoint_queue),
-    (collision_topic, collision_queue), 
-    (tf_topic, tf_queue)]
-
-
 def start_capture(topic_queue_pairs):
     t = threading.Thread(target=write2bag, args=(topic_queue_pairs, ))
     t.setDaemon(False)
@@ -132,7 +114,7 @@ def write2bag(topic_queue_pairs):
     file_name = time.strftime("%Y-%m-%d_%H-%M-%S.bag", time.localtime()) 
     # time.sleep(60)
     bag = rosbag.Bag(file_name, "w")
-    for topic, que in topic_queue_pairs:
+    for topic, que, _, _, _ in topic_queue_pairs:
         for msg, t in list(que.queue):
             bag.write(topic, msg, t)
     
@@ -145,7 +127,6 @@ auto_capture = False
 def autostate_callback(msg):
     global pose_queue, obs_queue, image_queue, last_autostate
     
-    # print('*** autostate {}, last {} ***'.format(msg.CurDriveMode, last_autostate))
     if msg.CurDriveMode == 0 and last_autostate == 2:
         global auto_capture, global_topic_queue_pairs, take_over_count
         if auto_capture:
@@ -154,12 +135,10 @@ def autostate_callback(msg):
         take_over_count = take_over_count + 1
 
     last_autostate = msg.CurDriveMode
-    # 
     if not auto_queue.full():
         auto_queue.put((msg, rospy.Time.now()))
     else:
         auto_queue.get()
-
 
 
 def ego_pose_callback(msg):
@@ -177,14 +156,11 @@ def ego_pose_callback(msg):
     vb = np.array([point[0], point[1]])
     va = np.array([last_point[0], last_point[1]])
     gap = np.linalg.norm(vb - va)
-    # print('*** gap {} ***'.format(gap))
     last_point = point
     
     global total_distance, last_autostate
     if last_autostate == 2:
         total_distance = total_distance + gap
-    # print('++++ ego len ', len(pose_queue.queue))
-
 
 
 def obstacles_callback(msg):
@@ -192,8 +168,6 @@ def obstacles_callback(msg):
         obs_queue.put((msg, rospy.Time.now()))
     else:
         obs_queue.get()
-    # print('++++ obs len ', len(obs_queue.queue))
-
 
 
 def image_callback(msg):
@@ -201,8 +175,6 @@ def image_callback(msg):
         image_queue.put((msg, rospy.Time.now()))
     else:
         image_queue.get()
-    # print('++++ img len ', len(image_queue.queue))
-
 
 
 def pcl_callback(msg):
@@ -210,8 +182,6 @@ def pcl_callback(msg):
         pcl_queue.put((msg, rospy.Time.now()))
     else:
         pcl_queue.get()
-    # print('++++ pcl len ', len(pcl_queue.queue))
-
 
 
 def ego_marker_callback(msg):
@@ -222,14 +192,12 @@ def ego_marker_callback(msg):
         ego_marker_queue.get()
 
 
-
 def lanes_marker_callback(msg):
     global lanes_marker_queue
     if not lanes_marker_queue.full():
         lanes_marker_queue.put((msg, rospy.Time.now()))
     else:
         lanes_marker_queue.get()
-
 
 
 def obstacles_marker_callback(msg):
@@ -240,7 +208,6 @@ def obstacles_marker_callback(msg):
         obstacles_marker_queue.get()
 
 
-
 def sent_ref_path_callback(msg):
     global sent_ref_path_queue
     if not sent_ref_path_queue.full():
@@ -249,15 +216,12 @@ def sent_ref_path_callback(msg):
         sent_ref_path_queue.get()
     
 
-
 def all_trajectory_path_callback(msg):
     global all_trajectory_path_queue
     if not all_trajectory_path_queue.full():
         all_trajectory_path_queue.put((msg, rospy.Time.now()))
     else:
         all_trajectory_path_queue.get()
-
-
 
 
 def decision_trajectory_path_callback(msg):
@@ -268,15 +232,12 @@ def decision_trajectory_path_callback(msg):
         decision_trajectory_path_queue.get()
 
 
-
-    
 def prepoint_callback(msg):
     global prepoint_queue
     if not prepoint_queue.full():
         prepoint_queue.put((msg, rospy.Time.now()))
     else:
         prepoint_queue.get()
-
 
 
 def collision_callback(msg):
@@ -295,6 +256,23 @@ def tf_callback(msg):
         tf_queue.get()
 
 
+global_topic_queue_pairs = [
+    ###  (topic, queue, class, callback, hz)
+    (auto_topic, auto_queue, AutoStateEx, autostate_callback, 20),
+    (ego_pose_topic, pose_queue, RigidBodyStateStamped, ego_pose_callback, 100), 
+    (obs_topic, obs_queue, TrackingBoxArray, obstacles_callback, 10),
+    (left_cam_topic, image_queue, CompressedImage, image_callback, 10),
+    (pcl_topic, pcl_queue, PointCloud2, pcl_callback, 10),
+    (ego_marker_topic, ego_marker_queue, MarkerArray, ego_marker_callback, 5),
+    (lanes_marker_topic, lanes_marker_queue, MarkerArray, lanes_marker_callback, 5),
+    (obstacles_marker_topic, obstacles_marker_queue, MarkerArray, obstacles_marker_callback, 10),
+    (sent_ref_path_topic, sent_ref_path_queue, Path, sent_ref_path_callback, 20),
+    (all_trajectory_path_topic, all_trajectory_path_queue, MarkerArray, all_trajectory_path_callback, 5),
+    (decision_trajectory_path_topic, decision_trajectory_path_queue, Path, decision_trajectory_path_callback, 5),
+    (prepoint_topic, prepoint_queue, TFMessage, tf_callback, 100),
+    (collision_topic, collision_queue, MarkerArray, collision_callback, 5), 
+    (tf_topic, tf_queue, TFMessage, tf_callback, 100)]
+
 
 ros_main_thread_pid = -1
 
@@ -305,32 +283,18 @@ def ros_main_thread():
     ros_main_thread_pid = os.getpid()
     
     try:
-        rospy.Subscriber(auto_topic, AutoStateEx, autostate_callback, queue_size=20)
-        rospy.Subscriber(left_cam_topic, CompressedImage, image_callback, queue_size=10)
-        rospy.Subscriber(ego_pose_topic, RigidBodyStateStamped, ego_pose_callback, queue_size=100)
-        rospy.Subscriber(obs_topic, TrackingBoxArray, obstacles_callback, queue_size=10)
-        rospy.Subscriber(pcl_topic, PointCloud2, pcl_callback, queue_size=10)
-
-        rospy.Subscriber(ego_marker_topic, MarkerArray, ego_marker_callback, queue_size=5)
-        rospy.Subscriber(lanes_marker_topic, MarkerArray, lanes_marker_callback, queue_size=5)
-        rospy.Subscriber(obstacles_marker_topic, MarkerArray, obstacles_marker_callback, queue_size=10)
-
-        rospy.Subscriber(sent_ref_path_topic, Path, sent_ref_path_callback, queue_size=20)
+        # batch create sub
+        for t, _, cls, cb, hz in global_topic_queue_pairs:
+            rospy.Subscriber(t, cls, cb, queue_size=hz)
         
-        rospy.Subscriber(all_trajectory_path_topic, MarkerArray, all_trajectory_path_callback, queue_size=5)
-        rospy.Subscriber(decision_trajectory_path_topic, Path, decision_trajectory_path_callback, queue_size=5)
-        rospy.Subscriber(prepoint_topic, Marker, prepoint_callback, queue_size=20)
-        rospy.Subscriber(collision_topic, MarkerArray, collision_callback, queue_size=5)
-        rospy.Subscriber(tf_topic, TFMessage, tf_callback, queue_size=100)
         global traffic_publisher
-        traffic_publisher = rospy.Publisher(traffic_light_topic, DetectionBoxArray, queue_size=1)
+        traffic_publisher = rospy.Publisher(traffic_light_topic, DetectionBoxArray, queue_size=10)
 
         rospy.loginfo("*** Create Subscribers Done, Start Loop ***")
         rospy.spin()
     finally:
         rospy.loginfo("*** All Done ***")
         
-
 
 class MyViz(QWidget):
     def __init__(self):
