@@ -13,6 +13,7 @@ def default_msg(msg_type):
         msg.stop_distance = float('inf')
     elif msg_type == MapState:
         msg = MapState()
+        msg.jmap.distance_to_lanes = float('inf')
     elif msg_type == RoadObstacle:
         msg = RoadObstacle()
     elif msg_type == JunctionMapState:

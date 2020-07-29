@@ -6,3 +6,5 @@ LaneState reference_path
 # -------- Other constaints ----------
 geometry_msgs/Polygon drivable_area
 RoadObstacle[] obstacles
+
+float32 distance_to_lanes

@@ -188,7 +188,7 @@ class NearestLocator:
     # TODO: adjust lane_end_dist_thres to class variable
     def locate_ego_vehicle_in_lanes(self, tstates, 
                             lane_end_dist_thres=15,
-                            lane_head_thres = 3, 
+                            lane_head_thres = 4, 
                             lane_dist_thres = 5):
         dist_list = np.array([dist_from_point_to_polyline2d(
             tstates.ego_state.state.pose.pose.position.x, tstates.ego_state.state.pose.pose.position.y,
@@ -205,7 +205,7 @@ class NearestLocator:
         
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
         self._ego_vehicle_distance_to_lane_tail = dist_list[:, 4]
-        
+
         if (self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded] <= lane_end_dist_thres 
                 and tstates.dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane.stop_state == Lane.STOP_STATE_THRU):
             # Drive into junction, wait until next map
@@ -217,6 +217,8 @@ class NearestLocator:
         if (self._ego_vehicle_distance_to_lane_head[int(ego_lane_index)] <= lane_head_thres):
             rospy.logdebug("Preparing lane decision, ego_lane_index = %f, dist_to_lane_head = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_head[int(ego_lane_index)])
             tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
+            # TODO: adjust this for prepare lane decision
+            tstates.dynamic_map.jmap.distance_to_lanes = dist_list[ego_lane_index_rounded,0]
             return
 
         tstates.dynamic_map.model = MapState.MODEL_MULTILANE_MAP

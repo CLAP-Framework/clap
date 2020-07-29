@@ -42,12 +42,21 @@ class MainDecision(object):
 
         # close_to_lane = 1
 
-        if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP: 
-            self._local_trajectory_instance.clean_frenet_lane()
-            return None
-        
 
-        trajectory = None
+        if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP: 
+
+            # print("-++++++++++++++++-",dynamic_map.jmap.distance_to_lanes)
+            if dynamic_map.jmap.distance_to_lanes < 5:
+                self._local_trajectory_instance.build_frenet_lane(dynamic_map)
+                return None
+            else:
+                self._local_trajectory_instance.clean_frenet_lane()
+                return None
+
+        if len(self._local_trajectory_instance.lanes) == 0:
+            self._local_trajectory_instance.build_frenet_lane(dynamic_map)
+            return None
+
         changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
         
         ego_speed = get_speed(dynamic_map.ego_state)

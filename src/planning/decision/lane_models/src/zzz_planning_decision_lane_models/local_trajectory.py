@@ -433,18 +433,15 @@ class Werling_planner(object):
         self.lanes = []
         self.last_target_lane_index = -1
 
-    def get_trajectory(self, dynamic_map, target_lane_index, desired_speed,
-                resolution=2.0, time_ahead=5, distance_ahead=10, rectify_thres=2,
-                lc_dt = 1.5, lc_v = 2.67):
-        # TODO: get smooth spline (write another module to generate spline)
+    def get_trajectory(self, dynamic_map, target_lane_index, desired_speed):
         # ego_x = dynamic_map.ego_state.pose.pose.position.x
         # ego_y = dynamic_map.ego_state.pose.pose.position.y
 
         ego_lane_idx = int(round(dynamic_map.mmap.ego_lane_index))
 
         # if len(self.lanes) <= 0:
-        if self.last_target_lane_index < 0:
-            self.build_frenet_lane(dynamic_map)
+        # if self.last_target_lane_index < 0:
+        #     self.build_frenet_lane(dynamic_map)
 
         if target_lane_index != self.last_target_lane_index:
             for werlinglane in self.lanes:
