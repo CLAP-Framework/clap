@@ -285,8 +285,8 @@ def ros_main_thread():
     
     try:
         # batch create sub
-        # for t, _, cls, cb, hz in global_topic_queue_pairs:
-        #     rospy.Subscriber(t, cls, cb, queue_size=hz)
+        for t, _, cls, cb, hz in global_topic_queue_pairs:
+            rospy.Subscriber(t, cls, cb, queue_size=hz)
         
         global traffic_publisher
         traffic_publisher = rospy.Publisher(traffic_light_topic, DetectionBoxArray, queue_size=10)
@@ -351,8 +351,6 @@ class MyViz(QWidget):
         self.statusBar.showMessage('Initialize Successfully')
     ## GUI button event handling
     def onCaptureQuestionButtonClick(self):
-        return
-
         global global_topic_queue_pairs
         start_capture(global_topic_queue_pairs)
         with open('Record.txt', 'a+') as f:
@@ -363,8 +361,6 @@ class MyViz(QWidget):
         print("### Capture Done! ###")
     
     def onCaptureShowcaseButtonClick(self):
-        return
-
         global global_topic_queue_pairs
         start_capture(global_topic_queue_pairs)
         with open('Record.txt', 'a+') as f:
