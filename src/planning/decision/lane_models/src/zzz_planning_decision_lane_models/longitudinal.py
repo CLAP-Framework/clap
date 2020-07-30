@@ -10,9 +10,9 @@ class IDM(object):
 
     def __init__(self):
         self.T = 1.6
-        self.g0 = 7
-        self.a = 2.73
-        self.b = 1.65
+        self.g0 = 7 
+        self.a = 2.73 
+        self.b = 1.65 
         self.delta = 4
         self.decision_dt = 0.75
         self.dynamic_map = None
@@ -23,7 +23,7 @@ class IDM(object):
     def longitudinal_speed(self, target_lane_index, traffic_light = False):
 
         target_lane = None
-        
+
         if target_lane_index > len(self.dynamic_map.mmap.lanes)-1:
             rospy.logwarn("cannot find neighbor lane, lane_index: %d", target_lane_index)
             return 0 
@@ -68,7 +68,6 @@ class IDM(object):
 
         v = get_speed(self.dynamic_map.ego_state)
         v0 = lane.map_lane.speed_limit/3.6
-        if v0 == 0: v0 = 5 # TODO: ensure this
         if v < 5:
             a = self.a + (5 - v)/5*2
         else:

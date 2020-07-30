@@ -1,6 +1,7 @@
 
 import rospy
 import numpy as np
+import math
 
 from zzz_driver_msgs.utils import get_speed
 from zzz_cognition_msgs.msg import MapState, RoadObstacle
@@ -11,24 +12,21 @@ class LaneUtility(object):
         self.longitudinal_model_instance = longitudinal_model
         self.dynamic_map = None
 
-    def lateral_decision(self, dynamic_map):
+    def lateral_decision(self, dynamic_map, close_to_junction = 10):
 
         self.longitudinal_model_instance.update_dynamic_map(dynamic_map)
         self.dynamic_map = dynamic_map
-
+        # return -1, self.longitudinal_model_instance.longitudinal_speed(-1)#FIXME(ksj)
         rospy.logdebug("map model is %d", dynamic_map.model)
-
-        # TODO: int?
-        ego_lane_index_rounded = int(round(dynamic_map.mmap.ego_lane_index))
-        
+       
         target_index = self.generate_lane_change_index()
         target_speed = self.longitudinal_model_instance.longitudinal_speed(target_index,traffic_light = True)
-        # # TODO: More accurate speed
-        # tail_speed = self.tail_speed(dynamic_map.mmap.distance_to_junction)
 
-        # if tail_speed < target_speed:
-        #     target_speed = tail_speed
-        
+        tail_speed = self.tail_speed(dynamic_map.mmap.distance_to_junction)
+
+        if tail_speed < target_speed:
+            target_speed = tail_speed
+
         return target_index, target_speed
 
     def generate_lane_change_index(self, change_lane_thres = 0.5):
@@ -63,8 +61,7 @@ class LaneUtility(object):
         available_speed = self.longitudinal_model_instance.longitudinal_speed(lane_index)
         exit_lane_index = self.dynamic_map.mmap.target_lane_index
         distance_to_end = self.dynamic_map.mmap.distance_to_junction
-
-        utility = available_speed + 1/(abs(exit_lane_index - lane_index)+1) * max(0,(200-distance_to_end)) * 0.1
+        utility = available_speed*1.5# + 1/(abs(exit_lane_index - lane_index)+1)*max(0,(200-distance_to_end))*0.1
         return utility
 
     def lane_change_safe(self, ego_lane_index, target_index):
@@ -87,6 +84,14 @@ class LaneUtility(object):
         if len(target_lane.rear_vehicles) > 0:
             rear_vehicle = target_lane.rear_vehicles[0]
 
+        # for lane in self.dynamic_map.mmap.lanes:
+        #     if lane.map_lane.index == target_index:
+        #         if len(lane.front_vehicles) > 0:
+        #             front_vehicle = lane.front_vehicles[0]
+        #         if len(lane.rear_vehicles) > 0:
+        #             rear_vehicle = lane.rear_vehicles[0]
+        #         break
+
         ego_v = get_speed(self.dynamic_map.ego_state)
 
         if front_vehicle is None:
@@ -102,7 +107,7 @@ class LaneUtility(object):
             # TODO: Change to real distance in lane
             d_front = np.linalg.norm(front_vehicle_location - ego_vehicle_location)
             front_v = get_speed(front_vehicle.state)
-            if d_front > max(10 + 5*(ego_v-front_v), 10):
+            if d_front > max(10 + 3*(ego_v-front_v), 20):
                 front_safe = True
         
 
@@ -118,7 +123,7 @@ class LaneUtility(object):
             behavior_rear = rear_vehicle.behavior
             d_rear = np.linalg.norm(rear_vehicle_location - ego_vehicle_location)
             rear_v = get_speed(rear_vehicle.state)
-            if d_rear > max(10 + 5*(rear_v-ego_v), 20):
+            if d_rear > max(10 + 3*(rear_v-ego_v), 20):
                 rear_safe = True
 
         rospy.logdebug("ego_lane = %d, target_lane = %d, front_d = %f(%d), rear_d = %f(%d)",
@@ -129,6 +134,24 @@ class LaneUtility(object):
             return True
             
         return False
+
+    def tail_speed(self, d):
+        '''
+        Calculate the speed when close to the tail
+        TODO(zhcao): should merge in Control model
+        '''
+        if d <= 0:
+            return 0.0
+
+        dec = 0.4
+        available_speed = math.sqrt(2*dec*d) # m/s
+        ego_v = get_speed(self.dynamic_map.ego_state)
+        if available_speed > ego_v:
+            return 10000
+        else:
+            return available_speed
+        
+        
  
 class MOBIL(object):
     pass

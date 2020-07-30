@@ -97,16 +97,16 @@ class ZZZCarlaEnv(gym.Env):
                 if collision:
                     done = True
                     #reward = 0#-1000
-                    print("+++++++++++++++++++++ received collision")
+                    # print("+++++++++++++++++++++ received collision")
                 
                 if leave_current_mmap == 1:
                     done = True
                     reward = 500#+500
-                    print("+++++++++++++++++++++ successful pass intersection")
+                    # print("+++++++++++++++++++++ successful pass intersection")
 
                 elif leave_current_mmap == 2:
                     done = True
-                    print("+++++++++++++++++++++ restart by code")
+                    # print("+++++++++++++++++++++ restart by code")
                 reward = reward / 500
                 print("reward=", reward)
 

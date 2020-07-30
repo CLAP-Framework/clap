@@ -23,24 +23,25 @@ from zzz_planning_decision_continuous_models.predict import predict
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 10.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 500.0  # maximum curvature [1/m]
-MAX_ROAD_WIDTH = 6.0   # maximum road width [m] # related to RL action space
-D_ROAD_W = 1.5  # road width sampling length [m]
+# MAX_ROAD_WIDTH = 4.0   # maximum road width [m] # related to RL action space
+# LEFT_SAMPLE_BOUND = 4.0
+# RIGHT_SAMPLE_BOUND = 4.0
+D_ROAD_W = 1  # road width sampling length [m]
 DT = 0.3  # time tick [s]
-MAXT = 4.6  # max prediction time [m]
-MINT = 4.0  # min prediction time [m]
-D_T_S = 5 / 3.6  # target speed sampling length [m/s]
+MAXT = 8.6  # max prediction time [m]
+MINT = 8.0  # min prediction time [m]
+D_T_S = 2 / 3.6  # target speed sampling length [m/s]
 N_S_SAMPLE = 2  # sampling number of target speed
 
 # collision check
 OBSTACLES_CONSIDERED = 5
-ROBOT_RADIUS = 3.0  # robot radius [m]
+ROBOT_RADIUS = 2.4  # robot radius [m]
 RADIUS_SPEED_RATIO = 0.0 # higher speed, bigger circle
 MOVE_GAP = 1.0
-ONLY_SAMPLE_TO_RIGHT = True
 
 # Cost weights
-KJ = 0.1
-KT = 0.1
+KJ = 0.1 * 2
+KT = 0.1 * 0.5
 KD = 1.0
 KLAT = 1.0
 KLON = 1.0
@@ -48,103 +49,88 @@ KLON = 1.0
 
 class Werling(object):
 
-    def __init__(self, target_line):
+    def __init__(self, target_line, lane_idx, lane_num, lane_width = 3):
 
         self.last_trajectory_array = np.c_[0, 0]
         self.last_trajectory = Frenet_path()
         self.last_trajectory_array_rule = np.c_[0, 0]
         self.last_trajectory_rule = Frenet_path()
-        self.reference_path = None
+        # self.reference_path = None
 
         self.rviz_all_trajectory = None
 
-        self._dynamic_map = None
+        # self._dynamic_map = None
         self.ref_path = None
         self.ref_path_tangets = None
         self.ob = None
         self.csp = None
-        self.target_line = target_line
         self.target_speed = 0
 
+        self._lane_num = lane_num
+        self._lane_idx = lane_idx
+        self._lane_width = lane_width
+
         self.rivz_element = rviz_display()
+
+        self.build_frenet_path(target_line)
     
-    def clear_buff(self, dynamic_map):
+    def lane_change_clean_buff(self):
+        
         self.last_trajectory_array = np.c_[0, 0]
         self.last_trajectory = Frenet_path()
         self.last_trajectory_array_rule = np.c_[0, 0]
         self.last_trajectory_rule = Frenet_path()
-        self.reference_path = None
-        self.csp = None
-        self.target_line = dynamic_map.jmap.reference_path.map_lane.central_path_points
 
+    def build_frenet_path(self, target_line):
 
-        self.rivz_element.candidates_trajectory = None
-        self.rivz_element.prediciton_trajectory = None
-        self.rivz_element.collision_circle = None
-        return None
+        if self.csp is None:
+            ref_path_ori = convert_path_to_ndarray(target_line)
+            self.ref_path = dense_polyline2d(ref_path_ori, 2)
+            self.ref_path_tangets = np.zeros(len(self.ref_path))
+
+            Frenetrefx = self.ref_path[:,0]
+            Frenetrefy = self.ref_path[:,1]
+            tx, ty, tyaw, tc, self.csp = self.generate_target_course(Frenetrefx,Frenetrefy)
     
-    def trajectory_update(self, dynamic_map, target_speed):
-        if self.initialize(dynamic_map):
-
+    def trajectory_update(self, dynamic_map, target_speed, ego_lane_index):
+        
+        if self.initialize_obj_predict(dynamic_map):
+            self.all_trajectory = []
+            self._ego_lane_index = ego_lane_index
             start_state = self.calculate_start_state(dynamic_map)
-            self.target_speed = target_speed
-            generated_trajectory = self.frenet_optimal_planning(self.csp, self.c_speed, start_state)
+            generated_trajectory, high_resolution_speed = self.frenet_optimal_planning(self.csp, self.c_speed, start_state, target_speed)
 
             if generated_trajectory is not None:
-                desired_speed = generated_trajectory.s_d[-1]
-                trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
-                trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori,1)
+                local_desired_speed = high_resolution_speed #generated_trajectory.s_d[-1]
+                trajectory_array = np.c_[generated_trajectory.x, generated_trajectory.y]
                 self.last_trajectory_array_rule = trajectory_array
-                self.last_trajectory_rule = generated_trajectory              
+                self.last_trajectory_rule = generated_trajectory
                 rospy.logdebug("----> Lane_Werling: Successful Planning")
-            
-            elif len(self.last_trajectory_array_rule) > 5 and self.c_speed > 1:
-                trajectory_array = self.last_trajectory_array_rule
-                generated_trajectory = self.last_trajectory_rule
-                desired_speed =  0 
-                rospy.logdebug("----> Lane_Werling: Fail to find a solution")
-
             else:
-                trajectory_array =  self.ref_path
-                desired_speed = 0
-                rospy.logdebug("----> Lane_Werling: Output ref path")           
-            
-            # msg = DecisionTrajectory()
-            # msg.trajectory = convert_ndarray_to_pathmsg(trajectory_array)
-            # msg.desired_speed = desired_speed
-
+                # generated_trajectory = best_free_fp
+                # local_desired_speed = 0
+                # trajectory_array = np.c_[generated_trajectory.x, generated_trajectory.y]
+                # self.last_trajectory_array_rule = trajectory_array
+                # self.last_trajectory_rule = generated_trajectory
+                rospy.logdebug("----> Lane_Werling: Fail to find a solution")
+         
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
             self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
             self.rivz_element.collision_circle = self.obs_prediction.rviz_collision_checking_circle
-            return trajectory_array
+            return trajectory_array, local_desired_speed
         else:
-            return None
+            return None, None
 
-    def initialize(self, dynamic_map):
-        self._dynamic_map = dynamic_map
+    def initialize_obj_predict(self, dynamic_map):
+
         try:
-            # estabilish frenet frame
-
             if self.csp is None:
-                self.reference_path = self.target_line
-
-                ref_path_ori = convert_path_to_ndarray(self.reference_path)
-                self.ref_path = dense_polyline2d(ref_path_ori, 2)
-                self.ref_path_tangets = np.zeros(len(self.ref_path))
-
-                Frenetrefx = self.ref_path[:,0]
-                Frenetrefy = self.ref_path[:,1]
-                tx, ty, tyaw, tc, self.csp = self.generate_target_course(Frenetrefx,Frenetrefy)
+                self.build_frenet_path()
             # initialize prediction module
             self.obs_prediction = predict(dynamic_map, OBSTACLES_CONSIDERED, MAXT, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
                                         get_speed(dynamic_map.ego_state))
-            rospy.logdebug("------> Lane_Werling: Initialize successful ")
-
-
             return True
-
         except:
-            rospy.logdebug("------> Lane_Werling: Initialize fail ")
             return False
 
     def calculate_start_state(self, dynamic_map):
@@ -154,7 +140,7 @@ class Werling(object):
             # find closest point on the last trajectory
             mindist = float("inf")
             bestpoint = 0
-            for t in range(len(self.last_trajectory_rule.t)):
+            for t in range(len(self.last_trajectory_rule.x)):
                 pointdist = (self.last_trajectory_rule.x[t] - dynamic_map.ego_state.pose.pose.position.x) ** 2 + (self.last_trajectory_rule.y[t] - dynamic_map.ego_state.pose.pose.position.y) ** 2
                 if mindist >= pointdist:
                     mindist = pointdist
@@ -163,7 +149,9 @@ class Werling(object):
             start_state.c_d = self.last_trajectory_rule.d[bestpoint]
             start_state.c_d_d = self.last_trajectory_rule.d_d[bestpoint]
             start_state.c_d_dd = self.last_trajectory_rule.d_dd[bestpoint]
-            self.c_speed = self.last_trajectory_rule.s_d[bestpoint]
+            # self.c_speed = self.last_trajectory_rule.s_d[bestpoint]
+            ego_state = dynamic_map.ego_state
+            self.c_speed = get_speed(ego_state) 
         else:
             ego_state = dynamic_map.ego_state
             self.c_speed = get_speed(ego_state)       # current speed [m/s]
@@ -173,52 +161,87 @@ class Werling(object):
             start_state.c_d = -ffstate.d # current lateral position [m]
             start_state.c_d_d = ffstate.vd # current lateral speed [m/s]
             start_state.c_d_dd = 0   # current latral acceleration [m/s]
-
-            # print(self.target_line)
-
-            # print("ego_state", ego_state)
-            # print("start state.s", start_state.s0)
-            # print("start state.c_d", start_state.c_d)
-            # print("start state.c_d_d", start_state.c_d_d)
             
         return start_state
 
-    def frenet_optimal_planning(self, csp, c_speed, start_state):
-        t0 = rospy.get_rostime().to_sec()
+
+    def frenet_optimal_planning(self, csp, c_speed, start_state, low_resolution_speed):
+
+        # No adjustment
+        di_range = np.array([0])
+        Ti_range = np.arange(MINT, MAXT, DT)
+        vi_range = np.array([max(10/3.6, low_resolution_speed)])
+        best_free_fp, fp_available = self.calculate_path_in_given_range(csp, c_speed, start_state, 
+                                                                            di_range, Ti_range, vi_range)
+        
+        if fp_available:
+            rospy.logdebug("----> Lane_Werling: Successful Planning (No adjustment)")
+            return best_free_fp, low_resolution_speed
 
 
-        fplist = self.calc_frenet_paths(c_speed, start_state)
-        t1 = rospy.get_rostime().to_sec()
-        time_consume1 = t1 - t0
-        candidate_len1 = len(fplist)
+        # Lateral slight adjustment
+        right_bound = - (max((self._lane_idx - self._ego_lane_index),0)*self._lane_width + 0.5*self._lane_width)
+        left_bound = max(self._ego_lane_index - self._lane_idx, 0)*self._lane_width + 0.5*self._lane_width
+        sample_width_d = 0.125*self._lane_width
+
+        di_range = np.arange(right_bound, left_bound, sample_width_d)
+        Ti_range = np.arange(MINT, MAXT, DT)
+        vi_range = np.array([max(10/3.6, low_resolution_speed)])
+
+        generated_fp, fp_available = self.calculate_path_in_given_range(csp, c_speed, start_state, 
+                                                                            di_range, Ti_range, vi_range)
+
+        if fp_available:
+            rospy.logdebug("----> Lane_Werling: Successful Planning (Lateral slight adjustment)")
+            return generated_fp, low_resolution_speed
 
 
+        # Speed adjustment
+        speed_adjust_thres = 5/3.6
+        # speed_low_bound = low_resolution_speed
+        # speed_high_bound = max(low_resolution_speed, speed_adjust_thres)
+        speed_low_bound = max(low_resolution_speed, 1/3.6)
+        speed_high_bound = max(low_resolution_speed, speed_adjust_thres)
+        speed_sample_d = 1/3.6 # m/s
+
+        di_range = np.arange(right_bound, left_bound, sample_width_d)
+        Ti_range = np.arange(MINT, MAXT, DT)
+        vi_range = np.arange(speed_low_bound, speed_high_bound, speed_sample_d)
+
+        generated_fp, fp_available = self.calculate_path_in_given_range(csp, c_speed, start_state, 
+                                                                            di_range, Ti_range, vi_range)
+
+        if fp_available:
+            rospy.logdebug("----> Lane_Werling: Successful Planning (speed adjustment)")
+            return generated_fp, generated_fp.s_d[-1]
+            
+        rospy.logdebug("----> Lane_Werling: Fail to find a solution")
+        return best_free_fp, 0
+
+    def calculate_path_in_given_range(self, csp, c_speed, start_state, di_range, Ti_range, vi_range):
+
+        fplist = self.calc_frenet_paths(c_speed, start_state, di_range, Ti_range, vi_range)
         fplist = self.calc_global_paths(fplist, csp)
-        t2 = rospy.get_rostime().to_sec()
-        time_consume2 = t2 - t1
-        candidate_len2 = len(fplist)
-
-
         fplist = self.check_paths(fplist)
-        t3 = rospy.get_rostime().to_sec()
-        time_consume3 = t3 - t2
-        candidate_len3 = len(fplist)
 
-        rospy.logdebug("frenet time consume step1: %.1f(candidate: %d), step2: %.1f(candidate: %d), step3: %.1f(candidate: %d)",
-                                            time_consume1, candidate_len1,
-                                            time_consume2, candidate_len2,
-                                            time_consume3, candidate_len3)
+        if len(fplist) == 0: 
+            return None, False
 
-        self.all_trajectory = fplist
+        self.all_trajectory.extend(fplist)
 
-        # find minimum cost path
-        mincost = float("inf")
-        bestpath = None
+        path_tuples = []
         for fp in fplist:
-            if mincost >= fp.cf:
-                mincost = fp.cf
-                bestpath = fp
-        return bestpath
+            one_path = [fp, fp.cf]
+            path_tuples.append(one_path)
+        
+        sorted_fplist = sorted(path_tuples, key=lambda path_tuples: path_tuples[1])
+        best_fp, _ = sorted_fplist[0]
+
+        for fp, score in sorted_fplist:
+            if self.obs_prediction.check_collision(fp):
+                return fp, True
+
+        return best_fp, False
 
     def generate_target_course(self, x, y):
         csp = Spline2D(x, y)
@@ -234,7 +257,7 @@ class Werling(object):
 
         return rx, ry, ryaw, rk, csp
 
-    def calc_frenet_paths(self, c_speed, start_state): # input state
+    def calc_frenet_paths(self, c_speed, start_state, di_range, Ti_range, vi_range): # input state
 
         frenet_paths = []
 
@@ -243,15 +266,11 @@ class Werling(object):
         c_d_d = start_state.c_d_d
         c_d_dd = start_state.c_d_dd
 
-        # generate path to each offset goal
-        if ONLY_SAMPLE_TO_RIGHT:
-            left_sample_bound = D_ROAD_W
-        else:
-            left_sample_bound = MAX_ROAD_WIDTH 
-        for di in np.arange(-MAX_ROAD_WIDTH, left_sample_bound, D_ROAD_W):
+
+        for di in di_range:
 
             # Lateral motion planning
-            for Ti in np.arange(MINT, MAXT, DT):
+            for Ti in Ti_range:
                 fp = Frenet_path()
 
                 lat_qp = quintic_polynomial(c_d, c_d_d, c_d_dd, di, 0.0, 0.0, Ti) 
@@ -262,8 +281,12 @@ class Werling(object):
                 fp.d_dd = [lat_qp.calc_second_derivative(t) for t in fp.t]
                 fp.d_ddd = [lat_qp.calc_third_derivative(t) for t in fp.t]
 
-                # Loongitudinal motion planning (Velocity keeping)
-                for tv in np.arange(self.target_speed - D_T_S * N_S_SAMPLE, self.target_speed + D_T_S * N_S_SAMPLE, D_T_S):
+                # Loongitudinal motion planning
+                for tv in vi_range:
+                
+                    if tv < 0:
+                        continue
+                
                     tfp = copy.deepcopy(fp)
                     lon_qp = quartic_polynomial(s0, c_speed, 0.0, tv, 0.0, Ti)
 
@@ -336,8 +359,8 @@ class Werling(object):
             elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
                 # rospy.logdebug("exceeding max curvature")
                 continue
-            if not self.obs_prediction.check_collision(fplist[i]):
-                continue
+            # if not self.obs_prediction.check_collision(fplist[i]):
+            #     continue
 
             okind.append(i)
 

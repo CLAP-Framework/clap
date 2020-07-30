@@ -43,7 +43,7 @@ OBSTACLES_CONSIDERED = 3
 ROBOT_RADIUS = 3.5  # robot radius [m]
 RADIUS_SPEED_RATIO = 0.25 # higher speed, bigger circle
 MOVE_GAP = 1.0
-ONLY_SAMPLE_TO_RIGHT = False
+ONLY_SAMPLE_TO_RIGHT = True
 
 # Cost weights
 KJ = 0.1
@@ -199,35 +199,21 @@ class Werling(object):
 
     def calculate_start_state(self, dynamic_map):
         start_state = Frenet_state()
-        dist_to_start = 0
-        if len(self.last_trajectory_array_rule) > 5:
-            dist_to_start = (self.last_trajectory_rule.x[0] - dynamic_map.ego_state.pose.pose.position.x) ** 2 + (self.last_trajectory_rule.y[0] - dynamic_map.ego_state.pose.pose.position.y) ** 2
-        
-        if dist_to_start < 10:
-            try:
-                # find closest point on the last trajectory
-                mindist = float("inf")
-                bestpoint = 0
-                for t in range(len(self.last_trajectory_rule.t)):
-                    pointdist = (self.last_trajectory_rule.x[t] - dynamic_map.ego_state.pose.pose.position.x) ** 2 + (self.last_trajectory_rule.y[t] - dynamic_map.ego_state.pose.pose.position.y) ** 2
-                    if mindist >= pointdist:
-                        mindist = pointdist
-                        bestpoint = t
-                start_state.s0 = self.last_trajectory_rule.s[bestpoint]
-                start_state.c_d = self.last_trajectory_rule.d[bestpoint]
-                start_state.c_d_d = self.last_trajectory_rule.d_d[bestpoint]
-                start_state.c_d_dd = self.last_trajectory_rule.d_dd[bestpoint]
-                self.c_speed = self.last_trajectory_rule.s_d[bestpoint]
-            except:
-                ego_state = dynamic_map.ego_state
-                self.c_speed = get_speed(ego_state)       # current speed [m/s]
-                ffstate = get_frenet_state(dynamic_map.ego_state, self.ref_path, self.ref_path_tangets)
 
-                start_state.s0 = ffstate.s #+ c_speed * 0.5      # current course position
-                start_state.c_d = -ffstate.d #- dynamic_map.ego_ffstate.d #ffstate.d  # current lateral position [m]
-                start_state.c_d_d = ffstate.vd #dynamic_map.ego_ffstate.vd #ffstate.vd  # current lateral speed [m/s]
-                start_state.c_d_dd = 0   # current latral acceleration [m/s]
-        
+        if len(self.last_trajectory_array_rule) > 5:
+            # find closest point on the last trajectory
+            mindist = float("inf")
+            bestpoint = 0
+            for t in range(len(self.last_trajectory_rule.t)):
+                pointdist = (self.last_trajectory_rule.x[t] - dynamic_map.ego_state.pose.pose.position.x) ** 2 + (self.last_trajectory_rule.y[t] - dynamic_map.ego_state.pose.pose.position.y) ** 2
+                if mindist >= pointdist:
+                    mindist = pointdist
+                    bestpoint = t
+            start_state.s0 = self.last_trajectory_rule.s[bestpoint]
+            start_state.c_d = self.last_trajectory_rule.d[bestpoint]
+            start_state.c_d_d = self.last_trajectory_rule.d_d[bestpoint]
+            start_state.c_d_dd = self.last_trajectory_rule.d_dd[bestpoint]
+            self.c_speed = self.last_trajectory_rule.s_d[bestpoint]
         else:
             ego_state = dynamic_map.ego_state
             self.c_speed = get_speed(ego_state)       # current speed [m/s]
@@ -284,6 +270,7 @@ class Werling(object):
         c_d_dd = start_state.c_d_dd
 
         Ti = KICK_IN_TIME
+        # rospy.logdebug("rls_action")
         di = RLS_action[0]
         tv = RLS_action[1]
         print("rls_action",RLS_action[0],RLS_action[1])

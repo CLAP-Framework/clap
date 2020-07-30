@@ -22,7 +22,8 @@ class Node(object):
             map_file_type = "opendrive",
             pose_topic = "/zzz/navigation/ego_pose",
             reference_path_topic = "/zzz/navigation/reference_path",
-            rerouting_requried_topic = "/zzz/navigation/rerouting"
+            rerouting_requried_topic = "/zzz/navigation/rerouting",
+            sent_ref_path_topic = "/zzz/cognition/sent_ref_path"
         )
 
         self._rate = rospy.Rate(20)
@@ -36,6 +37,7 @@ class Node(object):
         self._output_map_publisher = rospy.Publisher(params.map_output_topic, MapState, queue_size=1)
         # TODO: we need a separate navigation/mission module to deal with rerouting request
         self._rerouting_required_publisher = rospy.Publisher(params.rerouting_requried_topic, ReroutingRequest, queue_size=1)
+        self._sent_ref_path_path_publisher = rospy.Publisher(params.sent_ref_path_topic, Path, queue_size=1)
 
     def rerouting_callback(self):
         pass
@@ -47,11 +49,13 @@ class Node(object):
             if new_map:
                 rospy.logdebug("Sent reference path, length: %d", len(new_map.jmap.reference_path.map_lane.central_path_points))
                 self._output_map_publisher.publish(new_map)
+                self._sent_ref_path_path_publisher.publish(self._map_instance.ref_path_msg)
             self._rate.sleep()
 
 
 if __name__ == "__main__":
 
     rospy.init_node("put_buffer", log_level=rospy.DEBUG)
+    rospy.logdebug("### put_buffer launched ###")
     node = Node()
     node.loop()

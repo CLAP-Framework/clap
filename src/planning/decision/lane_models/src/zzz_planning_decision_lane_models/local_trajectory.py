@@ -416,26 +416,40 @@ class PolylineTrajectory(object):
 class Werling_planner(object):
     def __init__(self):
         self.last_target_lane_index = -10
+        self.lanes = []
 
 
-    def get_trajectory(self, dynamic_map, target_lane_index, desired_speed, 
-                resolution=2.0, time_ahead=5, distance_ahead=10, rectify_thres=2,
-                lc_dt = 1.5, lc_v = 2.67):
-        # TODO: get smooth spline (write another module to generate spline)
-        ego_x = dynamic_map.ego_state.pose.pose.position.x
-        ego_y = dynamic_map.ego_state.pose.pose.position.y
-        
-        target_lane = dynamic_map.mmap.lanes[int(target_lane_index)]
-        central_path = target_lane.map_lane.central_path_points
-        extend_centrol_path = self.extend_path(central_path)
-        
-        # self._local_trajectory_planner = Werling(dense_centrol_path)
+    def build_frenet_lane(self,dynamic_map):
+        if len(self.lanes) > 0:
+            return
+
+        lane_num = len(dynamic_map.mmap.lanes)
+        for lane_idx,lane in enumerate(dynamic_map.mmap.lanes):
+            central_path = lane.map_lane.central_path_points
+            extend_centrol_path = self.extend_path(central_path)
+            self.lanes.append(Werling(extend_centrol_path,lane_idx,lane_num))
+
+    def clean_frenet_lane(self):
+        self.lanes = []
+        self.last_target_lane_index = -1
+
+    def get_trajectory(self, dynamic_map, target_lane_index, desired_speed):
+        # ego_x = dynamic_map.ego_state.pose.pose.position.x
+        # ego_y = dynamic_map.ego_state.pose.pose.position.y
+
+        ego_lane_idx = int(round(dynamic_map.mmap.ego_lane_index))
+
+        # if len(self.lanes) <= 0:
+        # if self.last_target_lane_index < 0:
+        #     self.build_frenet_lane(dynamic_map)
+
         if target_lane_index != self.last_target_lane_index:
-            self._local_trajectory_planner = Werling(extend_centrol_path)
+            for werlinglane in self.lanes:
+                werlinglane.lane_change_clean_buff()
+
             self.last_target_lane_index = target_lane_index
             
-        desired_speed = 15 / 3.6
-        return self._local_trajectory_planner.trajectory_update(dynamic_map, desired_speed)
+        return self.lanes[int(target_lane_index)].trajectory_update(dynamic_map, desired_speed, ego_lane_idx)
 
     def extend_path(self, path):
         
@@ -450,6 +464,16 @@ class Werling_planner(object):
 
         return path
 
+    def get_rviz_info(self):
+        
+        if self.last_target_lane_index < 0:
+            return None, None, None
+        
+        all_trajectory = self.lanes[self.last_target_lane_index].rivz_element.candidates_trajectory
+        obs_paths = self.lanes[self.last_target_lane_index].rivz_element.prediciton_trajectory
+        collision_circle = self.lanes[self.last_target_lane_index].rivz_element.collision_circle
+
+        return all_trajectory, obs_paths, collision_circle
 
     # TODO(zyxin): Add these to zzz_navigation_msgs.utils
     def convert_path_to_ndarray(self, path):

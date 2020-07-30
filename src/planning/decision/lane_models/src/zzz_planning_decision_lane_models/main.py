@@ -40,21 +40,29 @@ class MainDecision(object):
         else:
             dynamic_map = self._dynamic_map_buffer
 
-        in_junction = False
-        if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
-            self._local_trajectory_instance.last_target_lane_index = -1
-            return None
-        trajectory = None
-        changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
-        if desired_speed < 0: # TODO: clean this
-            desired_speed = 0
+        # close_to_lane = 1
 
-        rospy.logdebug("target_lane_index = %d, target_speed = %f km/h", changing_lane_index, desired_speed*3.6)
-        trajectory = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed, in_junction)
+
+        if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP: 
+            # print("-++++++++++++++++-",dynamic_map.jmap.distance_to_lanes)
+            self._local_trajectory_instance.clean_frenet_lane()
+            return None
+
+        if len(self._local_trajectory_instance.lanes) == 0:
+            self._local_trajectory_instance.build_frenet_lane(dynamic_map)
+            return None
+
+        changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
+        
+        ego_speed = get_speed(dynamic_map.ego_state)
+
+        rospy.logdebug("target_lane_index = %d, target_speed = %f km/h, current_speed: %f km/h", changing_lane_index, desired_speed*3.6, ego_speed*3.6)
+        
+        trajectory, local_desired_speed = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
 
         msg = DecisionTrajectory()
         msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory) # TODO: move to library
-        msg.desired_speed = desired_speed
+        msg.desired_speed = local_desired_speed # TODO: Multi-resolution Planning
 
         return msg
 

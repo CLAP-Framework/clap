@@ -24,7 +24,6 @@ class predict():
         self.initialze_fail = False
 
         self.rviz_collision_checking_circle = None
-        self.rviz_collision_checking_circle_ego = None
         self.rivz_element = rviz_display()
 
         try:
@@ -41,34 +40,31 @@ class predict():
         
         
     def check_collision(self, fp):
+
         if len(self.obs_paths) == 0 or len(fp.t) < 2 :
             return True
             
         # two circles for a vehicle
         fp_front = copy.deepcopy(fp)
         fp_back = copy.deepcopy(fp)
-
+        
         try:
-            # fp_front.x = (np.array(fp.x) + np.cos(np.array(fp.yaw)) * self.move_gap).tolist()
-            # fp_front.y = (np.array(fp.y) + np.cos(np.array(fp.yaw)) * self.move_gap).tolist()
-            # fp_back.x = (np.array(fp.x) - np.cos(np.array(fp.yaw)) * self.move_gap).tolist()
-            # fp_back.y = (np.array(fp.y) - np.cos(np.array(fp.yaw)) * self.move_gap).tolist()
+            # for t in range(len(fp.yaw)):
+            #     fp_front.x[t] = fp.x[t] + math.cos(fp.yaw[t]) * self.move_gap
+            #     fp_front.y[t] = fp.y[t] + math.sin(fp.yaw[t]) * self.move_gap
+            #     fp_back.x[t] = fp.x[t] - math.cos(fp.yaw[t]) * self.move_gap
+            #     fp_back.y[t] = fp.y[t] - math.sin(fp.yaw[t]) * self.move_gap
 
-            for t in range(len(fp.yaw)):
-                fp_front.x[t] = fp.x[t] + math.cos(fp.yaw[t]) * self.move_gap
-                fp_front.y[t] = fp.y[t] + math.sin(fp.yaw[t]) * self.move_gap
-                fp_back.x[t] = fp.x[t] - math.cos(fp.yaw[t]) * self.move_gap
-                fp_back.y[t] = fp.y[t] - math.sin(fp.yaw[t]) * self.move_gap
+            fp_front.x = (np.array(fp.x)+np.cos(np.array(fp.yaw))*self.move_gap).tolist()
+            fp_front.y = (np.array(fp.y)+np.sin(np.array(fp.yaw))*self.move_gap).tolist()
+            fp_back.x = (np.array(fp.x)-np.cos(np.array(fp.yaw))*self.move_gap).tolist()
+            fp_back.y = (np.array(fp.y)-np.sin(np.array(fp.yaw))*self.move_gap).tolist()
 
             for obsp in self.obs_paths:
-            #     mind = min((np.array(obsp.x) - np.array(fp_front.x)) ** 2 + (np.array(obsp.y) - np.array(fp_front.y)) ** 2)
-            #     if mind <= self.check_radius**2:
-            #         return False
-            #     mind = min((np.array(obsp.x) - np.array(fp_back.x)) ** 2 + (np.array(obsp.y) - np.array(fp_back.y)) ** 2)
-            #     if mind <= self.check_radius**2:
-            #         return False
-                
-                for t in range(len(fp.t)):
+                len_predict_t = min(len(fp.t),len(obsp.t))
+                predict_step = 1
+                start_predict = 2
+                for t in range(start_predict, len_predict_t, predict_step):
                     d = (obsp.x[t] - fp_front.x[t])**2 + (obsp.y[t] - fp_front.y[t])**2
                     if d <= self.check_radius**2: 
                         return False
@@ -76,10 +72,9 @@ class predict():
                     if d <= self.check_radius**2: 
                         return False
         except:
+            print("collision check fail")
             pass
-            print("collision check fail",len(fp.yaw),len(fp_back.x),len(fp_front.x))
-
-        self.rviz_collision_checking_circle_ego = self.rivz_element.draw_circles(fp_front, fp_back, self.check_radius)
+        # self.rviz_collision_checking_circle = self.rivz_element.draw_circles(fp_front, fp_back, self.check_radius)
         return True
 
     def found_closest_obstacles(self):
@@ -95,9 +90,10 @@ class predict():
 
             obs_ffstate = get_frenet_state(obs.state, self.ref_path, self.ref_path_tangets)
             obs_yaw = get_yaw(obs.state)
+            classid = obs.cls.classid
             one_obs = (obs.state.pose.pose.position.x , obs.state.pose.pose.position.y , obs.state.twist.twist.linear.x ,
                      obs.state.twist.twist.linear.y , p4 , obs_ffstate.s , -obs_ffstate.d , obs_ffstate.vs, obs_ffstate.vd, 
-                     obs.state.accel.accel.linear.x, obs.state.accel.accel.linear.y, obs_yaw)
+                     obs.state.accel.accel.linear.x, obs.state.accel.accel.linear.y, obs_yaw, classid)
             obs_tuples.append(one_obs)
         
         #sorted by distance
@@ -109,6 +105,7 @@ class predict():
                 i = i + 1
             else:
                 break
+        
         return np.array(closest_obs)
 
     def prediction_obstacle(self, ob, max_prediction_time, delta_t): # we should do prediciton in driving space
@@ -116,43 +113,71 @@ class predict():
         obs_paths = []
 
         for one_ob in ob:
-            obsp_front = Frenet_path()
-            obsp_back = Frenet_path()
-            obsp_front.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
-            obsp_back.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
-            ax = 0#one_ob[9]
-            ay = 0#one_ob[10]
+            if one_ob[12] != 2: # vehicle
+                obsp_front = Frenet_path()
+                obsp_back = Frenet_path()
+                obsp_front.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
+                obsp_back.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
+                ax = 0 #one_ob[9]
+                ay = 0 #one_ob[10]
 
-            # vx = one_ob[2] + ax * delta_t * np.linspace(0,len(obsp_front.t)-1,len(obsp_front.t)-1)
-            # vy = one_ob[3] + ax * delta_t * np.linspace(0,len(obsp_front.t)-1,len(obsp_front.t)-1)
-
-            # obspx = one_ob[0] + delta_t * vx * np.linspace(0,len(obsp_front.t)-1,len(obsp_front.t)-1)
-            # obspy = one_ob[1] + delta_t * vy * np.linspace(0,len(obsp_front.t)-1,len(obsp_front.t)-1)
-
-            # yaw = one_ob[11]
-            # obsp_front.x = (obspx + math.cos(yaw) * self.move_gap).tolist()
-            # obsp_front.y = (obspy + math.sin(yaw) * self.move_gap).tolist()
-
-            # obsp_back.x = (obspx - math.cos(yaw) * self.move_gap).tolist()
-            # obsp_back.x = (obspy - math.sin(yaw) * self.move_gap).tolist()
-
-            for i in range(len(obsp_front.t)):
-                vx = one_ob[2] + ax * delta_t * i
-                vy = one_ob[3] + ax * delta_t * i
-                yaw = one_ob[11]   #only for constant prediction
-
-                obspx = one_ob[0] + i * delta_t * vx
-                obspy = one_ob[1] + i * delta_t * vy
-
-                obsp_front.x.append(obspx + math.cos(yaw) * self.move_gap)
-                obsp_front.y.append(obspy + math.sin(yaw) * self.move_gap)
-                obsp_back.x.append(obspx - math.cos(yaw) * self.move_gap)
-                obsp_back.y.append(obspy - math.sin(yaw) * self.move_gap)
+                vx = one_ob[2]*np.ones(len(obsp_front.t))
+                vy = one_ob[3]*np.ones(len(obsp_front.t))
+                yaw = one_ob[11]
+                obspx = one_ob[0] + np.arange(len(obsp_front.t))*delta_t*vx
+                obspy = one_ob[1] + np.arange(len(obsp_front.t))*delta_t*vy
                 
-            obs_paths.append(obsp_front)
-            obs_paths.append(obsp_back)
+                obsp_front.x = (obspx + math.cos(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
+                obsp_front.y = (obspy + math.sin(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
+                obsp_back.x = (obspx - math.cos(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
+                obsp_back.y = (obspy - math.sin(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
+          
+                obs_paths.append(obsp_front)
+                obs_paths.append(obsp_back)
+
+            if one_ob[12] == 2: # Pedestrian
+                obsp = Frenet_path()
+                obsp.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
+                ax = 0 #one_ob[9]
+                ay = 0 #one_ob[10]
+
+                vx = one_ob[2]*np.ones(len(obsp.t))
+                vy = one_ob[3]*np.ones(len(obsp.t))
+                yaw = one_ob[11]
+                obspx = one_ob[0] + np.arange(len(obsp_front.t))*delta_t*vx
+                obspy = one_ob[1] + np.arange(len(obsp_front.t))*delta_t*vy
+                
+                
+                obsp.x = obspx.tolist()
+                obsp.y = obspy.tolist()
+                       
+                obs_paths.append(obsp)
+        # for one_ob in ob:
+        #     obsp_front = Frenet_path()
+        #     obsp_back = Frenet_path()
+        #     obsp_front.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
+        #     obsp_back.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
+        #     ax = 0#one_ob[9]
+        #     ay = 0#one_ob[10]
+
+        #     for i in range(len(obsp_front.t)):
+        #         vx = one_ob[2] + ax * delta_t * i
+        #         vy = one_ob[3] + ax * delta_t * i
+        #         yaw = one_ob[11]   #only for constant prediction
+
+        #         obspx = one_ob[0] + i * delta_t * vx
+        #         obspy = one_ob[1] + i * delta_t * vy
+
+        #         obsp_front.x.append(obspx + math.cos(yaw) * self.move_gap)
+        #         obsp_front.y.append(obspy + math.sin(yaw) * self.move_gap)
+        #         obsp_back.x.append(obspx - math.cos(yaw) * self.move_gap)
+        #         obsp_back.y.append(obspy - math.sin(yaw) * self.move_gap)
+                
+        #     obs_paths.append(obsp_front)
+        #     obs_paths.append(obsp_back)
 
         self.rviz_collision_checking_circle = self.rivz_element.draw_obs_circles(obs_paths, self.check_radius)
+
 
         return obs_paths
 

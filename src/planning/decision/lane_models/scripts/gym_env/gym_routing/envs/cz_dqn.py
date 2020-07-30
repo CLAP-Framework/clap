@@ -72,22 +72,21 @@ class ZZZCarlaEnv_lane(gym.Env):
 
     def step(self, action):
         action = action.astype(int)
-        # action = action.tolist()
+        action = action.tolist()
         # send action to zzz planning module
         print("-------------",type(action),action)
         while True:
             try:
                 self.sock_conn.sendall(msgpack.packb(action))
-                
                 # wait next state
                 received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
                 print("-------------received msg in step")
-                self.state = received_msg[0:19]
+                self.state = received_msg[0:20]
                 collision = received_msg[20]
 
                 # calculate reward
                 reward = 0
-              
+            
                 # judge if finish
                 done = False
 
@@ -107,7 +106,6 @@ class ZZZCarlaEnv_lane(gym.Env):
 
             except:
                 print("RL cannot receive an state")
-
                 continue
 
         return np.array(self.state), reward, done, collision_happen
@@ -125,7 +123,7 @@ class ZZZCarlaEnv_lane(gym.Env):
                 received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
                 print("-------------received msg in reset",received_msg)
 
-                self.state = received_msg[0:19]
+                self.state = received_msg[0:20]
                 collision = received_msg[20]
                 return np.array(self.state)
 

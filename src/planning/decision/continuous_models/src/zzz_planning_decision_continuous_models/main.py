@@ -22,7 +22,7 @@ class MainDecision(object):
         
         # This function generate trajectory
 
-        close_to_junction = 10
+        close_to_junction = 5
 
         # Update_dynamic_local_map
         if self._dynamic_map_buffer is None:
@@ -33,7 +33,7 @@ class MainDecision(object):
             self._trajectory_planner.clear_buff(dynamic_map)
             return None
         elif dynamic_map.model == dynamic_map.MODEL_MULTILANE_MAP:
-            msg = self._trajectory_planner.trajectory_update(dynamic_map)
+            msg = self._trajectory_planner.build_frenet_path(dynamic_map)
             return None
         else:
             return self._trajectory_planner.trajectory_update(dynamic_map)
