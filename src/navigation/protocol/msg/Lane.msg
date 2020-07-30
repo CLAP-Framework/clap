@@ -47,3 +47,6 @@ LaneBoundary[] right_boundaries
 # ----- Auxiliary information of the lane -----
 # Road situations on this line. This field could be updated with dynamic info.
 LaneSituation[] situations
+
+# ---- traffic ligth position ------ 
+float32[] traffic_light_pos

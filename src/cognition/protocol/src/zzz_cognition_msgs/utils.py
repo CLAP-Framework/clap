@@ -10,7 +10,7 @@ def default_msg(msg_type):
     '''
     if msg_type == LaneState:
         msg = LaneState()
-        msg.stop_distance = float('inf')
+        msg.ego_dis_to_lane_tail = float('inf')
     elif msg_type == MapState:
         msg = MapState()
         msg.jmap.distance_to_lanes = float('inf')

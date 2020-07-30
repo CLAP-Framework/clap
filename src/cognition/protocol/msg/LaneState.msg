@@ -4,7 +4,8 @@
 zzz_navigation_msgs/Lane map_lane
 
 # distance to lane end
-float32 stop_distance # = Inf
+float32 ego_dis_to_lane_tail # = Inf
+float32 ego_dis_to_lane_head # = Inf
 
 # the front vehicles on this lane, sorted by their distances in ascending order
 # TODO: Change name to front_objects
