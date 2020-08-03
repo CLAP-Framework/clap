@@ -270,7 +270,7 @@ global_topic_queue_pairs = [
     (sent_ref_path_topic, sent_ref_path_queue, Path, sent_ref_path_callback, 20),
     (all_trajectory_path_topic, all_trajectory_path_queue, MarkerArray, all_trajectory_path_callback, 5),
     (decision_trajectory_path_topic, decision_trajectory_path_queue, Path, decision_trajectory_path_callback, 5),
-    (prepoint_topic, prepoint_queue, TFMessage, tf_callback, 100),
+    (prepoint_topic, prepoint_queue, Marker, prepoint_callback, 100),
     (collision_topic, collision_queue, MarkerArray, collision_callback, 5), 
     (tf_topic, tf_queue, TFMessage, tf_callback, 100)]
 
