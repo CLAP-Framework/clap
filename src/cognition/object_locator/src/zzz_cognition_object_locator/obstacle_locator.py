@@ -169,7 +169,7 @@ class NearestLocator:
             la, lb = abs(closest_lane_dist), abs(second_closest_lane_dist)
             return (b*la + a*lb)/(lb + la)
 
-    def locate_objects_in_junction(self, tstates, danger_area = 30):
+    def locate_objects_in_junction(self, tstates, danger_area = 80):
         tstates.dynamic_map.jmap.obstacles = []
                
         for obj in tstates.surrounding_object_list:
@@ -245,8 +245,8 @@ class NearestLocator:
 
             for vehicle_idx, vehicle in enumerate(tstates.surrounding_object_list):
                 # TODO: separate vehicle and other objects?
-                # if vehicle.cls.classid == vehicle.cls.HUMAN and ego_v < 20/3.6:
-                #     continue
+                if vehicle.cls.classid == vehicle.cls.HUMAN and ego_v < 20/3.6:
+                    continue
                 dist_list = np.array([dist_from_point_to_polyline2d(
                     vehicle.state.pose.pose.position.x,
                     vehicle.state.pose.pose.position.y,

@@ -125,8 +125,8 @@ class predict():
                 vx = one_ob[2]*np.ones(len(obsp_front.t))
                 vy = one_ob[3]*np.ones(len(obsp_front.t))
                 yaw = one_ob[11]
-                obspx = one_ob[0] + np.array(obsp_front.t)*delta_t*vx
-                obspy = one_ob[1] + np.array(obsp_front.t)*delta_t*vy
+                obspx = one_ob[0] + np.arange(len(obsp_front.t))*delta_t*vx
+                obspy = one_ob[1] + np.arange(len(obsp_front.t))*delta_t*vy
                 
                 obsp_front.x = (obspx + math.cos(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
                 obsp_front.y = (obspy + math.sin(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
@@ -145,8 +145,8 @@ class predict():
                 vx = one_ob[2]*np.ones(len(obsp.t))
                 vy = one_ob[3]*np.ones(len(obsp.t))
                 yaw = one_ob[11]
-                obspx = one_ob[0] + np.array(obsp.t)*delta_t*vx
-                obspy = one_ob[1] + np.array(obsp.t)*delta_t*vy
+                obspx = one_ob[0] + np.arange(len(obsp.t))*delta_t*vx
+                obspy = one_ob[1] + np.arange(len(obsp.t))*delta_t*vy
                 
                 obsp.x = obspx.tolist()
                 obsp.y = obspy.tolist()

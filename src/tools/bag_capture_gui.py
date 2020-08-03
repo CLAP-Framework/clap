@@ -418,8 +418,13 @@ if __name__ == '__main__':
         f.write('---------------------------\n')
         f.write('This testing end at:{0}\n'.format(datetime.datetime.now().strftime('%H:%M:%S')))
         f.write('Today we droved {}km, Take over {} times'.format(total_distance / 1000.0, take_over_count))
+    
     global ros_main_thread_pid
+    os.kill(ros_main_thread_pid, signal.SIGINT)
     time.sleep(5)
-    os.kill(ros_main_thread_pid, signal.SIGTERM)
+    
+    cmd = "kill -9 %d" % int(ros_main_thread_pid)
+    os.system(cmd)
+    # os.kill(ros_main_thread_pid, signal.SIGTERM)
     print('### kill ros_main_thread {} ! ###'.format(ros_main_thread_pid))
 
