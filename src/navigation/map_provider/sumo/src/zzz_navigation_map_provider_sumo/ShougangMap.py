@@ -151,25 +151,42 @@ class ShougangMap(object):
             self.static_local_map.target_lane_index = 1
             self.static_local_map.lanes.append(self.get_lane(self.road9_1))
 
-        for lane in self.static_local_map.lanes:
+        for i, lane in enumerate(self.static_local_map.lanes):
             if road_id == (1-1):
                 lane.speed_limit = 35
+                if i == 0:
+                    lane.traffic_light_pos.append(298)
+                if i == 1:
+                    lane.traffic_light_pos.append(297)
+                lane.traffic_light_pos.append(0)
             if road_id == (2-1):
                 lane.speed_limit = 30
+                lane.traffic_light_pos.append(0)
             if road_id == (3-1):
                 lane.speed_limit = 20
+                lane.traffic_light_pos.append(0)
             if road_id == (4-1):
                 lane.speed_limit = 30
+                lane.traffic_light_pos.append(0)
             if road_id == (5-1):
                 lane.speed_limit = 30
+                lane.traffic_light_pos.append(0)
             if road_id == (6-1):
                 lane.speed_limit = 30
+                lane.traffic_light_pos.append(0)
             if road_id == (7-1):
                 lane.speed_limit = 35
+                lane.traffic_light_pos.append(0)
             if road_id == (8-1):
                 lane.speed_limit = 35
+                lane.traffic_light_pos.append(0)
             if road_id == (9-1):
                 lane.speed_limit = 35
+                if i == 0:
+                    lane.traffic_light_pos.append(330)
+                if i == 1:
+                    lane.traffic_light_pos.append(331)
+                lane.traffic_light_pos.append(0)
 
     def update_next_road_list(self, next_road_id):
 

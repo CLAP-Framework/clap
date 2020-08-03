@@ -169,7 +169,7 @@ class NearestLocator:
             la, lb = abs(closest_lane_dist), abs(second_closest_lane_dist)
             return (b*la + a*lb)/(lb + la)
 
-    def locate_objects_in_junction(self, tstates, danger_area = 30):
+    def locate_objects_in_junction(self, tstates, danger_area = 80):
         tstates.dynamic_map.jmap.obstacles = []
                
         for obj in tstates.surrounding_object_list:
@@ -206,6 +206,10 @@ class NearestLocator:
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
         self._ego_vehicle_distance_to_lane_tail = dist_list[:, 4]
 
+        for i, lane in enumerate(tstates.dynamic_map.mmap.lanes):
+            lane.ego_dis_to_lane_head = dist_list[i,3]
+            lane.ego_dis_to_lane_tail = dist_list[i,4]
+        
         if (self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded] <= lane_end_dist_thres 
                 and tstates.dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane.stop_state == Lane.STOP_STATE_THRU):
             # Drive into junction, wait until next map
@@ -241,8 +245,8 @@ class NearestLocator:
 
             for vehicle_idx, vehicle in enumerate(tstates.surrounding_object_list):
                 # TODO: separate vehicle and other objects?
-                # if vehicle.cls.classid == vehicle.cls.HUMAN and ego_v < 20/3.6:
-                #     continue
+                if vehicle.cls.classid == vehicle.cls.HUMAN and ego_v < 20/3.6:
+                    continue
                 dist_list = np.array([dist_from_point_to_polyline2d(
                     vehicle.state.pose.pose.position.x,
                     vehicle.state.pose.pose.position.y,
@@ -357,17 +361,30 @@ class NearestLocator:
         '''
         # TODO(zhcao): Change the speed limit according to the map or the traffic sign(perception)
         # Now we set the multilane speed limit as 40 km/h.
-        total_lane_num = len(tstates.static_map.lanes)
-        for i in range(total_lane_num):
+        # total_lane_num = len(tstates.static_map.lanes)
+        for i,lane in enumerate(tstates.dynamic_map.mmap.lanes):
             speed_limit = tstates.static_map.lanes[i].speed_limit
-            d = tstates.dynamic_map.mmap.distance_to_junction
-            available_speed = self.traffic_speed_limit(d, tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state == Lane.STOP_STATE_THRU)
-            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = max(0, min(speed_limit,available_speed))
+            available_speed = self.traffic_speed_limit(lane,tstates.static_map.lanes[i].traffic_light_pos)
+            lane.map_lane.speed_limit = max(0, min(speed_limit,available_speed))
+        
+        # for i in range(total_lane_num):
+        #     speed_limit = tstates.static_map.lanes[i].speed_limit
+        #     d = tstates.dynamic_map.mmap.distance_to_junction
+        #     available_speed = self.traffic_speed_limit(d, tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state == Lane.STOP_STATE_THRU)
+        #     tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = max(0, min(speed_limit,available_speed))
             
-    def traffic_speed_limit(self, d, traffic_light_thru = True, d_thres = 5, dec = 0.4):
+    def traffic_speed_limit(self, lane, traffic_light_pos, d_thres = 5, dec = 0.4):
 
-        if traffic_light_thru:
+        if lane.map_lane.stop_state == Lane.STOP_STATE_THRU:
             return 10000
+
+        d = 0
+        
+        for pos in traffic_light_pos:
+            if lane.ego_dis_to_lane_tail < pos:
+                continue
+            d = lane.ego_dis_to_lane_tail - pos
+            break
 
         if d < d_thres:
             return 0

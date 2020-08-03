@@ -20,7 +20,7 @@ class IDM(object):
     def update_dynamic_map(self, dynamic_map):
         self.dynamic_map = dynamic_map
 
-    def longitudinal_speed(self, target_lane_index, traffic_light = False):
+    def longitudinal_speed(self, target_lane_index):
 
         target_lane = None
 
@@ -55,10 +55,7 @@ class IDM(object):
                 right_idm_speed = self.IDM_speed_in_lane(right_lane)
                 idm_speed = min(idm_speed,right_idm_speed)
 
-        traffic_light_speed = float("inf")
-        if traffic_light:
-            traffic_light_speed = self.traffic_light_speed(target_lane)
-        return min(idm_speed, traffic_light_speed)
+        return idm_speed
 
 
     def IDM_speed_in_lane(self, lane):
@@ -97,19 +94,6 @@ class IDM(object):
         acc = a*(1 - pow(v/v0, delta) - (g1/g)*((g1/g)))
 
         return max(0, v + acc*self.decision_dt)
-
-
-    def traffic_light_speed(self, lane):
-
-        ego_vehicle_speed = get_speed(self.dynamic_map.ego_state)
-        if lane.map_lane.stop_state == Lane.STOP_STATE_THRU:
-            return float("inf")
-        else:
-            d = lane.stop_distance
-            if d < 10 + ego_vehicle_speed*ego_vehicle_speed/2/2:
-                return 0 
-
-        return float("inf")
 
 
     def neighbor_vehicle_is_cutting_in(self,neighbor_lane,ego_lane):

@@ -44,11 +44,12 @@ class DecisionNode(object):
     def loop(self):
         while not rospy.is_shutdown():
             #zwt for running 
+        
             try:
-                publish_msg = self._decision_instance.update()
+                publish_msg = self._decision_instance.update()   
             except:
                 pass
-
+            
             if publish_msg:
                 self._decision_trajectory_publisher.publish(publish_msg)
                 publish_msg2 = publish_msg.trajectory

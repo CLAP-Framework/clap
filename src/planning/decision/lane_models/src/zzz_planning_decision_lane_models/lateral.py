@@ -20,7 +20,7 @@ class LaneUtility(object):
         rospy.logdebug("map model is %d", dynamic_map.model)
        
         target_index = self.generate_lane_change_index()
-        target_speed = self.longitudinal_model_instance.longitudinal_speed(target_index,traffic_light = True)
+        target_speed = self.longitudinal_model_instance.longitudinal_speed(target_index)
 
         tail_speed = self.tail_speed(dynamic_map.mmap.distance_to_junction)
 
