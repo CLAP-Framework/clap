@@ -959,8 +959,8 @@ class DrivingSpaceConstructor:
                                 if dist_list[j] > obstacle_dist:
                                     dist_list[j] = obstacle_dist
                                     angle_list[j] = math.atan2(cross_position_y - ego_y, cross_position_x - ego_x) #might slightly differ
-                                    vx = obs.state.twist.twist.linear.x[0]
-                                    vy = obs.state.twist.twist.linear.y[0]
+                                    vx = obs.state.twist.twist.linear.x
+                                    vy = obs.state.twist.twist.linear.y
                                     #a boundary only has vertical velocity, thus the direction is fixed. Only need to calculate the velocity value.
                                     v_value = vx * math.cos(direction + math.pi/2) + vy * math.sin(direction + math.pi/2)
                                     vx_list[j] = v_value * math.cos(direction + math.pi/2)
@@ -996,8 +996,8 @@ class DrivingSpaceConstructor:
                                 if dist_list[j] > obstacle_dist:
                                     dist_list[j] = obstacle_dist
                                     angle_list[j] = math.atan2(cross_position_y - ego_y, cross_position_x - ego_x) #might slightly differ
-                                    vx = obs.state.twist.twist.linear.x[0]
-                                    vy = obs.state.twist.twist.linear.y[0]
+                                    vx = obs.state.twist.twist.linear.x
+                                    vy = obs.state.twist.twist.linear.y #[0]
                                     #a boundary only has vertical velocity, thus the direction is fixed. Only need to calculate the velocity value.
                                     v_value = vx * math.cos(direction + math.pi/2) + vy * math.sin(direction + math.pi/2)
                                     vx_list[j] = v_value * math.cos(direction + math.pi/2)
