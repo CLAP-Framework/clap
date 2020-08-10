@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import rospy
+import traceback
+
 from zzz_common.params import parse_private_args
 from zzz_cognition_msgs.msg import MapState
 from zzz_navigation_msgs.msg import Map
@@ -44,11 +46,10 @@ class DecisionNode(object):
     def loop(self):
         while not rospy.is_shutdown():
             #zwt for running 
-        
             try:
                 publish_msg = self._decision_instance.update()   
-            except:
-                pass
+            except Exception as e:
+                rospy.logerr("@@@!!! Exception in idm_lane_utility !!! {} \n {}".format(e.message, traceback.format_exc()))
             
             if publish_msg:
                 self._decision_trajectory_publisher.publish(publish_msg)
