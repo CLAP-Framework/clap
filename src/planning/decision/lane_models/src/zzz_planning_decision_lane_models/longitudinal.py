@@ -39,7 +39,7 @@ class IDM(object):
                     left_lane = lane
                     break
             if left_lane is not None and self.neighbor_vehicle_is_cutting_in(left_lane,target_lane):
-                rospy.logwarn("response to left front vehicle(%d)",target_lane_index+1)
+                rospy.logwarn("response to left front vehicle(%d)", target_lane_index+1)
                 left_idm_speed = self.IDM_speed_in_lane(left_lane)
                 idm_speed = min(idm_speed,left_idm_speed)
 
@@ -64,12 +64,13 @@ class IDM(object):
                                          self.dynamic_map.ego_state.pose.pose.position.y])
 
         v = get_speed(self.dynamic_map.ego_state)
-        v0 = lane.map_lane.speed_limit/3.6
+        
+        v0 = lane.map_lane.speed_limit / 3.6
         if v0 <= 0.0:
             return 0.0
-            
+        
         if v < 5:
-            a = self.a + (5 - v)/5*2
+            a = self.a + (5 - v) / 5*2
         else:
             a = self.a
         
@@ -86,15 +87,18 @@ class IDM(object):
             v_f = get_speed(lane.front_vehicles[0].state) # TODO: get mmap vx and vy, the translator part in nearest locator
             dv = v - v_f
             g = np.linalg.norm(f_v_location - ego_vehicle_location)
-            g1 = g0 + T*v + v*dv/(2*np.sqrt(a*b))
+            g1 = g0 + T * v + v * dv / (2 * np.sqrt(a * b))
+            if g == 0 or v0 == 0:
+                rospy.logerr("!!! Front vehicle position: (%.3f, %.3f), ego vehicle position: (%.3f, %.3f), g v0 (%.3f, %.3f)", 
+                         f_v_location[0], f_v_location[1], ego_vehicle_location[0], ego_vehicle_location[1], g, v0)
         else:
             dv = 0
             g = 50
             g1 = 0
-
-        if g == 0 or v0 == 0:
-            rospy.logerr("Front vehicle position: (%.3f, %.3f), ego vehicle position: (%.3f, %.3f)", f_v_location[0], f_v_location[1], ego_vehicle_location[0], ego_vehicle_location[1])
-        acc = a*(1 - pow(v/v0, delta) - (g1/g)*((g1/g)))
+            if g == 0 or v0 == 0:
+                rospy.logerr("!!!  g, v0 - (%.3f, %.3f)",  g, v0)
+        
+        acc = a * (1 - pow(v/v0, delta) - (g1/g) * ((g1/g)))
 
         return max(0, v + acc*self.decision_dt)
 
