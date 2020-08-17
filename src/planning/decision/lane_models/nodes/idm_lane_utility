@@ -50,6 +50,7 @@ class DecisionNode(object):
                 publish_msg = self._decision_instance.update()   
             except Exception as e:
                 rospy.logerr("@@@!!! Exception in idm_lane_utility !!! {} \n {}".format(e.message, traceback.format_exc()))
+                pass
             
             if publish_msg:
                 self._decision_trajectory_publisher.publish(publish_msg)

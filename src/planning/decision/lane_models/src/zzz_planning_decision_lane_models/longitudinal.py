@@ -65,6 +65,9 @@ class IDM(object):
 
         v = get_speed(self.dynamic_map.ego_state)
         v0 = lane.map_lane.speed_limit/3.6
+        if v0 <= 0.0:
+            return 0.0
+            
         if v < 5:
             a = self.a + (5 - v)/5*2
         else:

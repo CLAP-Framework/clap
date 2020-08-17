@@ -7,10 +7,11 @@ import datetime
 import threading
 import copy
 import signal
-
 import roslib
 import rospy
+import copy
 import rosbag
+#import subprocess32
 from sensor_msgs.msg import Image, CompressedImage
 from sensor_msgs.msg import PointCloud2
 from nav_msgs.msg import Path
@@ -24,6 +25,8 @@ from tf2_msgs.msg import TFMessage
 
 from python_qt_binding.QtGui import *
 from python_qt_binding.QtCore import *
+from python_qt_binding.QtWidgets import *
+
 try:
     from python_qt_binding.QtWidgets import *
 except ImportError:
@@ -32,8 +35,9 @@ except ImportError:
 import rviz
 
 # zzz message reference
-from xpmotors_can_msgs.msg import AutoStateEx
+from xpmotors_can_msgs.msg import AutoStateEx, ESCStatus
 from zzz_driver_msgs.msg import RigidBodyStateStamped
+from zzz_planning_msgs.msg import DecisionTrajectory
 from zzz_perception_msgs.msg import TrackingBox, TrackingBoxArray, DetectionBox, DetectionBoxArray, ObjectSignals
 
 roslib.load_manifest('rosbag')
@@ -45,10 +49,16 @@ roslib.load_manifest('rosbag')
 
 traffic_publisher = None
 traffic_light_topic = "/zzz/perception/traffic_lights"
+real_velocity_topic = "/xp/esc_status"
+desired_velocity_topic = "/zzz/planning/decision_trajectory"
 
 # 2-autopilot, 0-manually
 last_autostate  = 0
 take_over_count = 0
+
+#current bag number and non-problem take over
+current_bag_number = 1
+non_problem_take_over = 0
 
 # bag record default 1 minutes
 window_seconds = 60*1.5
@@ -112,7 +122,9 @@ def start_capture(topic_queue_pairs):
 
 def write2bag(topic_queue_pairs):
 
-    file_name = time.strftime("%Y-%m-%d_%H-%M-%S.bag", time.localtime()) 
+    global current_bag_number
+    file_name = time.strftime("%Y-%m-%d_%H-%M-%S.bag", time.localtime())
+    file_name = str(current_bag_number) + '_' + file_name
     # time.sleep(60)
     bag = rosbag.Bag(file_name, "w")
     for topic, que, _, _, _ in topic_queue_pairs:
@@ -256,6 +268,18 @@ def tf_callback(msg):
     else:
         tf_queue.get()
 
+real_velocity_value = 0.0
+desired_velocity_value = 0.0
+
+def desired_velocity_callback(msg):
+    global desired_velocity_value
+    desired_velocity_value = msg.desired_speed
+        #self.desired_velocity.setText(str(msg.desired_speed))
+    
+def real_velocity_callback(msg):
+    global real_velocity_value
+    real_velocity_value = msg.RRWheelSpd
+        #data_buffer = copy.deepcopy(msg.RRWheelSpd)
 
 global_topic_queue_pairs = [
     ###  (topic, queue, class, callback, hz)
@@ -290,6 +314,10 @@ def ros_main_thread():
         
         global traffic_publisher
         traffic_publisher = rospy.Publisher(traffic_light_topic, DetectionBoxArray, queue_size=10)
+        real_velocity_subscriber = rospy.Subscriber(real_velocity_topic, ESCStatus, real_velocity_callback)
+        desired_velocity_subscriber = rospy.Subscriber(desired_velocity_topic, DecisionTrajectory, desired_velocity_callback)
+        
+
 
         rospy.loginfo("*** Create Subscribers Done, Start Loop ***")
         rospy.spin()
@@ -309,11 +337,21 @@ class MyViz(QWidget):
         self.frame.setHideButtonVisibility(False)
         self.statusBar = QStatusBar()
         # record number of current bag
-        self.number_of_current_bag = 1
+        
+        self.timer = QTimer()
+        
+        self.timer.timeout.connect(self.desired_velocity_ui)
+        self.timer.timeout.connect(self.real_velocity_ui)
+        self.timer.start(200)
 
+
+        # self.real_velocity_subscriber = rospy.Subscriber(real_velocity_topic, ESCStatus, self.real_velocity_callback)
+        # self.desired_velocity_subscriber = rospy.Subscriber(desired_velocity_topic, DecisionTrajectory, self.desired_velocity_callback)
+        
         self.manager = self.frame.getManager()
         ## Here we create the layout and other widgets in the usual Qt way.
-        layout = QVBoxLayout()        
+        global_Hlayout = QHBoxLayout()
+        layout = QVBoxLayout()
         save_layout = QHBoxLayout()
         traffic_signal_layout = QHBoxLayout()
         
@@ -338,7 +376,44 @@ class MyViz(QWidget):
         green_button.setStyleSheet("background:green")
         green_button.clicked.connect(self.onGreenSignalButtonClick)
         traffic_signal_layout.addWidget(green_button)
+
+        option_layout = QVBoxLayout()
         
+        normal_take_over = QPushButton("Normal take-over")
+        normal_take_over.setFixedSize(150, 40)
+        normal_take_over.clicked.connect(self.count_normal_take_over)
+        
+        launch_system_button = QPushButton("LAUNCH SYSTEM")
+        launch_system_button.clicked.connect(self.launch_system)
+        
+        relaunch_system_button = QPushButton("REBOOST STSTEM")
+        relaunch_system_button.clicked.connect(self.relaunch_system)
+
+        option_layout.addWidget(launch_system_button)
+        option_layout.addWidget(relaunch_system_button)
+        option_layout.addWidget(normal_take_over)
+        
+        info_layout = QVBoxLayout()
+
+        self.font = QFont()
+        self.font.setPointSize(18)
+
+        desired_velocity_label = QLabel('Desired Velocity:')
+        self.desired_velocity = QTextEdit()
+        self.desired_velocity.setFixedSize(100,40)
+        self.desired_velocity.setFont(self.font)
+        self.desired_velocity.setText('0')
+        real_velocity_label = QLabel('Real Velocity:')
+        self.real_velocity = QTextEdit()
+        self.real_velocity.setFixedSize(100, 40)
+        self.real_velocity.setFont(self.font)
+        self.real_velocity.setText('0')
+
+        info_layout.addWidget(desired_velocity_label)
+        info_layout.addWidget(self.desired_velocity)
+        info_layout.addWidget(real_velocity_label)
+        info_layout.addWidget(self.real_velocity)
+
         # ADD a case description 
         self.case_description = QTextEdit()
         layout.addWidget(self.case_description)
@@ -346,28 +421,31 @@ class MyViz(QWidget):
         layout.addLayout(save_layout)
         layout.addLayout(traffic_signal_layout)
         layout.addWidget(self.statusBar)
-        self.setLayout(layout)
+        global_Hlayout.addLayout(layout)
+        global_Hlayout.addLayout(option_layout)
+        global_Hlayout.addLayout(info_layout)
+        self.setLayout(global_Hlayout)
 
         self.statusBar.showMessage('Initialize Successfully')
     ## GUI button event handling
     def onCaptureQuestionButtonClick(self):
-        global global_topic_queue_pairs
+        global global_topic_queue_pairs, current_bag_number
         start_capture(global_topic_queue_pairs)
         with open('Record.txt', 'a+') as f:
-            f.write('BAG NO.{0} | Question bag | {1}'.format(str(self.number_of_current_bag), self.case_description.toPlainText()) + '\n')
+            f.write('BAG NO.{0} | Question bag | {1}'.format(str(current_bag_number), self.case_description.toPlainText()) + '\n')
         self.case_description.clear()
-        self.statusBar.showMessage('No.{0} bag captured'.format(str(self.number_of_current_bag)), 5000)
-        self.number_of_current_bag += 1
+        self.statusBar.showMessage('No.{0} bag captured'.format(str(current_bag_number)), 5000)
+        current_bag_number += 1
         print("### Capture Done! ###")
     
     def onCaptureShowcaseButtonClick(self):
-        global global_topic_queue_pairs
+        global global_topic_queue_pairs, current_bag_number
         start_capture(global_topic_queue_pairs)
         with open('Record.txt', 'a+') as f:
-            f.write('BAG NO.{0} | ShowCase bag | {1}'.format(str(self.number_of_current_bag), self.case_description.toPlainText()) + '\n')
+            f.write('BAG NO.{0} | ShowCase bag | {1}'.format(str(current_bag_number), self.case_description.toPlainText()) + '\n')
         self.case_description.clear()
-        self.statusBar.showMessage('No.{0} bag captured'.format(str(self.number_of_current_bag)), 5000)
-        self.number_of_current_bag += 1
+        self.statusBar.showMessage('No.{0} bag captured'.format(str(current_bag_number)), 5000)
+        current_bag_number += 1
         print("### Capture Done! ###")
         
         
@@ -390,34 +468,67 @@ class MyViz(QWidget):
         traffic_publisher.publish(traffic_light_detection)
         print('### Send GREEN Signal...')
         
-    
+    def count_normal_take_over(self):
+        global non_problem_take_over
+        non_problem_take_over += 1
+
+    def real_velocity_ui(self):
+        global real_velocity_value
+        self.real_velocity.setText(str(real_velocity_value/3.6))
+        
+    def desired_velocity_ui(self):
+        global desired_velocity_value
+        self.desired_velocity.setText(str(desired_velocity_value))
+        
+
+    def launch_system(self):
+	pass
+        #self.load_path_cmd = subprocess32.Popen(['/bin/bash', '-i', '-c', 'cd /home/novauto/CLAP/zzz&&./load_ref_path.sh'], start_new_session=True)
+        # self.load_main_cmd = subprocess32.Popen(['/bin/bash', '-i', '-c', 'cd /home/novauto/CLAP/zzz&&./load_main.sh'], start_new_session=True)
+        # print('CMD PID IS !!!!!!!!!{0}'.format(self.load_main_cmd.pid))
+
+    def closeEvent(self, event):
+        try:
+            #os.kill(self.load_path_cmd.pid, signal.SIGKILL)
+            # os.kill(self.load_main_cmd.pid, signal.SIGKILL)
+            print('All process killed!!!!')
+        except:
+            pass
+
+
+    def relaunch_system(self):
+        print('a')
+
+
 ## Start the Application
 if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    myviz = MyViz()
     # ros comm
     rospy.init_node("Bug-Capture-Node", anonymous=True)
+
     ros_thread = threading.Thread(
         target = ros_main_thread, args=())
     ros_thread.setDaemon(True)
     ros_thread.start()
     
     # open a new text file to record testing result
-    with open('Record.txt', 'w+') as f:
+    with open('Record.txt', 'a+') as f:
         f.write('Today is :{0}\n'.format(datetime.date.today()))
         f.write('This testing begin from:{0}\n'.format(datetime.datetime.now().strftime('%H:%M:%S')))
         f.write('---------------------------\n')
     # qt-gui
-    app = QApplication(sys.argv)
-    myviz = MyViz()
-    myviz.resize(250, 30)
+    
+    myviz.resize(250, 150)
     myviz.show()
     app.exec_()
-    global total_distance, take_over_count
+    global total_distance, take_over_count, non_problem_take_over
     print('### Total Distance - {} km, Take over {} times ###'.format(total_distance / 1000.0, take_over_count))
     # kill ros_main_thread
     with open('Record.txt', 'a+') as f:
         f.write('---------------------------\n')
         f.write('This testing end at:{0}\n'.format(datetime.datetime.now().strftime('%H:%M:%S')))
-        f.write('Today we droved {}km, Take over {} times'.format(total_distance / 1000.0, take_over_count))
+        f.write('Today we droved {}km, Take over {} times'.format(total_distance / 1000.0, take_over_count - non_problem_take_over) + '\n')
     
     global ros_main_thread_pid
     os.kill(ros_main_thread_pid, signal.SIGINT)

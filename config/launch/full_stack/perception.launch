@@ -32,7 +32,7 @@
     <!-- <group if="$(eval run_platform == 'xiaopeng')"> -->
       <arg name="input_odm_topic" value="/localization/gps/odom" />
       <arg name="lidar2imu_rotation" 
-          default="[0.99885, -0.04471, -0.017021, 0.04449, 0.99892, -0.013123, 0.01759, 0.01235, 0.99977]" />
+          default="[0.9995, -0.0273, -0.0172, 0.0271, 0.9996, -0.0128, 0.0176, 0.0123, 0.9998]" />
       <arg name="lidar2imu_translation" 
           default="[0.98, 0.0, 0.9]" />   
     <!-- </group> -->
@@ -41,7 +41,7 @@
   <include file="$(find tf4hmi)/launch/tf4hmi.launch">
       <arg name="input_odom_topic" value="/localization/gps/odom" />
       <arg name="lidar2imu_rotation" 
-          default="[0.99885, -0.04471, -0.017021, 0.04449, 0.99892, -0.013123, 0.01759, 0.01235, 0.99977]" />
+          default="[0.9995, -0.0273, -0.0172, 0.0271, 0.9996, -0.0128, 0.0176, 0.0123, 0.9998]" />
       <arg name="lidar2imu_translation" 
           default="[0.98, 0.0, 0.9]" />   
   </include>
