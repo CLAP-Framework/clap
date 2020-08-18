@@ -1,2 +1,2 @@
 source devel/setup.bash
-rviz
+rviz -d ./default.rviz

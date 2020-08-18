@@ -1,9 +1,11 @@
 easydict
-cython >= 0.29
+cython 
 utm
 intervaltree
 plotly
 dash
 filterpy
 scipy
+numpy
 shapely
+cvxopt
