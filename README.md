@@ -37,8 +37,8 @@
 3. 加载全局导航参考路径, Ctl+Shift+T, 执行./load_ref_path.sh
 4. 加载感知+规划+控制, 执行./load_main.sh
 5. 加载rviz可视化界面, 执行./load_rviz.sh
-
-   最后使用xiaopengG1车钥匙即可开启autopilot功能(操作方法:中间件连续按5秒, 而后第一个键(位置靠近小鹏logo) 连按2下即可)
+6. 加载bag capture工具, 执行./load_capture.sh
+7. 最后使用xiaopengG1车钥匙即可开启autopilot功能(操作方法:中间件连续按5秒, 而后第一个键(位置靠近小鹏logo) 连按2下即可), 如不出意外车子就可以自己走了!
 
 
 
