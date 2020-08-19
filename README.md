@@ -1,6 +1,8 @@
+# CLAP系统快速操作指南
 
 
-## 基础环境配置
+
+## 系统环境搭建
 
 1. 安装Ubuntu 18.04， 磁盘500G+， 内存16G+。
 2. 安装ros， 按照http://wiki.ros.org/melodic/Installation/Ubuntu的步骤安装ros-melodic-desktop-full。
@@ -27,20 +29,33 @@
 
 ​     
 
-## 回放bag进行离线调试
+## CLAP系统xiaopeng-G1启动
+
+0. 通常clap系统部署在xiaopeng G1工控机的home目录下,  进入工控机ubuntu(user icv, pass 123456)后, cd ~/zzz;
+1. 打开terminal, 执行roscore
+2. 加载传感器个节点, Ctl+Shift+T另起tab, 执行./load_sensors.sh
+3. 加载全局导航参考路径, Ctl+Shift+T, 执行./load_ref_path.sh
+4. 加载感知+规划+控制, 执行./load_main.sh
+5. 加载rviz可视化界面, 执行./load_rviz.sh
+
+   最后使用xiaopengG1车钥匙即可开启autopilot功能(操作方法:中间件连续按5秒, 而后第一个键(位置靠近小鹏logo) 连按2下即可)
+
+
+
+## CLAP系统离线Bag调试
 
 开始...
 
 0. 打开terminal， 执行 roscore
 1. 加载全局reference-path， 另起tab 运行./load_ref_path.sh
 
-#### 如果调试规划模块
+#### 调试规划模块
 
 2. 回放bag包， ctl+shift+T另启一个tab，执行./bagreplay.sh bagfile offset_time(跳过秒数开始play)，回放的数据包含ego-pose，image， pointscloud, objects_tracked等信息；
 
 3. 运行 planning， 另起tab 运行 ./load_main_planning.sh
 
-#### 如果调试感知+规划模块
+#### 调试感知+规划模块
 
 2. 回放bag包， ctl+shift+T另启一个tab，执行./bagreplay_perception.sh bagfile offset_time(跳过秒数开始play)，回放的数据包含ego-pose，image， pointscloud等；
 3. 运行感知+规划， 另起tab 运行 ./load_main.sh
@@ -57,13 +72,17 @@
 
 
 
-示例BAG， 
+示例BAG， 百度网盘: 准备中.....
 
 
 
 
 
 
+
+## CLAP系统对接Carla仿真
+
+...
 
 
 
