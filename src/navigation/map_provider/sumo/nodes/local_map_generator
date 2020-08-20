@@ -13,7 +13,7 @@ from geometry_msgs.msg import Pose
 from nav_msgs.msg import Path
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import Map, MapString
-from zzz_navigation_map_provider_sumo import LocalMap
+from zzz_navigation_map_provider_sumo.local_map import LocalMap
 
 MAP_TYPES = {
     MapString.MAP_UNKNOWN: "unknown",
