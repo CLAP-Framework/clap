@@ -14,7 +14,7 @@ class ControllerNode(object):
         params = parse_private_args(
             control_topic="command",
             pose_topic="/zzz/navigation/ego_pose",
-            trajectory_topic="/zzz/planning/safeguard_trajectory"
+            trajectory_topic="/zzz/planning/decision_trajectory"
         )
 
         self._rate = rospy.Rate(20)
