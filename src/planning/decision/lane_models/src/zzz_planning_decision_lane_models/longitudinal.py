@@ -2,6 +2,7 @@
 import numpy as np
 import rospy
 
+from zzz_common.params import parse_private_args
 from zzz_navigation_msgs.msg import Lane
 from zzz_driver_msgs.utils import get_speed
 from zzz_cognition_msgs.msg import RoadObstacle
@@ -9,13 +10,24 @@ from zzz_cognition_msgs.msg import RoadObstacle
 class IDM(object):
 
     def __init__(self):
-        self.T = 3.6
-        self.g0 = 7 + 12
+        running_mode = 'xiaopeng'
+        try:
+            running_mode = rospy.get_param("/running_mode")
+        except:
+            rospy.logwarn("Didn't claim running mode in main launch file, xiaopeng will be chosen")
+
+        self.T = 1.8
+        self.g0 = 7
         self.a = 2.73 
         self.b = 1.65 + 5
         self.delta = 4
-        self.decision_dt = 0.2
+        self.decision_dt = 0.75
         self.dynamic_map = None
+
+        if running_mode == 'xiaopeng':
+            self.T = self.T * 2
+            self.g0 = self.g0 + 12
+            self.decision_dt = self.decision_dt - 0.55
     
     def update_dynamic_map(self, dynamic_map):
         self.dynamic_map = dynamic_map
@@ -23,7 +35,6 @@ class IDM(object):
     def longitudinal_speed(self, target_lane_index):
 
         target_lane = None
-
         if target_lane_index > len(self.dynamic_map.mmap.lanes)-1:
             rospy.logwarn("cannot find neighbor lane, lane_index: %d", target_lane_index)
             return 0 

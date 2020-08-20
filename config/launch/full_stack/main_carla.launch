@@ -2,6 +2,7 @@
     <arg name="odom_topic" default="/carla/ego_vehicle/odometry"/>
     <arg name="waypoint_topic" default="/carla/ego_vehicle/waypoints"/>
     <arg name="objects_topic" default="/carla/ego_vehicle/objects"/>
+    <param name="running_mode" value="carla"/>
 
     <node pkg="zzz_navigation_pose_reporter" type="manual"
               name="pose_reporter" output="screen" ns="/zzz/navigation">
