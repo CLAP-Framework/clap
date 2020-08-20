@@ -4,11 +4,6 @@
       <arg name="waypoint_topic" default="/carla/ego_vehicle/waypoints"/>
       <arg name="objects_topic" default="/zzz/perception/objects_tracked"/>
 
-      <node pkg="zzz_navigation_map_provider_sumo" type="native_map_generator"
-            name="static_map_builder" output="screen" ns="/zzz/navigation">
-          <param name="reference_path_topic" value="$(arg waypoint_topic)"/>
-      </node>
-
       <node pkg="zzz_cognition_object_locator" type="nearest_locator"  respawn="true"
             name="nearest_locator" output="screen" ns="/zzz/cognition">
             <param name="objects_topic" value="$(arg objects_topic)"/>
@@ -31,7 +26,5 @@
       <node pkg="zzz_planning_decision_lane_models" type="idm_lane_utility"  respawn="true"
             name="idm_lane_utility" output="screen" ns="/zzz/planning">
       </node>
-
-      <include file="$(find icvfollower)/launch/ICVfollower.launch" /> 
 
 </launch>
