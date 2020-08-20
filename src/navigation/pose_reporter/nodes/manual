@@ -89,6 +89,23 @@ class Node(object):
         rel_state = convert_odometry_to_state(msg)
         state = get_absolute_state(rel_state, odom_state, check_frame=False)
 
+        # transform ego_pose to fit carla world
+        # Quaterion xyzw
+        x = state.state.pose.pose.orientation.x
+        y = state.state.pose.pose.orientation.y
+        z = state.state.pose.pose.orientation.z
+        w = state.state.pose.pose.orientation.w
+
+        # get rotation matrix from Quaterion, and multiply it with linear velocity to get carla_world velocity
+        rotation_mat = np.array([[1-2*y*y-2*z*z, 2*x*y+2*w*z, 2*x*z-2*w*y], [2*x*y-2*w*z, 1-2*x*x-2*z*z, 2*y*z+2*w*x], [2*x*z+2*w*y, 2*y*z-2*w*x, 1-2*x*x-2*y*y]])
+        rotation_mat_inverse = np.linalg.inv(rotation_mat) #those are the correct way to deal with quaternion
+        vel_self = np.array([[state.state.twist.twist.linear.x], [state.state.twist.twist.linear.y], [state.state.twist.twist.linear.z]])
+        vel_world = np.matmul(rotation_mat_inverse, vel_self)
+
+        state.state.twist.twist.linear.x = vel_world[0]
+        state.state.twist.twist.linear.y = vel_world[1]
+        state.state.twist.twist.linear.z = vel_world[2]
+
         rospy.logdebug("Position: %.3f, %.3f", state.state.pose.pose.position.x, state.state.pose.pose.position.y)
         
         self._pose_publisher.publish(state)
