@@ -26,7 +26,7 @@ class IDM(object):
 
         if running_mode == 'xiaopeng':
             self.T = self.T * 2
-            self.g0 = self.g0 + 12
+            self.g0 = self.g0 + 2
             self.decision_dt = self.decision_dt - 0.55
     
     def update_dynamic_map(self, dynamic_map):
@@ -98,6 +98,8 @@ class IDM(object):
             v_f = get_speed(lane.front_vehicles[0].state) # TODO: get mmap vx and vy, the translator part in nearest locator
             dv = v - v_f
             g = np.linalg.norm(f_v_location - ego_vehicle_location)
+            # adaptive following speed, need to be checked in real car
+            g0 = g0 + lane.front_vehicles[0].dimension.length_x
             g1 = g0 + T * v + v * dv / (2 * np.sqrt(a * b))
             if g == 0 or v0 == 0:
                 rospy.logerr("!!! Front vehicle position: (%.3f, %.3f), ego vehicle position: (%.3f, %.3f), g v0 (%.3f, %.3f)", 
