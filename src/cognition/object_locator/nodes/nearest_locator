@@ -11,6 +11,8 @@ from zzz_cognition_msgs.msg import MapState
 from zzz_perception_msgs.msg import DetectionBoxArray, TrackingBoxArray
 from zzz_cognition_object_locator.obstacle_locator import NearestLocator
 
+from visualization_msgs.msg import Marker, MarkerArray
+
 
 class LocatorNode(object):
     def __init__(self):
@@ -33,6 +35,8 @@ class LocatorNode(object):
         self._dynamic_map_publisher = rospy.Publisher(params.map_output_topic, MapState, queue_size=1)
         self._traffic_light_subscriber = rospy.Subscriber(params.traffic_light_topic, DetectionBoxArray,
             self._map_instance.receive_traffic_light_detection)
+        self._rviz_nearest_front_vehicle = rospy.Publisher('/zzz/cognition/nearest_front_vehicle', MarkerArray, queue_size=1)
+        self._rviz_corner_to_lane = rospy.Publisher('/zzz/cognition/front_vehicle_corner_to_lane', MarkerArray, queue_size=1)
 
     def loop(self):
         while not rospy.is_shutdown():
@@ -40,6 +44,9 @@ class LocatorNode(object):
             dmap = self._map_instance.update()
             if dmap: 
                 self._dynamic_map_publisher.publish(dmap)
+                # todo remove visulization part in every node to module visulization
+                self._rviz_nearest_front_vehicle.publish(self._map_instance.nearest_front_vehicle_marker)
+                self._rviz_corner_to_lane.publish(self._map_instance.corner_to_lane_marker)
 
 if __name__ == "__main__":
 
