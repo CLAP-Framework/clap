@@ -126,7 +126,7 @@ class LaneUtility(object):
             if d_rear > max(10 + 3*(rear_v-ego_v), 20):
                 rear_safe = True
 
-        rospy.logdebug("ego_lane = %d, target_lane = %d, front_d = %f(%d), rear_d = %f(%d)",
+        rospy.logdebug("ego_lane = %d, safe_checking_target_lane = %d, front_d = %f(%d), rear_d = %f(%d)",
                                 ego_lane_index, target_index, d_front, 
                                 behavior_front, d_rear, behavior_rear)
                                 
