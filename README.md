@@ -72,12 +72,10 @@
 
 
 
-示例BAG， 百度网盘: 准备中.....
-
-
-
-
-
+示例BAG， 百度网盘: 
+地址：https://pan.baidu.com/s/1846ZN8GzlhuyUD5FQEf_jw
+提取码：18xx
+其中Record.txt有对bag内容的大致描述
 
 
 ## CLAP系统对接Carla仿真
