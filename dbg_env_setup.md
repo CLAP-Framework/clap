@@ -36,6 +36,7 @@
    0) git clone https://gitlab.com/umvdl/zzz/zzz.git -b dev/zhcao/xiaopeng
    1) echo "export ZZZ_ROOT=$(pwd -P)" >> ~/.bashrc && source ~/.bashrc
    2) cd zzz && sudo -H pip2 install -r requirement.txt
+   3) ./build_zzz.sh && bash scripts/env.sh && bash scripts/cnnseg_trt_builder.sh
 
 ## 3. start debug with bag
    0) roscore

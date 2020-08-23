@@ -12,11 +12,19 @@ import rospy
 import copy
 import rosbag
 #import subprocess32
+
 from sensor_msgs.msg import Image, CompressedImage
 from sensor_msgs.msg import PointCloud2
-from nav_msgs.msg import Path
+from nav_msgs.msg import Path, Odometry
+
 from cv_bridge import CvBridgeError, CvBridge
 from visualization_msgs.msg import Marker, MarkerArray
+
+from rslidar_msgs.msg import rslidarPacket
+from rslidar_msgs.msg import rslidarScan
+
+
+
 from queue import Queue
 import argparse
 import utm
@@ -69,9 +77,14 @@ total_distance = 0.0
 # all topics
 auto_topic = '/xp/auto_state_ex'
 ego_pose_topic  = '/zzz/navigation/ego_pose'
+odom_topic = '/localization/gps/odom'
 obs_topic = '/zzz/perception/objects_tracked'
 left_cam_topic  = '/left_usb_cam/image_raw/compressed'
+
 pcl_topic = '/middle/rslidar_points'
+pcl_packets_topic = '/middle/rslidar_packets' 
+pcl_packets_difop_topic = '/middle/rslidar_packets_difop'
+
 ego_marker_topic = '/zzz/cognition/ego_markerarray'
 lanes_marker_topic = '/zzz/cognition/lanes_markerarray'
 obstacles_marker_topic = '/zzz/cognition/obstacles_markerarray'
@@ -87,12 +100,15 @@ tf_topic = '/tf'
 auto_queue = Queue(50 * window_seconds)
 # ego_pose hz 100
 pose_queue = Queue(100 * window_seconds)
+odom_queue = Queue(100 * window_seconds)
 # perception obstacle hz 10
 obs_queue = Queue(10 * window_seconds)
 # usb cam hz 10
 image_queue = Queue(10 * window_seconds)
 # pcl hz 10
-pcl_queue = Queue(10 * window_seconds)
+# pcl_queue = Queue(10 * window_seconds)
+pcl_packets_difop_queue = Queue(10 * window_seconds)
+pcl_packets_queue = Queue(10 * window_seconds)
 # 5 hz
 ego_marker_queue = Queue(5 * window_seconds)
 # 5 hz
@@ -176,6 +192,13 @@ def ego_pose_callback(msg):
         total_distance = total_distance + gap
 
 
+def odom_callback(msg):
+    if not odom_queue.full():
+        odom_queue.push((msg, rospy.Time.now()))
+    else:
+        odom_queue.get()
+
+
 def obstacles_callback(msg):
     if not obs_queue.full():
         obs_queue.put((msg, rospy.Time.now()))
@@ -195,6 +218,20 @@ def pcl_callback(msg):
         pcl_queue.put((msg, rospy.Time.now()))
     else:
         pcl_queue.get()
+
+
+def pcl_packets_callback(msg):
+    if not pcl_packets_queue.full():
+        pcl_packets_queue.put((msg, rospy.Time.now()))
+    else:
+        pcl_packets_queue.get()
+
+
+def pcl_packets_difop_callback(msg):
+    if not pcl_packets_difop_queue.full():
+        pcl_packets_difop_queue.put((msg, rospy.Time.now()))
+    else:
+        pcl_packets_difop_queue.get()
 
 
 def ego_marker_callback(msg):
@@ -285,9 +322,12 @@ global_topic_queue_pairs = [
     ###  (topic, queue, class, callback, hz)
     (auto_topic, auto_queue, AutoStateEx, autostate_callback, 20),
     (ego_pose_topic, pose_queue, RigidBodyStateStamped, ego_pose_callback, 100), 
+    (odom_topic, odom_queue, Odometry, odom_callback, 100),
     (obs_topic, obs_queue, TrackingBoxArray, obstacles_callback, 10),
     (left_cam_topic, image_queue, CompressedImage, image_callback, 10),
-    (pcl_topic, pcl_queue, PointCloud2, pcl_callback, 10),
+    # (pcl_topic, pcl_queue, PointCloud2, pcl_callback, 10),
+    (pcl_packets_topic, pcl_packets_queue, rslidarPacket, pcl_packets_callback, 10),
+    (pcl_packets_difop_topic, pcl_packets_difop_queue, rslidarScan, pcl_packets_difop_callback, 10),
     (ego_marker_topic, ego_marker_queue, MarkerArray, ego_marker_callback, 5),
     (lanes_marker_topic, lanes_marker_queue, MarkerArray, lanes_marker_callback, 5),
     (obstacles_marker_topic, obstacles_marker_queue, MarkerArray, obstacles_marker_callback, 10),

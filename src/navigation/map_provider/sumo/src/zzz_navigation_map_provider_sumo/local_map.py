@@ -373,6 +373,7 @@ class LocalMap(object):
                 lane_wrapped.left_boundaries.append(left_bound)
                 lane_wrapped.right_boundaries.append(right_bound)
 
+            lane_wrapped.speed_limit = 35
 
         return lane_wrapped
 

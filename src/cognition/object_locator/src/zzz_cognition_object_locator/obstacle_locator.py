@@ -10,12 +10,14 @@ from zzz_cognition_msgs.utils import convert_tracking_box
 from zzz_cognition_msgs.utils import default_msg as cognition_default
 from zzz_common.geometry import dist_from_point_to_polyline2d, wrap_angle
 from zzz_common.kinematics import get_frenet_state
+from zzz_common.utils import quaternion_to_eular, calc_vehicle_corners
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_driver_msgs.utils import get_speed, get_yaw
 from zzz_navigation_msgs.msg import Lane, Map
 from zzz_navigation_msgs.utils import get_lane_array, default_msg as navigation_default
 from zzz_perception_msgs.msg import (DetectionBoxArray, DetectionBox, ObjectSignals,
                                      TrackingBoxArray)
+from zzz_visualization_rviz_box_visualizer.utils import RvizVisualizer
 
 class NearestLocator:
     def __init__(self, lane_dist_thres=5): 
@@ -37,6 +39,9 @@ class NearestLocator:
         # These two are buffers for computation
         self._ego_vehicle_distance_to_lane_head = [] # distance from vehicle to lane start
         self._ego_vehicle_distance_to_lane_tail = [] # distance from vehicle to lane end
+
+        self.nearest_front_vehicle_marker = None
+        self.corner_to_lane_marker = None
 
     # ====== Data Receiver =======
 
@@ -247,23 +252,40 @@ class NearestLocator:
                 # TODO: separate vehicle and other objects?
                 if vehicle.cls.classid == vehicle.cls.HUMAN and ego_v < 20/3.6:
                     continue
-                dist_list = np.array([dist_from_point_to_polyline2d(
-                    vehicle.state.pose.pose.position.x,
-                    vehicle.state.pose.pose.position.y,
-                    lane, return_end_distance=True)
-                    for lane in tstates.static_map_lane_path_array])
-                closest_lane = np.argmin(np.abs(dist_list[:, 0]))
+
+                roll, pitch, yaw = quaternion_to_eular(vehicle.state.pose.pose.orientation.x,
+                                                       vehicle.state.pose.pose.orientation.y,
+                                                       vehicle.state.pose.pose.orientation.z,
+                                                       vehicle.state.pose.pose.orientation.w)
+                corner_mat = calc_vehicle_corners(vehicle.state.pose.pose.position.x,
+                                                  vehicle.state.pose.pose.position.y,
+                                                  vehicle.dimension.length_x,
+                                                  vehicle.dimension.length_y,
+                                                  yaw)
+                dist_to_lanes_list = []
+                for lane in tstates.static_map_lane_path_array:
+                    corner_to_lane_dist = np.array([dist_from_point_to_polyline2d(
+                        corner_mat[0, i],
+                        corner_mat[1, i],
+                        lane, return_end_distance=True) for i in range(4)])
+                    # find closest corner point to current lane
+                    min_dist_to_current_lane = np.argmin(np.abs(corner_to_lane_dist[:, 0]))
+                    # distance from this closest corner point to current lane is taken as the minimum distance to lane
+                    dist_to_lanes_list.append(corner_to_lane_dist[min_dist_to_current_lane])
+
+                # compare the minimun corner distance and get the closest lane index
+                dist_to_lanes_list = np.array(dist_to_lanes_list)
+                closest_lane = np.argmin(np.abs(dist_to_lanes_list[:, 0]))
 
                 # Determine if the vehicle is close to lane enough
-                vehicle_width = 1.7
-                if abs(dist_list[closest_lane, 0]) > lane_width*0.5+vehicle_width*0.5:
-                    continue 
-                if dist_list[closest_lane, 3] < self._ego_vehicle_distance_to_lane_head[closest_lane]:
+                if abs(dist_to_lanes_list[closest_lane, 0]) > lane_width*0.5:
+                    continue
+                if dist_to_lanes_list[closest_lane, 3] < self._ego_vehicle_distance_to_lane_head[closest_lane]:
                     # The vehicle is behind if its distance to lane start is smaller
-                    lane_rear_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane, 3]))
-                if dist_list[closest_lane, 4] < self._ego_vehicle_distance_to_lane_tail[closest_lane]:
+                    lane_rear_vehicle_list[closest_lane].append((vehicle_idx, dist_to_lanes_list[closest_lane, 3]))
+                if dist_to_lanes_list[closest_lane, 4] < self._ego_vehicle_distance_to_lane_tail[closest_lane]:
                     # The vehicle is ahead if its distance to lane end is smaller
-                    lane_front_vehicle_list[closest_lane].append((vehicle_idx, dist_list[closest_lane, 4]))
+                    lane_front_vehicle_list[closest_lane].append((vehicle_idx, dist_to_lanes_list[closest_lane, 4]))
         
         # Put the vehicles onto lanes
         for lane_id in range(len(tstates.static_map.lanes)):
@@ -285,6 +307,32 @@ class NearestLocator:
                     tstates.dynamic_map.mmap.lanes[lane_id].front_vehicles.append(front_vehicle)
                 
                 front_vehicle = tstates.dynamic_map.mmap.lanes[lane_id].front_vehicles[0]
+
+                # from here to logdebug is for visulization
+                self.nearest_front_vehicle_marker = RvizVisualizer.draw_words('FRONT\nVEHICLE',
+                                                                              front_vehicle.state.pose.pose.position.x,
+                                                                              front_vehicle.state.pose.pose.position.y,
+                                                                              scale=1)
+                roll, pitch, yaw = quaternion_to_eular(front_vehicle.state.pose.pose.orientation.x,
+                                                       front_vehicle.state.pose.pose.orientation.y,
+                                                       front_vehicle.state.pose.pose.orientation.z,
+                                                       front_vehicle.state.pose.pose.orientation.w)
+                corner_mat = calc_vehicle_corners(front_vehicle.state.pose.pose.position.x,
+                                                  front_vehicle.state.pose.pose.position.y,
+                                                  front_vehicle.dimension.length_x,
+                                                  front_vehicle.dimension.length_y,
+                                                  yaw)
+                corner_to_lane_dist = np.array([dist_from_point_to_polyline2d(
+                    corner_mat[0, i],
+                    corner_mat[1, i],
+                    tstates.static_map_lane_path_array[lane_id], return_end_distance=True) for i in range(4)])
+                min_dist_to_current_lane = np.argmin(np.abs(corner_to_lane_dist[:, 0]))
+                corner_point = (corner_mat[0, min_dist_to_current_lane], corner_mat[1, min_dist_to_current_lane])
+                closet_point_inlane_index = int(corner_to_lane_dist[min_dist_to_current_lane, 1])
+                lane_point = tstates.static_map_lane_path_array[lane_id][closet_point_inlane_index].tolist()
+                self.corner_to_lane_marker = RvizVisualizer.draw_two_points_line(corner_point, lane_point, width=0.1)
+
+
                 rospy.logdebug("Lane index: %d, Front vehicle id: %d, behavior: %d, x:%.1f, y:%.1f, d:%.1f", 
                                 lane_id, front_vehicle.uid, front_vehicle.behavior,
                                 front_vehicle.state.pose.pose.position.x,front_vehicle.state.pose.pose.position.y,
