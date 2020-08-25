@@ -26,6 +26,7 @@ class TrackingBoxVisualizer:
 
             # Message headers
             label_marker.header = in_objects.header
+            label_marker.header.frame_id = "rslidar"
             label_marker.action = Marker.MODIFY if obj.uid in self._tracker_set else Marker.ADD
             label_marker.type = Marker.TEXT_VIEW_FACING
             label_marker.ns = self._params.marker_namespace + "/labels"

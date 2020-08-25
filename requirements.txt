@@ -8,3 +8,6 @@ filterpy
 pcl.py
 scipy
 shapely
+
+# these are listed when installed again
+cvxopt

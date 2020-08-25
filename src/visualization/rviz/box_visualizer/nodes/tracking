@@ -13,7 +13,7 @@ from zzz_visualization_rviz_box_visualizer.tracking import TrackingBoxVisualizer
 class Node():
     def __init__(self):
         params = parse_private_args(
-            input_topic="objects_tracked",
+            input_topic="/zzz/perception/objects_tracked",
             output_topic="objects_visual",
             marker_namespace="/zzz/tracking",
 
