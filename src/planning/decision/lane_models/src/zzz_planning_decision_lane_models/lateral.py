@@ -11,6 +11,7 @@ class LaneUtility(object):
     def __init__(self, longitudinal_model):
         self.longitudinal_model_instance = longitudinal_model
         self.dynamic_map = None
+        self.decision_action = 0.0
 
     def lateral_decision(self, dynamic_map, close_to_junction = 10):
 

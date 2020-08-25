@@ -71,16 +71,20 @@ class MainDecision(object):
         msg = DecisionTrajectory()
         msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory) # TODO: move to library
         msg.desired_speed = local_desired_speed # TODO: Multi-resolution Planning
+        msg.RLS_action = self._lateral_model_instance.decision_action
 
         return msg
 
     def convert_ndarray_to_pathmsg(self, path): 
+
         msg = Path()
         for wp in path:
             pose = PoseStamped()
             pose.pose.position.x = wp[0]
             pose.pose.position.y = wp[1]
             msg.poses.append(pose)
+
+        msg.header.stamp = rospy.Time.now()
         msg.header.frame_id = "map"
 
         return msg

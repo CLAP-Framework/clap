@@ -219,12 +219,16 @@ void convert_DetectedObjectArray2TrackingBoxArray(
 }
 
 void LidarTrackRos::objectsCallback(const autoware_msgs::DetectedObjectArray& input) {
+  
   input_header_ = input.header;
-  if ( global_output_ && std::abs(input_header_.stamp.toSec() -
-      input_odm_.header.stamp.toSec()) > 0.5) { 
-    ROS_ERROR("Odometry lost !!!");
-    return ;
+
+  double gap = std::abs(input_header_.stamp.toSec() - input_odm_.header.stamp.toSec());
+
+  if (global_output_ && gap > 0.5) { 
+      ROS_ERROR("Odometry lost, time gap %lf, %lf, %lf", gap, input_header_.stamp.toSec(), input_odm_.header.stamp.toSec());
+    // return ;
   } 
+
   timestamp_ = input.header.stamp.sec * 1000000 + input.header.stamp.nsec / 1000;
   if (input.objects.size() > 0) {
       input_object_ = input.objects.at(0);

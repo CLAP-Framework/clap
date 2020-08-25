@@ -102,19 +102,19 @@ main (int argc, char **argv)
 
 	      Tframe.frame.id = ((uint16) (*(p+3) << 8) + *(p+4));
 	      for (j = 0; j < 8; j++) {
-		Tframe.frame.data[j] = *(p+j+5);
+			Tframe.frame.data[j] = *(p+j+5);
 	      } 
 
 	      switch (Tframe.frame.id)
 		{
 		case 0x510:
 		{
-
   			xpmotors_can_msgs::ESCStatus escStatus;
 			xpEsc.SetData(Tframe);
 			xpEsc.decode();
 			CanFrameSPD_510 data510 = *(xpEsc.data());
 
+			escStatus.header.stamp = ros::Time::now();
 			escStatus.RRWheelSpd = (float)data510.RR_WhlSpd / 100.0;
 			escStatus.LFWheelSpd = (float)data510.LF_WhlSpd / 100.0;
 			escStatus.LRWheelSpd = (float)data510.LR_WhlSpd / 100.0;
@@ -135,6 +135,7 @@ main (int argc, char **argv)
 			xpEps.decode();
 			CanFrameEPS_511 data511 = *(xpEps.data());
 
+			epsStatus.header.stamp = ros::Time::now();
 			epsStatus.Angle = (float)data511.EPS_angle_ccp / 50.0;
 			epsStatus.AngleSpd = (float)data511.EPS_angle_spd_ccp / 50.0;
 			epsStatus.StrngWhlTorq = (float)data511.EPS_StrngWhlTorq / 100.0;
@@ -150,10 +151,12 @@ main (int argc, char **argv)
 		{
 
   			xpmotors_can_msgs::AutoStateEx aStateEx;
+			
 			xpStateEx.SetData(Tframe);
 			xpStateEx.decode();
 			CanFrameBT_509 data509 = *(xpStateEx.data());
 
+			aStateEx.header.stamp = ros::Time::now();
 			aStateEx.StateTurningLight = data509.State_TurningLight_CCP;
 			aStateEx.CurDriveMode = data509.CurDriveMode_CCP;
 			aStateEx.StateBraking = data509.State_Braking_CCP;
@@ -172,6 +175,7 @@ main (int argc, char **argv)
 			xpState.decode();
 			CanFrameMotor_50B data50B = *(xpState.data());
 
+			aState.header.stamp = ros::Time::now();
 			aState.EPBState = data50B.EpbState_CCP;
 			aState.GearState = data50B.GearState_CCP;
 			aState.BrkPedal = data50B.BrkPedal_CCP;

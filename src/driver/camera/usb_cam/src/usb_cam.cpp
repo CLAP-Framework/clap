@@ -498,12 +498,25 @@ void UsbCam::process_image(const void * src, int len, camera_image_t *dest)
     else
     {
       //yuyv2rgb((char*)src, dest->image, dest->width * dest->height);      //YUV2RGB included
+
+#ifdef __aarch64__
+      usb_cam::convert_yuv_to_rgb_buffer((unsigned char*)src, (unsigned char*)(dest->image), dest->width, dest->height);
+#else
       usb_cam::yuyv2rgb_avx((unsigned char*)src, (unsigned char*)(dest->image), dest->width * dest->height);
+#endif
+
     }
   }
-  else if (pixelformat_ == V4L2_PIX_FMT_UYVY)    
-    usb_cam::yuyv2rgb_avx((unsigned char*)src, (unsigned char*)(dest->image), dest->width * dest->height);
-    //uyvy2rgb((char*)src, dest->image, dest->width * dest->height);      //YUV2RGB included
+  else if (pixelformat_ == V4L2_PIX_FMT_UYVY) {
+#ifdef __aarch64__
+      usb_cam::convert_yuv_to_rgb_buffer((unsigned char*)src,
+                                (unsigned char*)dest->image, dest->width,
+                                dest->height);
+#else
+      usb_cam::yuyv2rgb_avx((unsigned char*)src, (unsigned char*)dest->image,
+                   dest->width * dest->height);
+#endif
+  }
   else if (pixelformat_ == V4L2_PIX_FMT_MJPEG)
     mjpeg2rgb((char*)src, len, dest->image, dest->width * dest->height);
   else if (pixelformat_ == V4L2_PIX_FMT_RGB24)
@@ -511,6 +524,63 @@ void UsbCam::process_image(const void * src, int len, camera_image_t *dest)
   else if (pixelformat_ == V4L2_PIX_FMT_GREY)
     memcpy(dest->image, (char*)src, dest->width * dest->height);
 }
+
+
+#ifdef __aarch64__
+int convert_yuv_to_rgb_pixel(int y, int u, int v) {
+  unsigned int pixel32 = 0;
+  unsigned char* pixel = (unsigned char*)&pixel32;
+  int r, g, b;
+  r = (int)((double)y + (1.370705 * ((double)v - 128.0)));
+  g = (int)((double)y - (0.698001 * ((double)v - 128.0)) -
+            (0.337633 * ((double)u - 128.0)));
+  b = (int)((double)y + (1.732446 * ((double)u - 128.0)));
+  if (r > 255) r = 255;
+  if (g > 255) g = 255;
+  if (b > 255) b = 255;
+  if (r < 0) r = 0;
+  if (g < 0) g = 0;
+  if (b < 0) b = 0;
+  pixel[0] = (unsigned char)r;
+  pixel[1] = (unsigned char)g;
+  pixel[2] = (unsigned char)b;
+  return pixel32;
+}
+
+int convert_yuv_to_rgb_buffer(unsigned char* yuv, unsigned char* rgb,
+                                      unsigned int width, unsigned int height) {
+  unsigned int in, out = 0;
+  unsigned int pixel_16;
+  unsigned char pixel_24[3];
+  unsigned int pixel32;
+  int y0, u, y1, v;
+
+  for (in = 0; in < width * height * 2; in += 4) {
+    pixel_16 =
+        yuv[in + 3] << 24 | yuv[in + 2] << 16 | yuv[in + 1] << 8 | yuv[in + 0];
+    y0 = (pixel_16 & 0x000000ff);
+    u = (pixel_16 & 0x0000ff00) >> 8;
+    y1 = (pixel_16 & 0x00ff0000) >> 16;
+    v = (pixel_16 & 0xff000000) >> 24;
+    pixel32 = convert_yuv_to_rgb_pixel(y0, u, v);
+    pixel_24[0] = (unsigned char)(pixel32 & 0x000000ff);
+    pixel_24[1] = (unsigned char)((pixel32 & 0x0000ff00) >> 8);
+    pixel_24[2] = (unsigned char)((pixel32 & 0x00ff0000) >> 16);
+    rgb[out++] = pixel_24[0];
+    rgb[out++] = pixel_24[1];
+    rgb[out++] = pixel_24[2];
+    pixel32 = convert_yuv_to_rgb_pixel(y1, u, v);
+    pixel_24[0] = (unsigned char)(pixel32 & 0x000000ff);
+    pixel_24[1] = (unsigned char)((pixel32 & 0x0000ff00) >> 8);
+    pixel_24[2] = (unsigned char)((pixel32 & 0x00ff0000) >> 16);
+    rgb[out++] = pixel_24[0];
+    rgb[out++] = pixel_24[1];
+    rgb[out++] = pixel_24[2];
+  }
+  return 0;
+}
+#endif
+
 
 int UsbCam::read_frame()
 {

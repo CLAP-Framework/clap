@@ -31,10 +31,15 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <immintrin.h>
-#include <x86intrin.h>
+
+
 
 namespace usb_cam {
+
+
+#ifndef __aarch64__
+#include <immintrin.h>
+#include <x86intrin.h>
 
 void yuyv2rgb_avx(unsigned char *YUV, unsigned char *RGB, int NumPixels);
 
@@ -519,6 +524,8 @@ template <bool align>
 SIMD_INLINE __m256i LoadPermuted(const __m256i *p) {
   return _mm256_permute4x64_epi64(Load<align>(p), 0xD8);
 }
+
+#endif
 
 }  //namespace usb_cam
 

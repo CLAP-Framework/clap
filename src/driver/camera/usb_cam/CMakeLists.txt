@@ -31,7 +31,13 @@ catkin_package(
   LIBRARIES ${PROJECT_NAME}
   
 )
-set (CMAKE_CXX_FLAGS "-mavx2 -O2")
+
+IF (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64") 
+  set (CMAKE_CXX_FLAGS "-mavx2 -O2 -DX86")
+ELSE()
+  set (CMAKE_CXX_FLAGS " -O2 -D__aarch64__")
+ENDIF()
+
 ###########
 ## Build ##
 ###########

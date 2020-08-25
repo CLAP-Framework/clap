@@ -158,6 +158,7 @@ class PathBuffer:
 
         self.ref_path_msg = Path()
         self.ref_path_msg.header.frame_id = "map"
+        self.ref_path_msg.header.stamp = rospy.Time.now()
 
         for wp in self._reference_path_segment:
             pose = PoseStamped()

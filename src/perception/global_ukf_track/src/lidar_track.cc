@@ -10,7 +10,17 @@
 #define DEBUG_OUTPUT 0
 
 namespace ele {
-
+bool TrajectoryUKF::isSemiPositive() {
+  // compute the Cholesky decomposition of P_
+  Eigen::LLT<Eigen::MatrixXd> llt_P(P_) ; 
+  if(llt_P.info() == Eigen::NumericalIssue) {
+	is_initialized_ = false;
+    // throw std::runtime_error("P_ Possibly non semi-positive definitie matrix !!!");
+    std::cerr << "P_ Possibly non semi-positive definitie matrix !!!";
+    return false;
+  }  
+  return true;
+}
 void TrajectoryUKF::ProcessPrediction(long long timestamp) {
     /** Prediction */
     double delta_t = (timestamp - time_us_) / 1000000.0;  // convert unit from us to s.

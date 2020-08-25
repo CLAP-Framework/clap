@@ -21,6 +21,8 @@
 
 namespace usb_cam {
 
+#ifndef __aarch64__
+
 void print_m256(__m256i a) {
   unsigned char snoop[32];
   bool dst_align = Aligned(reinterpret_cast<void*>(snoop));
@@ -162,5 +164,7 @@ void yuyv2rgb_avx(unsigned char* YUV, unsigned char* RGB, int NumPixels) {
     }
   }
 }
+
+#endif
 
 }  // namespace usb_cam

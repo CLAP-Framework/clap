@@ -10,7 +10,7 @@ visualization_msgs::Marker pubVecilePosetoRviz(geometry_msgs::Pose msg)
   //visualization of ego_pose
   visualization_msgs::Marker Vehicle_xp;
   Vehicle_xp.header.frame_id = "map";
-  Vehicle_xp.header.stamp = ros::Time();
+  Vehicle_xp.header.stamp = ros::Time::now();
   Vehicle_xp.ns = "my_namespace";
   Vehicle_xp.id = 0;
   Vehicle_xp.type = visualization_msgs::Marker::CUBE;
@@ -40,7 +40,7 @@ visualization_msgs::Marker pubPrepointtoRviz(geometry_msgs::Pose msg_pre)
   //visualization of ego_pose
   visualization_msgs::Marker pre_point;
   pre_point.header.frame_id = "map";
-  pre_point.header.stamp = ros::Time();
+  pre_point.header.stamp = ros::Time::now();
   pre_point.ns = "my_namespace_pre";
   pre_point.id = 0;
   pre_point.type = visualization_msgs::Marker::CUBE;
