@@ -3,7 +3,7 @@
     <arg name="carla_settings_file" default="$(find zzz_driver_simulators_carla_adapter)/launch/server.launch.yaml"/>
     <arg name="vehicle_sensors_file" default="$(find zzz_driver_simulators_carla_adapter)/config/vehicle_sensors_minimal.json"/>
     <arg name="static_sensors_file" default="$(find zzz_driver_simulators_carla_adapter)/config/static_sensors.example.json"/>
-    <arg name="ego_actor" default='ego_vehicle'/>
+    <arg name="ego_actor" default='test_car'/>
     <arg name="ego_spawn" default="True"/> <!-- By default we use script to spawn vehicles -->
     <arg name="ego_spawn_point" default=""/> <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
 

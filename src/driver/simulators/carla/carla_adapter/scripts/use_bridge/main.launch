@@ -1,16 +1,16 @@
 <launch>
-    <arg name="ego_actor" default='ego_vehicle'/>
+    <arg name="ego_actor" default='test_car'/>
 
     <include file="/home/jacobz/Carla/zzz/config/launch/full_stack/perception.launch">
         <arg name="enable_camera" value="false"/>
         <arg name="enable_lidar" value="false"/>
     </include>
     <include file="/home/jacobz/Carla/zzz/config/launch/full_stack/planning.launch">
-        <arg name="odom_topic" value="/carla/$(arg ego_actor)/odometry">
-        <arg name="waypoint_topic" default="/carla/$(arg ego_actor)/waypoints"/>
+        <arg name="odom_topic" value="/carla/$(arg ego_actor)/odometry"/>
+        <arg name="waypoint_topic" value="/carla/$(arg ego_actor)/waypoints"/>
         <arg name="objects_topic" value="/zzz/perception/objects_truth"/>
     </include>
     <include file="$(dirname)/auxiliary.launch">
-        <arg name="ego_actor" default='$(arg ego_actor)'/>
+        <arg name="ego_actor" value='$(arg ego_actor)'/>
     </include>
 </launch>
