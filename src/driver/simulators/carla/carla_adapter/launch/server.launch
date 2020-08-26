@@ -22,7 +22,7 @@
       <param name="infrastructure_sensor_definition_file" value="$(arg static_sensors_file)" />
     </node>
     <node pkg="carla_ros_bridge" name="carla_ros_bridge" type="bridge.py" output="screen"/>
-    <node pkg="carla_waypoint_publisher" type="carla_waypoint_publisher.py" name="carla_waypoint_publisher" output="screen">
+    <!-- <node pkg="carla_waypoint_publisher" type="carla_waypoint_publisher.py" name="carla_waypoint_publisher" output="screen">
         <param name="role_name" value="$(arg ego_actor)" />
-    </node>
+    </node> -->
 </launch>
