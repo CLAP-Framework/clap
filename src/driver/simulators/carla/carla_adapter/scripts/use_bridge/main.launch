@@ -1,5 +1,5 @@
 <launch>
-    <arg name="ego_actor" default='test_car'/>
+    <arg name="ego_actor" default='hero'/>
 
     <include file="/home/jacobz/Carla/zzz/config/launch/full_stack/perception.launch">
         <arg name="enable_camera" value="false"/>
