@@ -1,10 +1,10 @@
 use_sim_time: true
 carla:
-  host: localhost
+  host: 141.211.37.251
   port: 2000
   timeout: 1000
-  synchronous_mode: true
+  synchronous_mode: True
   synchronous_mode_wait_for_vehicle_control_command: false
   fixed_delta_seconds: 0.05
   ego_vehicle:
-    role_name: ["hero", "ego_vehicle"]
+    role_name: ["hero", "ego_vehicle", "test_car"]

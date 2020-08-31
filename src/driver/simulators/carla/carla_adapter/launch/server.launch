@@ -1,9 +1,9 @@
 <launch>
     <!-- Carla setup & conversion -->
     <arg name="carla_settings_file" default="$(find zzz_driver_simulators_carla_adapter)/launch/server.launch.yaml"/>
-    <arg name="vehicle_sensors_file" default="$(find zzz_driver_simulators_carla_adapter)/config/vehicle_sensors.example.json"/>
+    <arg name="vehicle_sensors_file" default="$(find zzz_driver_simulators_carla_adapter)/config/vehicle_sensors_minimal.json"/>
     <arg name="static_sensors_file" default="$(find zzz_driver_simulators_carla_adapter)/config/static_sensors.example.json"/>
-    <arg name="ego_actor" default='ego_vehicle'/>
+    <arg name="ego_actor" default='hero'/>
     <arg name="ego_spawn" default="False"/> <!-- By default we use script to spawn vehicles -->
     <arg name="ego_spawn_point" default=""/> <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
 
@@ -15,13 +15,14 @@
         <param name="vehicle_filter" value="vehicle.lincoln.mkz2017" />
         <param name="spawn_point" value="$(arg ego_spawn_point)" />
         <param name="role_name" value="$(arg ego_actor)" />
+        <param name="spawn_ego_vehicle" value="$(arg ego_spawn)" />
         </node>
     </group>
     <node pkg="carla_infrastructure" type="carla_infrastructure.py" name="carla_infrastructure" output="screen">
       <param name="infrastructure_sensor_definition_file" value="$(arg static_sensors_file)" />
     </node>
     <node pkg="carla_ros_bridge" name="carla_ros_bridge" type="bridge.py" output="screen"/>
-    <node pkg="carla_waypoint_publisher" type="carla_waypoint_publisher.py" name="carla_waypoint_publisher" output="screen">
+    <!-- <node pkg="carla_waypoint_publisher" type="carla_waypoint_publisher.py" name="carla_waypoint_publisher" output="screen">
         <param name="role_name" value="$(arg ego_actor)" />
-    </node>
+    </node> -->
 </launch>
