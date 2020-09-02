@@ -42,7 +42,11 @@
 #include <jsk_recognition_msgs/BoundingBoxArray.h>
 
 #include <std_msgs/Header.h>
-
+//for SHM start
+#include "sem_object.h"
+#include "shm_object.h"
+#include "point_struct.h"
+//for SHM end
 
 
 #define __APP_NAME__ "lidar_apollo_cnn_seg_detect"
@@ -51,7 +55,11 @@ class CNNSegmentation
 {
 public:
   CNNSegmentation();
-  ~CNNSegmentation() {}
+  ~CNNSegmentation() {
+        if(shm_enable_){
+        shm_obj_point_.read_release();
+        }
+  }
 
   void run();
   void test_run();
@@ -104,6 +112,18 @@ private:
   // bird-view raw feature generator
   std::shared_ptr<FeatureGenerator> feature_generator_;
 
+    //for SHM start
+    bool shm_enable_;
+    shared_memory::ShmObject shm_obj_point_;
+    unsigned char *read_data_;
+    int shm_key_;
+    int sem_proj_id_;
+    shared_memory::SemObject sem_object_rec_;
+    int sem_id_;
+    int shm_cycle_delay_;
+    int shm_clent_index_;
+    //for SHM end
+
   bool init();
 
   bool segment(const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_ptr,
@@ -111,6 +131,10 @@ private:
                autoware_msgs::DetectedObjectArray &objects);
 
   void pointsCallback(const sensor_msgs::PointCloud2 &msg);
+    
+    //for SHM start
+    void pointsCallbackShm();
+    //for SHM end
 
   void pubColoredPoints(const autoware_msgs::DetectedObjectArray &objects);
 
