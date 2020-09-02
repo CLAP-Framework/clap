@@ -62,7 +62,30 @@ class RvizVisualizer():
         tempmarkerarray.markers.append(tempmarker)
         return tempmarkerarray
 
-
+    @staticmethod
+    def draw_line_from_points(points_list, color=(0,1,1), width=3):
+        tempmarkerarray = MarkerArray()
+        tempmarker = Marker()
+        tempmarker.header.frame_id = "map"
+        tempmarker.header.stamp = rospy.Time.now()
+        tempmarker.ns = "zzz/decision"
+        tempmarker.id = 1
+        tempmarker.type = Marker.LINE_STRIP
+        tempmarker.action = Marker.ADD
+        tempmarker.scale.x = width
+        for point in points_list:
+            point_marker = Point()
+            point_marker.x = point[0]
+            point_marker.y = point[1]
+            point_marker.z = 0
+            tempmarker.points.append(point_marker)
+        tempmarker.color.r = color[0]
+        tempmarker.color.g = color[1]
+        tempmarker.color.b = color[2]
+        tempmarker.color.a = 0.5
+        tempmarker.lifetime = rospy.Duration(0.5)
+        tempmarkerarray.markers.append(tempmarker)
+        return tempmarkerarray
 
     @staticmethod
     def draw_circle(center_x, center_y, radius, duration=0.5):

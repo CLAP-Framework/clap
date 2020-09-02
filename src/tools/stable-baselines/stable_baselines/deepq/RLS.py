@@ -4,6 +4,7 @@ import random
 import numpy as np
 from rtree import index as rindex
 from collections import deque
+from scipy.stats import norm
 
 
 
@@ -41,9 +42,12 @@ class RLS(object):
             if osp.exists("visited_value.txt"):
                 os.remove("visited_value.txt")
 
+            print("Create new data file...")
+
             self.visited_state_value = []
             self.visited_state_counter = 0
         else:
+            print("loading visited value data...")
             self.visited_state_value = np.loadtxt("visited_value.txt")
             self.visited_state_value = self.visited_state_value.tolist()
             self.visited_state_counter = len(self.visited_state_value)
@@ -59,7 +63,9 @@ class RLS(object):
         # ego_x, ego_y, ego_vx, ego_vy, 0f_x, 0f_y, 0f_vx, 0f_vy, 1f_x, 1f_y, 
         # 1f_vx, 1f_vy, 0r_x, 0r_y, 0r_vx, 0r_vy, 1r_x, 1r_y, 1r_vx, 1r_vy
         # 0, -1~2, 
-        self.visited_state_dist = np.array([[1, 0.3, 3, 1, 10, 0.3, 3, 1, 10, 0.3, 3, 1, 10, 0.3, 3, 1, 10, 0.3, 3, 1, 0.1]])
+        print("loading visited R Tree...")
+
+        self.visited_state_dist = np.array([[1, 0.3, 2, 50, 10, 0.3, 2, 50, 10, 0.3, 2, 50, 10, 0.3, 2, 50, 10, 0.3, 2, 50, 0.1]])
         self.visited_state_tree = rindex.Index('state_index',properties=visited_state_tree_prop)
 
         if self.create_new_record_file:
@@ -67,24 +73,23 @@ class RLS(object):
                 os.remove("driving_record.txt")
         self.driving_record_outfile = open("driving_record.txt","a")
         self.driving_record_format = " ".join(("%f",)*(self.obs_dimension+9))+"\n"
+        print("All training data loaded...")
 
     def act(self, obs, RL_action):
-        print(obs)
         if self.is_training:
             return self.act_train(obs, RL_action)
         else:
             return self.act_test(obs, RL_action)
     
-    def act_train(self,obs, RL_action):
-        return np.array(0)
+    def act_train(self, obs, RL_action):
         if self.should_use_rule(obs): 
-            return np.array([0])
+            return np.array(0)
         else:
             # epsilon greedy from DQN
             return RL_action
     
     def state_with_action(self,obs,action):
-        # print("--------",obs,type(obs),action,type(action))
+
         return np.append(obs, action)
 
     def should_use_rule(self,obs):
@@ -99,8 +104,8 @@ class RLS(object):
                                                                     self.visited_state_value,
                                                                     self.visited_state_tree) 
 
-        # if self.debug:
-        #     print("rule visited times:",visited_times_rule)
+        if self.debug:
+            print("training: rule_visited_times:", visited_times_rule, "Q_rule:", mean_rule)
 
         if visited_times_rule < self.visited_times_thres:
             return True
@@ -112,22 +117,28 @@ class RLS(object):
             return True
         return False
 
-    def act_test(self, obs, RL_action):
-        if RL_action == 0:
-            return 0
+    def act_test(self, obs, RL_action, confidence_thres = 0.5):
+
+        # if RL_action == 0:
+        #     return 0
         
         rule_state = self.state_with_action(obs,0)
         visited_times_rule = self._calculate_visited_times(rule_state,self.visited_state_tree)
+
         mean_rule, var_rule, sigma_rule = self._calculate_statistics_index(rule_state,
                                                                     self.visited_state_value,
                                                                     self.visited_state_tree) 
+
+        if self.debug:
+            print("testing: rule_visited_times:", visited_times_rule, "Q_rule:", mean_rule)
+
         for candidate_action in range(1,8):
 
             RL_state = self.state_with_action(obs,candidate_action)
             visited_times_RL = self._calculate_visited_times(RL_state,self.visited_state_tree)
             mean_RL, var_RL, sigma_RL = self._calculate_statistics_index(RL_state,self.visited_state_value,self.visited_state_tree)
 
-            if visited_times_rule < self.visited_times_thres or visited_times_RL < 10 or mean_rule > -0.1:
+            if visited_times_rule < self.visited_times_thres or visited_times_RL < 5 or mean_rule > -0.1:
                 continue
         
             var_diff = var_rule/visited_times_rule + var_RL/visited_times_RL
@@ -137,9 +148,13 @@ class RLS(object):
             z = mean_diff/sigma_diff
             # print(action,norm.cdf(z))
             if norm.cdf(z)>confidence_thres:
-                return candidate_action
+                if self.debug:
+                    print("RL_visited_times:", visited_times_RL, "Q_RL:", mean_RL)
+
+                return np.array(candidate_action)
+    
         
-        return 0
+        return np.array(0)
 
     ############## RLS Confidence ##############
 

@@ -10,6 +10,7 @@
 #define DEBUG_OUTPUT 0
 
 namespace ele {
+    
 bool TrajectoryUKF::isSemiPositive() {
   // compute the Cholesky decomposition of P_
   Eigen::LLT<Eigen::MatrixXd> llt_P(P_) ; 

@@ -155,6 +155,7 @@ def write2bag(topic_queue_pairs):
     for topic, que, _, _, _ in topic_queue_pairs:
         for msg, t in list(que.queue):
             bag.write(topic, msg, t)
+        que.queue.clear()
     
     bag.flush()
     bag.close()
@@ -381,7 +382,7 @@ global_topic_queue_pairs = [
     (lanes_marker_topic, lanes_marker_queue, MarkerArray, lanes_marker_callback, 5),
     (obstacles_marker_topic, obstacles_marker_queue, MarkerArray, obstacles_marker_callback, 10),
     (sent_ref_path_topic, sent_ref_path_queue, Path, sent_ref_path_callback, 20),
-    (all_trajectory_path_topic, all_trajectory_path_queue, MarkerArray, all_trajectory_path_callback, 5),
+    # (all_trajectory_path_topic, all_trajectory_path_queue, MarkerArray, all_trajectory_path_callback, 5),
     (decision_trajectory_path_topic, decision_trajectory_path_queue, Path, decision_trajectory_path_callback, 5),
     (prepoint_topic, prepoint_queue, Marker, prepoint_callback, 100),
     (collision_topic, collision_queue, MarkerArray, collision_callback, 5), 

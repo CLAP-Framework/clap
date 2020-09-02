@@ -258,6 +258,7 @@ void icvCarlaControlNode::CarconstructionPub(double steer_send, double SpeedReq)
 {
 
   xpmotors_can_msgs::AutoCtlReq ctrmsg;
+  ctrmsg.header.stamp = ros::Time::now();
   ctrmsg.EPSAngleReq = steer_send;
 
   if (!CurDriveMode)
@@ -467,7 +468,7 @@ void icvCarlaControlNode::data_file_input()
       }
     }
     Path_file.header.frame_id = "map";
-    Path_file.header.stamp = ros::Time();
+    Path_file.header.stamp = ros::Time::now();
     Path_file.poses.push_back(Point_file);
   }
   infile1.close();
