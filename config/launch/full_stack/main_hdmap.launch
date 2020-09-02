@@ -4,8 +4,8 @@
     <arg name="waypoint_topic" default="/carla/ego_vehicle/waypoints"/>
     <arg name="objects_topic" default="/zzz/perception/objects_tracked"/>
 
-    <arg name="bagreplay" default="$(env ENBALE_BAGREPLAY)"/>
-    <group if="$(eval bagreplay)">
+    <arg name="bagreplay" value="$(optenv ENABLE_BAGREPLAY false)"/>
+    <group if="$(arg bagreplay)">
         <include file="$(find rslidar_point_convert)/launch/middle_lidar.launch"> 
         </include>
     </group>
@@ -15,11 +15,6 @@
 
     <include file="$(find baidu_static_map)/launch/baidu_static_map.launch">
     </include> 
-
-    <!-- <node pkg="zzz_navigation_map_provider_sumo" type="native_map_generator"
-        name="static_map_builder" output="screen" ns="/zzz/navigation">
-        <param name="reference_path_topic" value="$(arg waypoint_topic)"/>
-    </node> -->
 
     <include file="$(env ZZZ_ROOT)/zzz/config/launch/full_stack/planning.launch">
         <arg name="objects_topic" value="/zzz/perception/objects_tracked"/>
