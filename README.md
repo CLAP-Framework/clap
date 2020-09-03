@@ -4,7 +4,7 @@
 
 ## 系统环境搭建
 
-1. 安装Ubuntu 18.04， 磁盘500G+， 内存16G+，确保kernel version小于(uname -a)。
+1. 安装Ubuntu 18.04， 磁盘500G+， 内存16G+，尽量确保kernel version小于5.0.13(uname -a, 大于这个版本号cuda driver安装的时候 找不到对应的linux kernel header导致安装失败)， 详细参见https://wiki.ubuntu.com/Kernel/Support。
 2. 安装ros， 按照http://wiki.ros.org/melodic/Installation/Ubuntu的步骤安装ros-melodic-desktop-full。
 3. 安装cmake，下载https://github.com/Kitware/CMake/releases/download/v3.15.4/cmake-3.15.4-Linux-x86_64.sh ，打开terminal， 执行命令 mkdir -P ~/bin 安装运行 ./cmake-3.15.4-Linux-x86_64.sh， 按照提示将cmake装到~/bin， 而后执行 echo "export PATH=$HOME/bin:$PATH" >> ~/.bashrc && source ~/.bashrc
 4. 安装CUDA 10.0, https://developer.nvidia.com/cuda-10.0-download-archive?target_os=Linux&target_arch=x86_64&target_distro=Ubuntu&target_version=1804, 下载runfile（local）安装及设置相应设置环境变量， 按照默认安装提示启用cuda进行安装；详细请参考https://docs.nvidia.com/cuda/archive/10.0/
