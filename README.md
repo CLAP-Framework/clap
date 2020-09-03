@@ -4,7 +4,7 @@
 
 ## 系统环境搭建
 
-1. 安装Ubuntu 18.04， 磁盘500G+， 内存16G+。
+1. 安装Ubuntu 18.04， 磁盘500G+， 内存16G+，确保kernel version小于(uname -a)。
 2. 安装ros， 按照http://wiki.ros.org/melodic/Installation/Ubuntu的步骤安装ros-melodic-desktop-full。
 3. 安装cmake，下载https://github.com/Kitware/CMake/releases/download/v3.15.4/cmake-3.15.4-Linux-x86_64.sh ，打开terminal， 执行命令 mkdir -P ~/bin 安装运行 ./cmake-3.15.4-Linux-x86_64.sh， 按照提示将cmake装到~/bin， 而后执行 echo "export PATH=$HOME/bin:$PATH" >> ~/.bashrc && source ~/.bashrc
 4. 安装CUDA 10.0, https://developer.nvidia.com/cuda-10.0-download-archive?target_os=Linux&target_arch=x86_64&target_distro=Ubuntu&target_version=1804, 下载runfile（local）安装及设置相应设置环境变量， 按照默认安装提示启用cuda进行安装；详细请参考https://docs.nvidia.com/cuda/archive/10.0/
@@ -59,6 +59,20 @@
 
 2. 回放bag包， ctl+shift+T另启一个tab，执行./bagreplay_perception.sh bagfile offset_time(跳过秒数开始play)，回放的数据包含ego-pose，image， pointscloud等；
 3. 运行感知+规划， 另起tab 运行 ./load_main.sh
+
+
+目前针对lidar的数据传输做了优化，在录制bag的时候为了减少数据大小，由原来录制[/middle/rslidar_points]改为录制[/middle/rslidar_packets,/middle/rslidar_packets_difop], 相应的调整在bagreplay的脚本
+```
+rosbag play --topics /tf /left_usb_cam/image_raw/compressed /middle/rslidar_points /zzz/navigation/ego_pose /zzz/perception/objects_tracked  --bag "$1"  -s "$2" 
+```
+改为
+```
+rosbag play --topics /tf /left_usb_cam/image_raw/compressed /middle/rslidar_packets /middle/rslidar_packets_difop /zzz/navigation/ego_pose /zzz/perception/objects_tracked  --bag "$1"  -s "$2" 
+```
+
+bagreplay_perception.sh 类似
+另外在~/.bashrc中添加 'export ENABLE_BAGREPLAY=true', 然后source ~/.bashrc (在回放模式下launch points_convert 将bag中的/middle/rslidar_packets转成/middle/rslidar_points输出给感知)；
+
 
 最后...
 
