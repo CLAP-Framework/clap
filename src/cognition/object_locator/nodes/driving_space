@@ -22,7 +22,7 @@ class DrivingSpaceNode(object):
             traffic_light_topic = "/zzz/perception/traffic_lights",
             driving_space_topic = "driving_space",
             dynamic_boundary_topic = "dynamic_boundary",
-            hz=5,
+            hz=5
         )
 
         self._driving_space = DrivingSpaceConstructor()
@@ -74,7 +74,7 @@ class DrivingSpaceNode(object):
 
 
 if __name__ == "__main__":
+
     rospy.init_node("driving_space", log_level=rospy.INFO)
-    
     node = DrivingSpaceNode()
     node.loop()

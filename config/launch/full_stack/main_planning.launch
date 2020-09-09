@@ -12,4 +12,9 @@
     
     <include file="$(find icvfollower)/launch/ICVfollower.launch" />
 
+    <node pkg="zzz_visualization_rviz_box_visualizer" type="decision_trajactory"
+            name="decision_trajactory" output="screen" ns="/zzz/visualization">
+    </node>
+
+
 </launch>

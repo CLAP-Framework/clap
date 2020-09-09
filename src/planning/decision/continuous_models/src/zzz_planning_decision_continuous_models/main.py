@@ -1,14 +1,7 @@
 #!/usr/bin/env python
 
-import rospy
-import numpy as np
-from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
-from nav_msgs.msg import Path
-from geometry_msgs.msg import PoseStamped
 from zzz_cognition_msgs.msg import MapState
-from zzz_driver_msgs.utils import get_speed, get_yaw
 
-from predict import predict
 
 class MainDecision(object):
     def __init__(self, trajectory_planner=None):
@@ -16,15 +9,11 @@ class MainDecision(object):
         self._trajectory_planner = trajectory_planner
 
     def receive_dynamic_map(self, dynamic_map):
+        assert type(dynamic_map) == MapState
         self._dynamic_map_buffer = dynamic_map
 
-    def update_trajectory(self):
-        
-        # This function generate trajectory
+    def update_trajectory(self, close_to_junction=40):
 
-        close_to_junction = 40
-
-        # Update_dynamic_local_map
         if self._dynamic_map_buffer is None:
             return None
         dynamic_map = self._dynamic_map_buffer

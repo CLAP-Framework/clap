@@ -37,10 +37,11 @@ class MapProvider(object):
     def loop(self):
         while not rospy.is_shutdown():
             self._rate.sleep()
-            new_static_map = self._map_instance.update()
-            if new_static_map is not None:
-                self._local_map_publisher.publish(new_static_map)
-                rospy.logdebug("[%s] Publish new static map" % __module_name__)
+            static_map = self._map_instance.update()
+            if static_map is not None:
+                self._local_map_publisher.publish(static_map)
+                rospy.loginfo(" Map Provider: Publish Local Static Map: lanes_num = %d, in_junction = %d ",
+                              len(static_map.lanes), int(static_map.in_junction))
 
 
 if __name__ == "__main__":

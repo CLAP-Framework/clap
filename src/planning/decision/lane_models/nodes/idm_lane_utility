@@ -49,18 +49,16 @@ class DecisionNode(object):
             try:
                 publish_msg = self._decision_instance.update()   
             except Exception as e:
-                rospy.logerr("@@@!!! Exception in idm_lane_utility !!! {} \n {}".format(e.message, traceback.format_exc()))
+                rospy.logerr("Planning (lanes): Exception in idm_lane_utility !!! {} \n {}".format(e.message, traceback.format_exc()))
                 pass
             
             if publish_msg:
                 self._decision_trajectory_publisher.publish(publish_msg)
-                publish_msg2 = publish_msg.trajectory
-                self._rviz_decision_trajectory_publisher.publish(publish_msg2)
-                rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
-                    len(publish_msg.trajectory.poses), publish_msg.desired_speed)
+                self._rviz_decision_trajectory_publisher.publish(publish_msg.trajectory)
+                rospy.loginfo(" Planning (lanes): Publish Trajectory length = %d, desired_speed = %f km/h",
+                    len(publish_msg.trajectory.poses), publish_msg.desired_speed*3.6)
 
             self.pub_rviz()
-
             self._rate.sleep()
 
     def pub_rviz(self):
@@ -72,7 +70,8 @@ class DecisionNode(object):
             self._rviz_predi_trajectory_publisher.publish(obs_paths)
         if collision_circle:
             self._rviz_collision_circle_publisher.publish(collision_circle)
-        
+
+
 if __name__ == "__main__":
 
     rospy.init_node("decision_node", log_level=rospy.DEBUG)

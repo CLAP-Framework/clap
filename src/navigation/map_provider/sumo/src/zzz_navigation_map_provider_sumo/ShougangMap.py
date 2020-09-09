@@ -113,7 +113,7 @@ class ShougangMap(object):
         '''
         init_static_map = Map()
         init_static_map.in_junction = False
-        init_static_map.target_lane_index = 0
+        init_static_map.exit_lane_index.append(0)
         return init_static_map
 
 
@@ -139,7 +139,7 @@ class ShougangMap(object):
 
         if road_id == (1-1):
             self.static_local_map.lanes.append(self.get_lane(self.road1_1))
-            self.static_local_map.target_lane_index = 1
+            self.static_local_map.exit_lane_index[0] = 1
         
         if road_id == (7-1):
             self.static_local_map.lanes.append(self.get_lane(self.road7_1))
@@ -148,7 +148,7 @@ class ShougangMap(object):
             self.static_local_map.lanes.append(self.get_lane(self.road8_1))
 
         if road_id == (9-1):
-            self.static_local_map.target_lane_index = 1
+            self.static_local_map.exit_lane_index[0] = 1
             self.static_local_map.lanes.append(self.get_lane(self.road9_1))
 
         for i, lane in enumerate(self.static_local_map.lanes):

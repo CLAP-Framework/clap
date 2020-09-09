@@ -35,10 +35,9 @@ class predict():
             self.obs = self.found_closest_obstacles()
             self.obs_paths = self.prediction_obstacle(self.obs, self.maxt, self.dt)
         except:
-            rospy.logdebug("continous module: fail to initialize prediction")
+            rospy.logerror("Planning (continuous): Fail to initialize prediction")
             self.obs_paths = []
-        
-        
+
     def check_collision(self, fp):
 
         if len(self.obs_paths) == 0 or len(fp.t) < 2 :
@@ -61,7 +60,7 @@ class predict():
             fp_back.y = (np.array(fp.y)-np.sin(np.array(fp.yaw))*self.move_gap).tolist()
 
             for obsp in self.obs_paths:
-                len_predict_t = min(len(fp.t),len(obsp.t))
+                len_predict_t = min(len(fp.t), len(obsp.t))
                 predict_step = 2
                 start_predict = 2
                 for t in range(start_predict, len_predict_t, predict_step):
@@ -73,7 +72,6 @@ class predict():
                         return False
         except:
             pass
-            # print("collision check fail",len(fp.yaw),len(fp_back.x),len(fp_front.x))
 
         # self.rviz_collision_checking_circle = self.rivz_element.draw_circles(fp_front, fp_back, self.check_radius)
         return True
@@ -154,7 +152,6 @@ class predict():
                 obs_paths.append(obsp)
 
         self.rviz_collision_checking_circle = self.rivz_element.draw_obs_circles(obs_paths, self.check_radius)
-
 
         return obs_paths
 

@@ -49,8 +49,6 @@ class NearestLocator:
         assert type(static_map) == Map
         with self._static_map_lock:
             self._static_map_buffer = static_map
-            rospy.loginfo("Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
-                len(static_map.lanes), int(static_map.in_junction), static_map.target_lane_index)
 
     def receive_object_list(self, object_list):
         assert type(object_list) == TrackingBoxArray
@@ -81,7 +79,7 @@ class NearestLocator:
         tstates = edict()
         # Skip if not ready
         if not self._ego_vehicle_state_buffer:
-            rospy.logwarn("Cognition Model not receive Ego pose")
+            rospy.logwarn("Cognition: not receive ego pose")
             return None
         with self._ego_vehicle_state_lock:
             tstates.ego_state = copy.deepcopy(self._ego_vehicle_state_buffer) 
@@ -103,7 +101,7 @@ class NearestLocator:
         dynamic_map.ego_state = tstates.ego_state.state
 
         if static_map.in_junction or len(static_map.lanes) == 0:
-            rospy.logdebug("In junction due to static map report junction location")
+            rospy.logdebug("Cognition: In junction due to static map report junction location")
             dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             dynamic_map.jmap.drivable_area = static_map.drivable_area
         else:
@@ -112,7 +110,7 @@ class NearestLocator:
                 dlane = cognition_default(LaneState)
                 dlane.map_lane = lane
                 dynamic_map.mmap.lanes.append(dlane)
-            dynamic_map.mmap.target_lane_index = static_map.target_lane_index
+            dynamic_map.mmap.exit_lane_index = copy.deepcopy(static_map.exit_lane_index)
 
         # Locate vehicles onto the junction map
         # TODO: Calculate frenet coordinate for objects in here or in put_buffer?
@@ -131,10 +129,6 @@ class NearestLocator:
         if tstates.dynamic_map.model == MapState.MODEL_JUNCTION_MAP:
             # clean traffic lights
             self._traffic_light_detection_buffer = None
-
-        rospy.logdebug("Updated Dynamic Map: lanes_num = %d, in_junction = %s, lane_index = %.2f, distance_to_end = %f",
-            len(dynamic_map.mmap.lanes), str(dynamic_map.model == MapState.MODEL_JUNCTION_MAP),
-            dynamic_map.mmap.ego_lane_index, dynamic_map.mmap.distance_to_junction)
 
         return dynamic_map
 
@@ -205,7 +199,7 @@ class NearestLocator:
 
         if ego_lane_index_rounded < 0 or ego_lane_index_rounded > len(tstates.static_map_lane_path_array) - 1:
             tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
-            rospy.logdebug("Ego_lane_index_error")
+            rospy.logwarn("Cognition: Ego_lane_index_error")
             return
         
         self._ego_vehicle_distance_to_lane_head = dist_list[:, 3]
@@ -218,13 +212,13 @@ class NearestLocator:
         if (self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded] <= lane_end_dist_thres 
                 and tstates.dynamic_map.mmap.lanes[ego_lane_index_rounded].map_lane.stop_state == Lane.STOP_STATE_THRU):
             # Drive into junction, wait until next map
-            rospy.logdebug("In junction due to close to intersection, ego_lane_index = %f, dist_to_lane_tail = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)])
+            rospy.logdebug("Cognition: Ego vehicle close to intersection, ego_lane_index = %f, dist_to_lane_tail = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)])
             tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             # TODO: Calculate frenet coordinate here or in put_buffer?
             return
         
         if (self._ego_vehicle_distance_to_lane_head[int(ego_lane_index)] <= lane_head_thres):
-            rospy.logdebug("Preparing lane decision, ego_lane_index = %f, dist_to_lane_head = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_head[int(ego_lane_index)])
+            rospy.logdebug("Cognition: Ego vehicle close to next lanes, ego_lane_index = %f, dist_to_lane_head = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_head[int(ego_lane_index)])
             tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
             # TODO: adjust this for prepare lane decision
             tstates.dynamic_map.jmap.distance_to_lanes = dist_list[ego_lane_index_rounded,0]
@@ -236,14 +230,11 @@ class NearestLocator:
             tstates.static_map_lane_tangets[ego_lane_index_rounded])
         tstates.dynamic_map.mmap.ego_lane_index = ego_lane_index
         tstates.dynamic_map.mmap.distance_to_junction = self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded]
-        
-        rospy.logdebug("Distance to end: (lane %f) %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded])
 
     def locate_surrounding_objects_in_lanes(self, tstates, lane_width=3):
         lane_front_vehicle_list = [[] for _ in tstates.static_map.lanes]
         lane_rear_vehicle_list = [[] for _ in tstates.static_map.lanes]
 
-        
         if tstates.surrounding_object_list is not None:
 
             ego_v = get_speed(tstates.ego_state.state)
@@ -332,11 +323,10 @@ class NearestLocator:
                 lane_point = tstates.static_map_lane_path_array[lane_id][closet_point_inlane_index].tolist()
                 self.corner_to_lane_marker = RvizVisualizer.draw_two_points_line(corner_point, lane_point, width=0.1)
 
-
-                rospy.logdebug("Lane index: %d, Front vehicle id: %d, behavior: %d, x:%.1f, y:%.1f, d:%.1f", 
-                                lane_id, front_vehicle.uid, front_vehicle.behavior,
-                                front_vehicle.state.pose.pose.position.x,front_vehicle.state.pose.pose.position.y,
-                                front_vehicle.ffstate.s)
+                # rospy.logdebug("Lane index: %d, Front vehicle id: %d, behavior: %d, x:%.1f, y:%.1f, d:%.1f",
+                #                 lane_id, front_vehicle.uid, front_vehicle.behavior,
+                #                 front_vehicle.state.pose.pose.position.x,front_vehicle.state.pose.pose.position.y,
+                #                 front_vehicle.ffstate.s)
 
             if len(rear_vehicles) > 0:
                 # Descending sort rear objects by distance to lane end
@@ -353,10 +343,11 @@ class NearestLocator:
                     tstates.dynamic_map.mmap.lanes[lane_id].rear_vehicles.append(rear_vehicle)
                 
                 rear_vehicle = tstates.dynamic_map.mmap.lanes[lane_id].rear_vehicles[0]
-                rospy.logdebug("Lane index: %d, Rear vehicle id: %d, behavior: %d, x:%.1f, y:%.1f, d:%.1f", 
-                                lane_id, rear_vehicle.uid, rear_vehicle.behavior, 
-                                rear_vehicle.state.pose.pose.position.x,rear_vehicle.state.pose.pose.position.y,
-                                rear_vehicle.ffstate.s)
+
+                # rospy.logdebug("Lane index: %d, Rear vehicle id: %d, behavior: %d, x:%.1f, y:%.1f, d:%.1f",
+                #                 lane_id, rear_vehicle.uid, rear_vehicle.behavior,
+                #                 rear_vehicle.state.pose.pose.position.x,rear_vehicle.state.pose.pose.position.y,
+                #                 rear_vehicle.ffstate.s)
 
     def locate_traffic_light_in_lanes(self, tstates):
         # TODO: Currently it's a very simple rule to locate the traffic lights
@@ -400,31 +391,29 @@ class NearestLocator:
         '''
         Put stop sign detections into lanes
         '''
+
         # TODO: Implement this
         pass
 
     def locate_speed_limit_in_lanes(self, tstates):
         '''
-        Put stop sign detections into lanes
+        Put stop sign, traffic lights into lanes
         '''
-        # TODO(zhcao): Change the speed limit according to the map or the traffic sign(perception)
-        # Now we set the multilane speed limit as 40 km/h.
-        # total_lane_num = len(tstates.static_map.lanes)
-        for i,lane in enumerate(tstates.dynamic_map.mmap.lanes):
-            speed_limit = tstates.static_map.lanes[i].speed_limit
-            available_speed = self.traffic_speed_limit(lane,tstates.static_map.lanes[i].traffic_light_pos)
-            lane.map_lane.speed_limit = max(0, min(speed_limit,available_speed))
-        
-        # for i in range(total_lane_num):
-        #     speed_limit = tstates.static_map.lanes[i].speed_limit
-        #     d = tstates.dynamic_map.mmap.distance_to_junction
-        #     available_speed = self.traffic_speed_limit(d, tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state == Lane.STOP_STATE_THRU)
-        #     tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = max(0, min(speed_limit,available_speed))
-            
-    def traffic_speed_limit(self, lane, traffic_light_pos, d_thres = 5, dec = 0.4):
+
+        for i, lane in enumerate(tstates.dynamic_map.mmap.lanes):
+            traffic_rule_speed_limit = tstates.static_map.lanes[i].speed_limit
+            traffic_light_available_speed = self.traffic_light_available_speed(lane, tstates.static_map.lanes[i].traffic_light_pos)
+            lane_tail_available_speed = self.lane_tail_available_speed(tstates, lane.ego_dis_to_lane_tail)
+            lane.map_lane.speed_limit = max(0, min(traffic_rule_speed_limit, traffic_light_available_speed, lane_tail_available_speed))
+            rospy.logdebug("Cognition: lane id: %d, speed limit: %.1f km/h, rule:%.1f km/h, "
+                           "traffic light:%.1f km/h, lane tail:%.1f km/h",
+                           i, lane.map_lane.speed_limit, traffic_rule_speed_limit,
+                           traffic_light_available_speed, lane_tail_available_speed)
+
+    def traffic_light_available_speed(self, lane, traffic_light_pos, d_thres=5, dec=0.4):
 
         if lane.map_lane.stop_state == Lane.STOP_STATE_THRU:
-            return 10000
+            return float("inf")
 
         d = 0
         
@@ -437,9 +426,29 @@ class NearestLocator:
         if d < d_thres:
             return 0
         
-        available_speed = math.sqrt(2*dec*(d - d_thres)) # m/s
+        available_speed = math.sqrt(2*dec*(d - d_thres))# m/s
         
         return available_speed*3.6
+
+    def lane_tail_available_speed(self, tstates, distance_to_tail=0, tail_speed=20/3.6):
+        '''
+        Calculate the speed when close to the tail
+        TODO(zhcao): should according to the tail required speed, if tail speed is 0, it is a stop sign or red traffic light
+        '''
+        if distance_to_tail <= 0:
+            return 0.0
+
+        dec = 0.4
+        available_speed = math.sqrt(2 * dec * distance_to_tail)  # m/s
+        ego_v = get_speed(tstates.ego_state.state)
+
+        if available_speed > ego_v:
+            return float("inf")
+
+        dt = 0.4
+        vehicle_dec = (ego_v - available_speed) * 5
+
+        return (ego_v - vehicle_dec * dt)*3.6
       
     # TODO(zyxin): Move this function into separate prediction module
     def predict_vehicle_behavior(self, vehicle, tstates, lane_change_thres = 0.2):
@@ -459,7 +468,6 @@ class NearestLocator:
         d_theta = vehicle_driving_direction - lane_direction
         d_theta = wrap_angle(d_theta)
 
-        # rospy.logdebug("id:%d, vehicle_direction:%.2f, lane_direction:%.2f",vehicle.uid,vehicle_driving_direction,lane_direction)
         if abs(d_theta) > lane_change_thres:
             if d_theta > 0:
                 behavior = RoadObstacle.BEHAVIOR_MOVING_LEFT

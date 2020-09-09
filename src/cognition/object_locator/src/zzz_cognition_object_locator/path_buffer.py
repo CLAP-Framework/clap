@@ -39,7 +39,6 @@ class PathBuffer:
 
         self._rerouting_trigger = None
         self._rerouting_sent = False
-        self._debug = True
 
     def set_rerouting_trigger(self, trigger):
         self._rerouting_trigger = trigger
@@ -48,7 +47,6 @@ class PathBuffer:
         assert type(map_input) == MapState
         with self._static_map_lock:
             self._static_map_buffer = map_input
-        rospy.logdebug("Updating local dynamic map")
 
     def receive_ego_state(self, state):
         assert type(state) == RigidBodyStateStamped
@@ -58,16 +56,14 @@ class PathBuffer:
     def receive_reference_path(self, reference_path):
         # TODO: Define a custom reference_path?
         assert type(reference_path) == Path
-        if self._debug:
-            print("#### PathBuffer msg frame - {}".format(reference_path.header.frame_id))
 
         # Here reference path is appended reversely in order to easy move points in a FIFO way
         with self._reference_path_lock:
             _reference_path_received = [(waypoint.pose.position.x, waypoint.pose.position.y) 
                                         for waypoint in reference_path.poses]
             self._reference_path_changed = True
-            self._reference_path_received = dense_polyline2d(np.array(_reference_path_received),2)
-        rospy.loginfo("Received reference path, length:%d", len(reference_path.poses))
+            self._reference_path_received = dense_polyline2d(np.array(_reference_path_received), 2)
+        rospy.loginfo("Cognition: Received Reference Path, length:%d", len(reference_path.poses))
 
     def _relocate_dense_reference_path_buffer(self, ego_state, resolution = 2):
         
@@ -123,7 +119,7 @@ class PathBuffer:
 
             for _ in range(nearest_idx-remained_passed_point):
                 removed_point = self._reference_path_segment.popleft()
-                rospy.logdebug("removed waypoint: %s, remaining count: %d", str(removed_point), len(self._reference_path_buffer))
+                # rospy.logdebug("removed waypoint: %s, remaining count: %d", str(removed_point), len(self._reference_path_buffer))
 
         # Choose points from reference path to buffer - enqueue
         while self._reference_path_buffer and len(self._reference_path_segment) < self._buffer_size:

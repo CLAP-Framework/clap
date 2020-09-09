@@ -98,22 +98,12 @@ class Werling(object):
             self.all_trajectory = []
             self._ego_lane_index = ego_lane_index
             start_state = self.calculate_start_state(dynamic_map)
-            generated_trajectory, high_resolution_speed = self.frenet_optimal_planning(self.csp, self.c_speed, start_state, target_speed)
+            generated_trajectory, local_desired_speed = self.frenet_optimal_planning(self.csp, self.c_speed, start_state, target_speed)
 
-            if generated_trajectory is not None:
-                local_desired_speed = high_resolution_speed #generated_trajectory.s_d[-1]
-                trajectory_array = np.c_[generated_trajectory.x, generated_trajectory.y]
-                self.last_trajectory_array_rule = trajectory_array
-                self.last_trajectory_rule = generated_trajectory
-                rospy.logdebug("----> Lane_Werling: Successful Planning")
-            else:
-                # generated_trajectory = best_free_fp
-                # local_desired_speed = 0
-                # trajectory_array = np.c_[generated_trajectory.x, generated_trajectory.y]
-                # self.last_trajectory_array_rule = trajectory_array
-                # self.last_trajectory_rule = generated_trajectory
-                rospy.logdebug("----> Lane_Werling: Fail to find a solution")
-         
+            trajectory_array = np.c_[generated_trajectory.x, generated_trajectory.y]
+            self.last_trajectory_array_rule = trajectory_array
+            self.last_trajectory_rule = generated_trajectory
+
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
             self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
             self.rivz_element.collision_circle = self.obs_prediction.rviz_collision_checking_circle
@@ -175,7 +165,7 @@ class Werling(object):
                                                                             di_range, Ti_range, vi_range)
         
         if fp_available:
-            rospy.logdebug("----> Lane_Werling: Successful Planning (No adjustment)")
+            rospy.logdebug("Planning (lanes): ----> Lane Werling Successful Planning (No adjustment)")
             return best_free_fp, low_resolution_speed
 
 
@@ -192,7 +182,7 @@ class Werling(object):
                                                                             di_range, Ti_range, vi_range)
 
         if fp_available:
-            rospy.logdebug("----> Lane_Werling: Successful Planning (Lateral slight adjustment)")
+            rospy.logdebug("Planning (lanes): ----> Lane Werling Successful Planning (Lateral slight adjustment)")
             return generated_fp, low_resolution_speed
 
 
@@ -212,10 +202,10 @@ class Werling(object):
                                                                             di_range, Ti_range, vi_range)
 
         if fp_available:
-            rospy.logdebug("----> Lane_Werling: Successful Planning (speed adjustment)")
+            rospy.logdebug("Planning (lanes): ----> Lane Werling Successful Planning (speed adjustment)")
             return generated_fp, generated_fp.s_d[-1]
             
-        rospy.logdebug("----> Lane_Werling: Fail to find a solution")
+        rospy.logdebug("Planning (lanes): ----> Lane Werling Fail to find a solution")
         return best_free_fp, 0
 
     def calculate_path_in_given_range(self, csp, c_speed, start_state, di_range, Ti_range, vi_range):
@@ -351,16 +341,12 @@ class Werling(object):
         for i, _ in enumerate(fplist):
 
             if any([v > MAX_SPEED for v in fplist[i].s_d]):  # Max speed check
-                # rospy.logdebug("exceeding max speed")
                 continue
             elif any([abs(a) > MAX_ACCEL for a in fplist[i].s_dd]):  # Max accel check
-                # rospy.logdebug("exceeding max accel")
                 continue
             elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
-                # rospy.logdebug("exceeding max curvature")
                 continue
-            # if not self.obs_prediction.check_collision(fplist[i]):
-            #     continue
+
 
             okind.append(i)
 

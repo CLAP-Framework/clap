@@ -40,17 +40,20 @@ class LocatorNode(object):
 
     def loop(self):
         while not rospy.is_shutdown():
-            self._rate.sleep() # TODO(zyxin): remove sleep after ensure the following modules are good
+            self._rate.sleep()
             dmap = self._map_instance.update()
-            if dmap: 
+            if dmap:
+                rospy.loginfo(
+                    " Cognition: Publish Dynamic Map: lanes_num = %d, in_junction = %s, ego_lane_index = %.2f, distance_to_end = %f",
+                    len(dmap.mmap.lanes), str(dmap.model == MapState.MODEL_JUNCTION_MAP),
+                    dmap.mmap.ego_lane_index, dmap.mmap.distance_to_junction)
                 self._dynamic_map_publisher.publish(dmap)
-                # todo remove visulization part in every node to module visulization
+                # TODO(lx): remove visulization part in every node to module visulization
                 self._rviz_nearest_front_vehicle.publish(self._map_instance.nearest_front_vehicle_marker)
                 self._rviz_corner_to_lane.publish(self._map_instance.corner_to_lane_marker)
 
 if __name__ == "__main__":
 
     rospy.init_node("nearest_locator", log_level=rospy.DEBUG)
-    
     node = LocatorNode()
     node.loop()
