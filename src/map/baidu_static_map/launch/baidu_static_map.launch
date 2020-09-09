@@ -1,7 +1,7 @@
 <!-- -->
 <launch>
   <arg name="map_path" 
-      default="$(env HOME)/base_map.bin" />
+      default="$(find baidu_static_map)/conf/base_map.bin" />
   <arg name="pose_topic" 
       default="/zzz/navigation/ego_pose" />
   <arg name="map_output_topic" 
