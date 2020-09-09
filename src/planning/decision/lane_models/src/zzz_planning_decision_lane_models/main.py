@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import rospy
-import numpy as np
 from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from zzz_planning_msgs.msg import DecisionTrajectory
 from threading import Lock
@@ -13,6 +12,7 @@ from zzz_planning_decision_lane_models.local_trajectory import PolylineTrajector
 
 # Make lat lon model as parameter
 
+
 class MainDecision(object):
     def __init__(self, lon_decision=None, lat_decision=None, local_trajectory=None):
         self._dynamic_map_buffer = None
@@ -21,16 +21,15 @@ class MainDecision(object):
         self._longitudinal_model_instance = lon_decision
         self._lateral_model_instance = lat_decision
         self._local_trajectory_instance = Werling_planner() # MPCTrajectory()
-        # self._local_trajectory_instance_for_ref = PolylineTrajectory() # TODO(Temps): Should seperate into continous models
 
         self._dynamic_map_lock = Lock()
 
-    # receive_dynamic_map running in Subscriber CallBack Thread.
     def receive_dynamic_map(self, dynamic_map):
+        assert type(dynamic_map) == MapState
         self._dynamic_map_buffer = dynamic_map
 
     # update running in main node thread loop
-    def update(self):
+    def update(self, close_to_lane=5):
         '''
         This function generate trajectory
         '''
@@ -40,13 +39,9 @@ class MainDecision(object):
         else:
             dynamic_map = self._dynamic_map_buffer
 
-        # close_to_lane = 1
-
-
         if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP: 
 
-            # print("-++++++++++++++++-",dynamic_map.jmap.distance_to_lanes)
-            if dynamic_map.jmap.distance_to_lanes < 5:
+            if dynamic_map.jmap.distance_to_lanes < close_to_lane:
                 self._local_trajectory_instance.build_frenet_lane(dynamic_map)
                 return None
             else:
@@ -61,7 +56,7 @@ class MainDecision(object):
         
         ego_speed = get_speed(dynamic_map.ego_state)
 
-        rospy.logdebug("target_lane_index = %d, target_speed = %f km/h, current_speed: %f km/h", changing_lane_index, desired_speed*3.6, ego_speed*3.6)
+        rospy.logdebug("Planning (lanes): target_lane = %d, target_speed = %f km/h, current_speed: %f km/h", changing_lane_index, desired_speed*3.6, ego_speed*3.6)
         
         trajectory, local_desired_speed = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
 

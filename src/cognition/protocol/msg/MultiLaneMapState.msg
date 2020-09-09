@@ -11,6 +11,5 @@ LaneState[] lanes
 # the lane that ego vehicle drives on
 float32 ego_lane_index
 
-# target lane index (0 refer to right-most lane in right-side driving situation)
-# TODO: Change to list
-int8 target_lane_index
+# exit lane index (0 refer to right-most lane in right-side driving situation)
+int8[] exit_lane_index

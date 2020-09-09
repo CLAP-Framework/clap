@@ -113,25 +113,25 @@ class Werling(object):
                 trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori,1)
                 self.last_trajectory_array_rule = trajectory_array
                 self.last_trajectory_rule = generated_trajectory              
-                rospy.logdebug("----> Werling: Successful Planning")
+                rospy.logdebug("Planning (continuous): ----> Werling Successful Planning")
             
             elif len(self.last_trajectory_array_rule) > 5 and self.c_speed > 1:
                 trajectory_array = self.last_trajectory_array_rule
                 generated_trajectory = self.last_trajectory_rule
                 desired_speed =  0 
-                rospy.logdebug("----> Werling: Fail to find a solution")
+                rospy.logdebug("Planning (continuous): ----> Werling Fail to find a solution")
 
             else:
                 trajectory_array =  self.ref_path
                 desired_speed = 0
-                rospy.logdebug("----> Werling: Output ref path")
+                rospy.logdebug("Planning (continuous): ----> Werling Output ref path")
             
             if desired_speed < 0.1/3.6:
                 desired_speed = 0.1/3.6
             
             msg = DecisionTrajectory()
-            msg.trajectory = convert_ndarray_to_pathmsg(dense_polyline2d(trajectory_array,0.2))
-            msg.desired_speed = self.ref_tail_speed(dynamic_map,desired_speed)
+            msg.trajectory = convert_ndarray_to_pathmsg(dense_polyline2d(trajectory_array, 0.2))
+            msg.desired_speed = self.ref_tail_speed(dynamic_map, desired_speed)
 
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
             self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
@@ -158,7 +158,7 @@ class Werling(object):
             return True
 
         except:
-            rospy.logdebug("------> Werling: Initialize fail ")
+            rospy.logdebug("Planning (continuous): ------> Werling Initialize fail ")
             return False
 
     def ref_tail_speed(self, dynamic_map, desired_speed):
@@ -237,7 +237,7 @@ class Werling(object):
         time_consume3 = t3 - t2
         candidate_len3 = len(fplist)
 
-        rospy.logdebug("frenet time consume step1: %.1f(candidate: %d), step2: %.1f(candidate: %d), step3: %.1f(candidate: %d)",
+        rospy.logdebug("Planning (continuous): frenet time consume step1 %.1f(candidate: %d), step2: %.1f(candidate: %d), step3: %.1f(candidate: %d)",
                                             time_consume1, candidate_len1,
                                             time_consume2, candidate_len2,
                                             time_consume3, candidate_len3)

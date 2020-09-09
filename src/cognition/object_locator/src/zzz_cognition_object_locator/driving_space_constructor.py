@@ -56,15 +56,12 @@ class DrivingSpaceConstructor:
         assert type(static_map) == Map
         with self._static_map_lock:
             self._static_map_buffer = static_map
-            rospy.loginfo("Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
-                len(static_map.lanes), int(static_map.in_junction), static_map.target_lane_index)
 
     def receive_object_list(self, object_list):
         assert type(object_list) == TrackingBoxArray
         with self._surrounding_object_list_lock:
             if self._ego_vehicle_state_buffer != None:
                 self._surrounding_object_list_buffer = convert_tracking_box(object_list, self._ego_vehicle_state_buffer)
-                print('++++ _surrounding_object_list_buffer len ', len(self._surrounding_object_list_buffer))
                 #jxy: the converted objects are in the RoadObstacle() format
 
     def receive_ego_state(self, state):
@@ -108,7 +105,6 @@ class DrivingSpaceConstructor:
 
         # Update driving_space with tstate
         if static_map.in_junction or len(static_map.lanes) == 0:
-            rospy.logdebug("In junction due to static map report junction location")
             self.calculate_drivable_area(tstates)
         else:
             for lane in tstates.static_map.lanes:
@@ -126,7 +122,6 @@ class DrivingSpaceConstructor:
         self._driving_space.ego_state = tstates.ego_vehicle_state.state
         #TODO: drivable area. It should be updated by obstacles. Only static drivable area is not OK.
         self._driving_space.obstacles = tstates.obstacles
-        rospy.logdebug("len(self._static_map.lanes): %d", len(tstates.static_map.lanes))
 
         self.dynamic_boundary = DynamicBoundary()
         self.dynamic_boundary.header.frame_id = "map"
@@ -644,11 +639,6 @@ class DrivingSpaceConstructor:
         self._traffic_lights_markerarray = MarkerArray()
 
         #TODO: now no lights are in. I'll check it when I run the codes.
-        
-        #lights = self._traffic_light_detection.detections
-        #rospy.loginfo("lights num: %d\n\n", len(lights))
-        
-        rospy.logdebug("Updated driving space")
 
         return True
 
@@ -802,13 +792,11 @@ class DrivingSpaceConstructor:
             # Drive into junction, wait until next map
             tstates.ego_lane_index = -1
             tstates.ego_s = ego_s
-            rospy.logdebug("In junction due to close to intersection, ego_lane_index = %f, dist_to_lane_tail = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)])
             return
         else:
             tstates.ego_lane_index = ego_lane_index
             tstates.ego_s = ego_s
             #TODO: this is not modified!
-        rospy.logdebug("Distance to end: (lane %f) %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded])
 
     def calculate_next_drivable_area(self, tstates):
         '''

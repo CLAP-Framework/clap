@@ -47,7 +47,7 @@ class Node(object):
         while not rospy.is_shutdown():
             new_map = self._map_instance.update()
             if new_map:
-                rospy.logdebug("Sent reference path, length: %d", len(new_map.jmap.reference_path.map_lane.central_path_points))
+                rospy.logdebug("Cognition: Publish Ref Path (length: %d)", len(new_map.jmap.reference_path.map_lane.central_path_points))
                 self._output_map_publisher.publish(new_map)
                 self._sent_ref_path_path_publisher.publish(self._map_instance.ref_path_msg)
             self._rate.sleep()
