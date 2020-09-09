@@ -60,6 +60,13 @@ extern "C"
 
 namespace usb_cam {
 
+#ifdef __aarch64__
+  int convert_yuv_to_rgb_pixel(int y, int u, int v);
+  int convert_yuv_to_rgb_buffer(unsigned char* yuv, unsigned char* rgb,
+                                unsigned int width, unsigned int height);
+#endif  
+
+
 class UsbCam {
  public:
   typedef enum
@@ -93,6 +100,7 @@ class UsbCam {
 
   static io_method io_method_from_string(const std::string& str);
   static pixel_format pixel_format_from_string(const std::string& str);
+
 
   void stop_capturing(void);
   void start_capturing(void);

@@ -9,3 +9,6 @@ scipy
 numpy
 shapely
 cvxopt
+gym
+networkx
+msgpack

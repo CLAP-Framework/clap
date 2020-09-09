@@ -82,7 +82,7 @@ class RLSDecision(object):
         try:
             self.sock.sendall(msgpack.packb(sent_RL_msg))
             RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
-            RLS_action = RLS_action
+            RLS_action = int(RLS_action)
             print("received action:", RLS_action)
             return self.get_decision_from_discrete_action(RLS_action)
         except:
@@ -172,6 +172,10 @@ class RLSDecision(object):
 
         current_speed = get_speed(self._dynamic_map.ego_state)
         ego_y = int(round(self._dynamic_map.mmap.ego_lane_index))
+
+        if current_speed < 5/3.6:
+            self.decision_action = 0.0
+            return self._rule_based_lateral_model_instance.lateral_decision(self._dynamic_map)
 
         # Hard-brake action
         if action == 1:

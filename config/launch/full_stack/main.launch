@@ -1,6 +1,12 @@
 <launch>
     <arg name="waypoint_topic" default="/carla/ego_vehicle/waypoints"/>
 
+    <arg name="bagreplay" value="$(optenv ENABLE_BAGREPLAY false)"/>
+    <group if="$(arg bagreplay)">
+        <include file="$(find rslidar_point_convert)/launch/middle_lidar.launch"> 
+        </include>
+    </group>
+
     <include file="$(env ZZZ_ROOT)/zzz/config/launch/full_stack/perception.launch">
     </include>
 
@@ -14,6 +20,14 @@
     </include>
 
     <include file="$(find icvfollower)/launch/ICVfollower.launch" />
+
+    <node pkg="zzz_visualization_web_dash" type="dashboard"
+            name="dash_board" output="screen" ns="/zzz/visualization">
+    </node>
+
+    <node pkg="zzz_visualization_rviz_box_visualizer" type="decision_trajactory"
+            name="decision_trajactory" output="screen" ns="/zzz/visualization">
+    </node>
 
     <!-- xiaopeng adpater -->
     <!-- <include file="$(env ZZZ_ROOT)/zzz/src/driver/simulators/carla/carla_adapter/scripts/use_bridge/auxiliary.launch"/> -->

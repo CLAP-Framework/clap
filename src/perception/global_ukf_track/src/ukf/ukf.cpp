@@ -357,8 +357,11 @@ void UKF::PredictMeasurement(int n_z, const MatrixXd &Zsig, VectorXd &z_pred, Ma
     VectorXd z_diff = Zsig.col(i) - z_pred;
 
     //angle normalization
-    while (z_diff(1)> M_PI) z_diff(1)-=_2_PI;
-    while (z_diff(1)<-M_PI) z_diff(1)+=_2_PI;
+    z_diff(1) = fmod(z_diff(1), _2_PI);
+    if (z_diff(1)> M_PI) z_diff(1)-=_2_PI;
+    if (z_diff(1)<-M_PI) z_diff(1)+=_2_PI;
+    // while (z_diff(1)> M_PI) z_diff(1)-=_2_PI;
+    // while (z_diff(1)<-M_PI) z_diff(1)+=_2_PI;
 
     S += weights_(i) * z_diff * z_diff.transpose();
   }
@@ -388,14 +391,19 @@ void UKF::UpdateState(const VectorXd &z, const VectorXd &z_pred, const MatrixXd 
     //residual
     VectorXd z_diff = Zsig.col(i) - z_pred;
     //angle normalization
-    while (z_diff(1)> M_PI) z_diff(1)-=_2_PI;
-    while (z_diff(1)<-M_PI) z_diff(1)+=_2_PI;
-
+    z_diff(1) = fmod(z_diff(1), _2_PI);
+    if (z_diff(1)> M_PI) z_diff(1)-=_2_PI;
+    if (z_diff(1)<-M_PI) z_diff(1)+=_2_PI;
+    // while (z_diff(1)> M_PI) z_diff(1)-=_2_PI;
+    // while (z_diff(1)<-M_PI) z_diff(1)+=_2_PI;
     // state difference
     VectorXd x_diff = Xsig_pred_.col(i) - x_;
     //angle normalization
-    while (x_diff(3)> M_PI) x_diff(3)-=_2_PI;
-    while (x_diff(3)<-M_PI) x_diff(3)+=_2_PI;
+    x_diff(3) = fmod(x_diff(3), _2_PI);
+    if (x_diff(3)> M_PI) x_diff(3)-=_2_PI;
+    if (x_diff(3)<-M_PI) x_diff(3)+=_2_PI;
+    // while (x_diff(3)> M_PI) x_diff(3)-=_2_PI;
+    // while (x_diff(3)<-M_PI) x_diff(3)+=_2_PI;
 
     Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
   }
@@ -407,8 +415,11 @@ void UKF::UpdateState(const VectorXd &z, const VectorXd &z_pred, const MatrixXd 
   VectorXd z_diff = z - z_pred;
 
   //angle normalization
-  while (z_diff(1)> M_PI) z_diff(1)-=2.*_2_PI;
-  while (z_diff(1)<-M_PI) z_diff(1)+=2.*_2_PI;
+  z_diff(1) = fmod(z_diff(1), _2_PI);
+  if (z_diff(1)> M_PI) z_diff(1)-=2.*_2_PI;
+  if (z_diff(1)<-M_PI) z_diff(1)+=2.*_2_PI;
+  // while (z_diff(1)> M_PI) z_diff(1)-=2.*_2_PI;
+  // while (z_diff(1)<-M_PI) z_diff(1)+=2.*_2_PI;
 
   //update state mean and covariance matrix
   x_ = x_ + K * z_diff;
@@ -440,7 +451,14 @@ void UKF::AugmentSigmaPoints(){
 #if DEBUG
   std::cout<< "agumented state covariance:\n" << P_aug_ << std::endl;
 #endif
-
+  // compute the Cholesky decomposition of P_aug_
+  Eigen::LLT<Eigen::MatrixXd> llt_P(P_aug_) ; 
+  if(llt_P.info() == Eigen::NumericalIssue) {
+    is_initialized_ = false;
+    // throw std::runtime_error("Possibly non semi-positive definitie matrix !!!");
+    std::cerr << "Possibly non semi-positive definitie matrix !!!";
+    return ;
+  }  
   //create square root matrix
   MatrixXd L = P_aug_.llt().matrixL();
 
@@ -526,8 +544,11 @@ void UKF::PredictMeanAndCovariance(){
     // state difference
     VectorXd x_diff = Xsig_pred_.col(i) - x_;
     //angle normalized to [-pi, pi]
-    while (x_diff(3)> M_PI) x_diff(3)-=_2_PI;
-    while (x_diff(3)<-M_PI) x_diff(3)+=_2_PI;
+    x_diff(3) = fmod(x_diff(3), _2_PI);
+    if (x_diff(3)> M_PI) x_diff(3)-=_2_PI;
+    if (x_diff(3)<-M_PI) x_diff(3)+=_2_PI;
+    // while (x_diff(3)> M_PI) x_diff(3)-=_2_PI;
+    // while (x_diff(3)<-M_PI) x_diff(3)+=_2_PI;
 
     P_ += weights_(i) * x_diff * x_diff.transpose() ;
   }

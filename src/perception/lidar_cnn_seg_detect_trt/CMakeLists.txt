@@ -88,6 +88,9 @@ add_executable(lidar_cnn_seg_detect_trt
   # src/feature_generator.cpp
   node/lidar_cnn_seg_detect_node.cpp
   node/cnn_segmentation.cpp
+  src/shm_object.cpp
+  src/sem_object.cpp
+  src/point_struct.cpp
 )
 
 target_link_libraries(lidar_cnn_seg_detect_trt
@@ -111,6 +114,9 @@ add_executable(lidar_cnn_seg_detect_trt
   src/feature_generator.cpp
   node/lidar_cnn_seg_detect_node.cpp
   node/cnn_segmentation.cpp
+  src/shm_object.cpp
+  src/sem_object.cpp
+  src/point_struct.cpp
 )
 
 target_link_libraries(lidar_cnn_seg_detect_trt

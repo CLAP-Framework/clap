@@ -1,0 +1,16 @@
+<launch>
+  <group ns="middle">
+    <arg name="lidar_model" default="RS32" />
+    <arg name="lidar_param_path" default="$(find rslidar_point_convert)/data/rs_lidar_32/" />
+
+    <node  name="point_convert_node" pkg="rslidar_point_convert" type="point_convert_node" output="screen" >
+      <param name="model" value="$(arg lidar_model)"/>
+      <param name="curves_path" value="$(arg lidar_param_path)/curves.csv" />
+      <param name="angle_path" value="$(arg lidar_param_path)/angle.csv" />
+      <param name="channel_path" value="$(arg lidar_param_path)/ChannelNum.csv" />
+      <param name="curves_rate_path" value="$(arg lidar_param_path)/CurveRate.csv" />
+      <param name="start_angle" value="0" />
+      <param name="end_angle" value="360" />
+    </node>
+  </group>
+</launch>

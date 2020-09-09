@@ -124,7 +124,7 @@ app.layout = html.Div(
         ),
         dcc.Interval( # fresher
             id='interval-component',
-            interval=200, # in milliseconds
+            interval=500, # in milliseconds
             n_intervals=0
         )
     ],

@@ -1,6 +1,12 @@
 <launch>
     <arg name="waypoint_topic" default="/carla/ego_vehicle/waypoints"/>
 
+    <arg name="bagreplay" value="$(optenv ENABLE_BAGREPLAY false)"/>
+    <group if="$(arg bagreplay)">
+        <include file="$(find rslidar_point_convert)/launch/middle_lidar.launch"> 
+        </include>
+    </group>
+    
     <node pkg="zzz_navigation_map_provider_sumo" type="native_map_generator"
             name="static_map_builder" output="screen" ns="/zzz/navigation">
           <param name="reference_path_topic" value="$(arg waypoint_topic)"/>

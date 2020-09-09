@@ -17,8 +17,15 @@
   <!-- <arg name="ground_height" default="-1.73" /> -->
   
   <arg name="benchmark_path" default="" />
-  <arg name="duration_path" default="" />  
-  
+  <arg name="duration_path" default="" />    
+
+  <!-- for SHM  -->  
+  <arg name="shm_enable" default="false" />  
+  <arg name="shm_key" default="200" />   
+  <arg name="sem_proj_id" default="100" />  
+  <arg name="shm_clent_index" default="1" />   
+  <arg name="shm_cycle_delay" default="30" />  
+
   <node pkg="lidar_cnn_seg_detect_trt" 
       type="lidar_cnn_seg_detect_trt" 
       name="lidar_cnn_seg_detect_trt_x64" 
@@ -41,6 +48,14 @@
 
     <param name="benchmark_path" value="$(arg benchmark_path)" />
     <param name="duration_path" value="$(arg duration_path)" />
+
+    <!-- for SHM  -->  
+    <param name="shm_enable" value="$(arg shm_enable)" />
+    <param name="shm_key" value="$(arg shm_key)" />
+    <param name="sem_proj_id" value="$(arg sem_proj_id)" />
+    <param name="shm_clent_index" value="$(arg shm_clent_index)" />
+    <param name="shm_cycle_delay" value="$(arg shm_cycle_delay)" />
+
   </node>
 
   <node pkg="detected_objects_visualizer" 

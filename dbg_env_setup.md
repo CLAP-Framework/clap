@@ -12,7 +12,9 @@
    1) echo "export ZZZ_ROOT=$(pwd -P)" >> ~/.bashrc && source ~/.bashrc
    2) cd zzz && sudo -H pip2 install -r requirement.txt
    3) ./build_zzz.sh 
-      @mark, before build_zzz (if debug planning: rm -rf src/perception/lidar_cnn_seg_detect_trt src/perception/lidar_point_pillars_detect_trt src/perception/global_ukf_track src/tools/libtrt src/tools/tensorrt_cpp)
+      @mark, before build_zzz (rm -rf src/perception/lidar_cnn_seg_detect_trt src/perception/lidar_point_pillars_detect_trt src/perception/global_ukf_track src/tools/libtrt src/tools/tensorrt_cpp <-- DO NOT comit your local changes!!!)
+      edit file 'zzz/config/launch/full_stack/main.launch', comment out perception module '<include file="$(env ZZZ_ROOT)/zzz/config/launch/full_stack/perception.launch">
+      </include> '
 
 ## 3. start debug with bag
    0) roscore

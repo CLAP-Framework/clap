@@ -309,6 +309,7 @@ public:
 
         zzz_driver_msgs::RigidBodyStateStamped state;
         state.header.frame_id = "map";
+        state.header.stamp = Odom_msg->header.stamp;
         state.state.child_frame_id = "odom";
         state.state.pose.pose = new_odom.pose.pose;
         state.state.pose.pose.position.z = 0.0;

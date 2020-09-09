@@ -183,7 +183,7 @@ def convert_ndarray_to_pathmsg(path):
         pose.pose.position.y = wp[1]
         msg.poses.append(pose)
     msg.header.frame_id = "map" 
-
+    msg.header.stamp = rospy.Time.now()
     return msg
 
 
@@ -202,5 +202,6 @@ def convert_XY_to_pathmsg(XX,YY,path_id = 'map'):
         
         msg.poses.append(pose)
     msg.header.frame_id = path_id 
+    msg.header.stamp = rospy.Time.now()
     return msg
 

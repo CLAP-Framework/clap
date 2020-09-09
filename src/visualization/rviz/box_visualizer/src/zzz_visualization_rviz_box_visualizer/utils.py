@@ -66,7 +66,7 @@ class RvizVisualizer():
     def draw_line_from_points(points_list, color=(0,1,1), width=3):
         tempmarkerarray = MarkerArray()
         tempmarker = Marker()
-        tempmarker.header.frame_id = "rslidar"
+        tempmarker.header.frame_id = "map"
         tempmarker.header.stamp = rospy.Time.now()
         tempmarker.ns = "zzz/decision"
         tempmarker.id = 1

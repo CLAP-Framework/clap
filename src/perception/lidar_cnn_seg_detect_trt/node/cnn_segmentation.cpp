@@ -46,6 +46,36 @@ bool CNNSegmentation::init() {
   ros::NodeHandle private_node_handle("~");//to receive args
   benchmark_path_.clear();
   duration_path_.clear();
+
+  //for SHM
+  ROS_WARN("[CNNSeg] Enter SHM parameter read!");
+  // private_node_handle.param<bool>("shm_enable", shm_enable_, false);
+  
+  if (private_node_handle.getParam("shm_enable", shm_enable_)){
+    ROS_INFO_STREAM("shm enable is : " << shm_enable_);
+  }
+  if(shm_enable_){
+      private_node_handle.param<int>("shm_key", shm_key_, 200);
+      private_node_handle.param<int>("sem_proj_id", sem_proj_id_, 100);
+      private_node_handle.param<int>("shm_clent_index", shm_clent_index_, 1);     //TODO
+      private_node_handle.param<int>("shm_cycle_delay", shm_cycle_delay_, 70);     //TODO
+      sem_id_ = sem_object_rec_.GetSemid(sem_proj_id_, 0);      //open sem
+      if (sem_id_ == -1)
+      {
+        ROS_ERROR("semget open sem failed.");
+      } 
+      else{
+        ROS_WARN_STREAM("[SEM] semget return value(SEM_ID) is " << sem_id_);
+      }
+      shm_obj_point_ = shared_memory::ShmObject{shm_key_};
+      
+      ROS_INFO_STREAM("shm key is : " << shm_key_ 
+          << ", and sem project id is :" << sem_proj_id_
+          << ", and shm clent index is :" << shm_clent_index_
+          << ", and shm cycle delay is :" << shm_cycle_delay_);
+  }
+
+
   if (private_node_handle.getParam("benchmark_path", benchmark_path_)){
     ROS_INFO("[%s] benchmark_path: %s", __APP_NAME__, benchmark_path_.c_str());
   }
@@ -61,6 +91,8 @@ bool CNNSegmentation::init() {
   // private_node_handle.param<std::string>("benchmark_path", benchmark_path_, "");
   // private_node_handle.param<std::string>("duration_path", duration_path_, "");
   // private_node_handle.param<std::string>("engine_file", engine_file, "");  
+
+
 
   private_node_handle.param<std::string>("publish_objects", 
       topic_pub_objects_, "/detection/lidar_detector/objects");
@@ -286,10 +318,26 @@ void CNNSegmentation::test_run() {
   }
 }
 
+// void CNNSegmentation::run() {
+//   init();
+//   points_sub_ = nh_.subscribe(topic_src_, 1, 
+//       &CNNSegmentation::pointsCallback, this);
+//   // points_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(
+//   //     topic_pub_points_, 2);
+//   objects_pub_ = nh_.advertise<autoware_msgs::DetectedObjectArray>(
+//       topic_pub_objects_, 2);
+//   ROS_INFO("[%s] Ready. Waiting for data...", __APP_NAME__);
+// }
+
 void CNNSegmentation::run() {
   init();
-  points_sub_ = nh_.subscribe(topic_src_, 1, 
-      &CNNSegmentation::pointsCallback, this);
+  if(!shm_enable_){
+      points_sub_ = nh_.subscribe(topic_src_, 1, 
+          &CNNSegmentation::pointsCallback, this);
+  }else{
+      boost::shared_ptr<boost::thread> shm_thread = 
+          boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(&CNNSegmentation::pointsCallbackShm, this)));
+  }
   // points_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(
   //     topic_pub_points_, 2);
   objects_pub_ = nh_.advertise<autoware_msgs::DetectedObjectArray>(
@@ -297,8 +345,50 @@ void CNNSegmentation::run() {
   ROS_INFO("[%s] Ready. Waiting for data...", __APP_NAME__);
 }
 
+void CNNSegmentation::pointsCallbackShm(){
+  rslidar_pointcloud::rslidarPointStruct struct_of_point;
+  bool sem_exit_flag = sem_object_rec_.IfSemExist(sem_proj_id_);
+  while(sem_exit_flag){           
+    sem_object_rec_.P(sem_id_, 0, -1);    
+    read_data_ = shm_obj_point_.get_data_for_read_with_sem(shm_clent_index_);    //unsigned char*
+    if(read_data_!=NULL)//表示已经获取到可读数据
+    {
+        std::memcpy(&struct_of_point, read_data_+MAX_CLIENT_NUM, rslidar_pointcloud::shm_data_length__);
+        read_data_[shm_clent_index_-1] = 0;//读取完成标志位
+        sensor_msgs::PointCloud2 point_msg = struct_of_point.get_point_msg();  
+
+        //perception part start
+        pcl::PointCloud<pcl::PointXYZI>::Ptr in_pc_ptr(new pcl::PointCloud<pcl::PointXYZI>);
+        pcl::fromROSMsg(point_msg, *in_pc_ptr);
+        pcl::PointIndices valid_idx;
+        auto &indices = valid_idx.indices;
+        indices.resize(in_pc_ptr->size());
+        std::iota(indices.begin(), indices.end(), 0);
+        message_header_ = point_msg.header;
+
+        autoware_msgs::DetectedObjectArray objects;
+        objects.header = message_header_;
+        segment(in_pc_ptr, valid_idx, objects);
+
+        // pubColoredPoints(objects);
+        objects_pub_.publish(objects);
+
+        if (!benchmark_path_.empty()) {
+          // std::cout << "record" << std::endl;
+          nova::Benchmark bench(nova::Benchmark::Dataset::Waymo, benchmark_path_);
+          bench.record(objects);
+        }
+        //perception part end
+        usleep(shm_cycle_delay_*1000);     
+    }
+    sem_object_rec_.V(sem_id_, 0, 1);
+    usleep(2000);    
+  }     
+}   //end of pointsCallbackShm()
+
 void CNNSegmentation::pointsCallback(const sensor_msgs::PointCloud2 &msg)
 {
+  ROS_INFO("[SHM] perception not in SHM");
   pcl::PointCloud<pcl::PointXYZI>::Ptr in_pc_ptr(new pcl::PointCloud<pcl::PointXYZI>);
   pcl::fromROSMsg(msg, *in_pc_ptr);
   pcl::PointIndices valid_idx;

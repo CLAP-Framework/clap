@@ -19,6 +19,7 @@ class TrajectoryUKF : public UKF{
 public:
   void ProcessPrediction(long long timestamp);
   void ProcessUpdate(const MeasurementPackage& meas_package);
+  bool isSemiPositive();
 public:
   Trajectory traj_;
 };
