@@ -185,7 +185,7 @@ class LocalMap(object):
         '''
         init_static_map = Map()
         init_static_map.in_junction = True
-        init_static_map.target_lane_index = -1
+        init_static_map.exit_lane_index.append(-1) 
         return init_static_map
 
     def update_static_map(self, update_mode):
@@ -212,9 +212,9 @@ class LocalMap(object):
         if not self.static_local_map.in_junction:
             self.calibrate_lane_index() # make the righest lane index 0
 
-        rospy.loginfo("Updated static map info: lane_number = %d, in_junction = %d, current_edge_id = %s, target_lane_index = %s",
+        rospy.loginfo("Updated static map info: lane_number = %d, in_junction = %d, current_edge_id = %s, exit_lane_index = %s",
             len(self.static_local_map.lanes), int(self.static_local_map.in_junction),
-            self._current_edge_id, self.static_local_map.target_lane_index)
+            self._current_edge_id, self.static_local_map.exit_lane_index[0])
 
     def update_junction(self, closest_dist=100):
         
@@ -399,8 +399,8 @@ class LocalMap(object):
                 connections_outgoing = lane.getOutgoing()
                 for connection in connections_outgoing:
                     if connection.getToLane().getID() == target_lane_id:
-                        self.static_local_map.target_lane_index = lane.getIndex()
-                        rospy.logdebug("Finded next target lane id = %s", self.static_local_map.target_lane_index)
+                        self.static_local_map.exit_lane_index.append(lane.getIndex())
+                        rospy.logdebug("Finded next target lane id = %s", self.static_local_map.exit_lane_index[0])
                         return
 
         # FIXME(zhcao): reference path match target lane
@@ -415,5 +415,5 @@ class LocalMap(object):
         for lane in self.static_local_map.lanes:
             lane.index = lane.index - first_index
 
-        if self.static_local_map.target_lane_index >= 0:
-            self.static_local_map.target_lane_index = self.static_local_map.target_lane_index - first_index
+        if self.static_local_map.exit_lane_index[0] >= 0:
+            self.static_local_map.exit_lane_index[0] = self.static_local_map.exit_lane_index[0] - first_index

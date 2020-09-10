@@ -356,6 +356,9 @@ class Werling(object):
             # fp.c = (np.diff(fp.yaw) / np.array(fp.ds)).tolist()
 
             for i in range(len(fp.yaw) - 1):
+                # carla simulation bug
+                if fp.ds[i]<0.00001:
+                    fp.ds[i] = 0.1
                 fp.c.append((fp.yaw[i + 1] - fp.yaw[i]) / fp.ds[i])
 
         return fplist

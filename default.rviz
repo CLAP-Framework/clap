@@ -5,6 +5,8 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /Path1
+        - /Path2
         - /Path3
         - /MarkerArray1
         - /MarkerArray2
@@ -16,8 +18,9 @@ Panels:
         - /MarkerArray11
         - /MarkerArray12
         - /MarkerArray13
+        - /MarkerArray15
       Splitter Ratio: 0.35586482286453247
-    Tree Height: 489
+    Tree Height: 1261
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -37,7 +40,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -219,7 +222,7 @@ Visualization Manager:
       Buffer Length: 1
       Class: rviz/Path
       Color: 170; 170; 255
-      Enabled: false
+      Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
@@ -237,13 +240,13 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic: /zzz/planning/decision_trajectory_path
       Unreliable: false
-      Value: false
+      Value: true
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /zzz/cognition/obstacles_markerarray
       Name: MarkerArray
       Namespaces:
-        zzz/cognition: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -251,7 +254,7 @@ Visualization Manager:
       Marker Topic: /zzz/cognition/lanes_markerarray
       Name: MarkerArray
       Namespaces:
-        zzz/cognition: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -259,7 +262,7 @@ Visualization Manager:
       Marker Topic: /zzz/cognition/ego_markerarray
       Name: MarkerArray
       Namespaces:
-        zzz/cognition: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -319,7 +322,7 @@ Visualization Manager:
       Marker Topic: /pre_point
       Name: Marker
       Namespaces:
-        my_namespace_pre: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -327,7 +330,7 @@ Visualization Manager:
       Marker Topic: /zzz/planning/collision_circle
       Name: MarkerArray
       Namespaces:
-        zzz/decision: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -373,7 +376,7 @@ Visualization Manager:
       Marker Topic: /zzz/cognition/nearest_front_vehicle
       Name: MarkerArray
       Namespaces:
-        zzz/decision: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -389,11 +392,11 @@ Visualization Manager:
       Marker Topic: /zzz/planning/decision_MarkerArray
       Name: MarkerArray
       Namespaces:
-        zzz/decision: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Image
-      Enabled: true
+      Enabled: false
       Image Topic: /left_usb_cam/image_raw
       Max Value: 1
       Median window: 5
@@ -403,6 +406,22 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: compressed
       Unreliable: false
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /zzz/cognition/lanes_boundary_markerarray
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /zzz/cognition/drivable_area_markerarray
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
@@ -431,7 +450,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.6150001287460327
+      Angle: -1.7699999809265137
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -441,11 +460,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 7.858376979827881
+      Scale: 1.3745639324188232
       Target Frame: rslidar
       Value: TopDownOrtho (rviz)
-      X: 11.061858177185059
-      Y: -345.9632873535156
+      X: 16.343551635742188
+      Y: -213.6508331298828
     Saved:
       - Class: rviz/Orbit
         Distance: 307.58343505859375
@@ -511,13 +530,13 @@ Window Geometry:
   Camera:
     collapsed: false
   Displays:
-    collapsed: true
-  Height: 640
-  Hide Left Dock: true
+    collapsed: false
+  Height: 1412
+  Hide Left Dock: false
   Hide Right Dock: false
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000024300000226fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073000000003d00000226000000c900fffffffc0000003d000001c30000000000fffffffaffffffff0100000002fb0000000a0049006d0061006700650000000000ffffffff0000005e00fffffffb0000000c00430061006d0065007200610000000000000002240000006900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006500000002060000019e0000001600fffffffb0000000a0049006d0061006700650000000121000000aa0000000000000000fb0000000a0049006d006100670065000000015a000001240000000000000000fb0000000c00430061006d00650072006100000001ed000001b70000000000000000fb0000000a0049006d00610067006503000000610000006d000002e30000019e000000010000010f00000261fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000002800000261000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000003bf0000003bfc0100000002fb0000000800540069006d00650000000000000003bf000002eb00fffffffb0000000800540069006d00650100000000000004500000000000000000000007d70000022600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000002430000052afc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000052a000000c900fffffffc0000003d000001c30000000000fffffffaffffffff0100000002fb0000000a0049006d0061006700650000000000ffffffff0000005e00fffffffb0000000c00430061006d0065007200610000000000000002240000006900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006500000002060000019e0000001600fffffffb0000000a0049006d0061006700650000000121000000aa0000001600fffffffb0000000a0049006d006100670065000000015a000001240000000000000000fb0000000c00430061006d00650072006100000001ed000001b70000000000000000fb0000000a0049006d00610067006503000000610000006d000002e30000019e000000010000010f00000261fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000002800000261000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000003bf0000003bfc0100000002fb0000000800540069006d00650000000000000003bf000002eb00fffffffb0000000800540069006d00650100000000000004500000000000000000000007b70000052a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -526,6 +545,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 2007
-  X: 68
-  Y: 433
+  Width: 2560
+  X: 1920
+  Y: 0
