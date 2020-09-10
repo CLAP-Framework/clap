@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <name>hdmap</name>
+  <version>5.5.0</version>
+  <description>The hdmap package</description>
+
+  <maintainer email="hongyan.pei@novauto.com.cn">Hongyan Pei</maintainer>
+  <license>Apache</license>
+
+  <build_depend>rsync</build_depend>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <run_depend>roscpp</run_depend>
+  <build_depend>abseil_cpp</build_depend>
+  <run_depend>abseil_cpp</run_depend>
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>

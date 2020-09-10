@@ -12,3 +12,5 @@ cvxopt
 gym
 networkx
 msgpack
+mpi4py
+joblib

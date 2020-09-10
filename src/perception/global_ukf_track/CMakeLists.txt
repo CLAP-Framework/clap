@@ -10,12 +10,10 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   geometry_msgs
   tf
-#   vector_map
   autoware_msgs
   )
 
 find_package(Boost REQUIRED COMPONENTS system filesystem)
-
 
 set(CMAKE_CXX_FLAGS "-O2 -Wall ${CMAKE_CXX_FLAGS}")
 
@@ -25,7 +23,6 @@ catkin_package(
   pcl_ros
   autoware_msgs
   tf
-#   vector_map
   )
 
 include_directories(

@@ -25,7 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
        genmsg
        cv_bridge
        message_generation)
-find_package(Boost COMPONENTS signals)
+
 find_package(Boost REQUIRED COMPONENTS thread)
 find_package(PkgConfig REQUIRED)
 include_directories(${catkin_INCLUDE_DIRS}

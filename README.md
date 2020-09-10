@@ -33,7 +33,7 @@
 
 0. 通常clap系统部署在xiaopeng G1工控机的home目录下,  进入工控机ubuntu(user icv, pass 123456)后, cd ~/zzz;
 1. 打开terminal, 执行roscore
-2. 加载传感器个节点, Ctl+Shift+T另起tab, 执行./load_sensors.sh
+2. 加载传感器个节点, Ctl+Shift+T另起tab, 执行./load_sensors.sh (目前在實車上localizaton模塊包含在sensor的launch文件內)
 3. 加载全局导航参考路径, Ctl+Shift+T, 执行./load_ref_path.sh
 4. 加载感知+规划+控制, 执行./load_main.sh
 5. 加载rviz可视化界面, 执行./load_rviz.sh
@@ -80,9 +80,11 @@ bagreplay_perception.sh 类似
 
 5. rviz打开后， 修改设置Displays->Global Options->Fixed Frame 将 'rslidar' 改成 'map'; 即可看到运行效果；
 
-   
+如過想啓用baidu map模塊， 運行./load_main_hdmap.sh
 
 **如果想快速查看查看问题在车上的表现效果，可直接运行rosbag play bagfile + load_rviz.sh；** 
+**系統以來pkg列表（待後續完善）**
+sudo apt install libmsgpack-dev libtinyxml2-dev libeigen3-dev ros-melodic-gps-common ros-melodic-jsk-recognition-msgs ros-melodic-nmea-msgs ros-melodic-abseil-cpp
 
 
 

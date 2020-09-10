@@ -33,7 +33,6 @@ find_package(catkin REQUIRED COMPONENTS
   #health_checker
 )
 
-find_package(Boost COMPONENTS signals)
 find_package(Boost REQUIRED COMPONENTS thread)
 find_package(PkgConfig REQUIRED)
 
