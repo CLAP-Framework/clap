@@ -1,0 +1,11 @@
+{
+    "sensors": [
+        {
+            "type": "sensor.camera.rgb",
+            "id": "Spectator",
+            "x": 0, "y": 0, "z": 50,
+            "roll": 0, "pitch": -90.0, "yaw": 0,
+            "width": 800, "height": 600, "fov": 100
+        }
+    ]
+}

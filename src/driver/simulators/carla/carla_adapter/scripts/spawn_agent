@@ -1,0 +1,142 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+import json
+import random
+import signal
+
+try:
+    import carla
+except ImportError:
+    print("Carla PythonAPI is in PYTHONPATH. Please install prebuilt "
+          "carla egg file, or append the egg file to PYTHONPATH.")
+
+# Following is a default sensor_configuration
+default_sensor_configuration = {
+    'ego_vehicle': {
+        'Center': {
+            'type': 'sensor.camera.rgb',
+            'x': 0.7, 'y': 0.0, 'z': 1.60,
+            'roll':0.0, 'pitch':0.0, 'yaw': 0.0,
+            'image_size_x': 800, 'image_size_y': 600, 'fov':100
+        },
+        'Left': {
+            'type': 'sensor.camera.rgb',
+            'x': 0.7, 'y': -0.4, 'z': 1.60,
+            'roll': 0.0, 'pitch': 0.0, 'yaw': -45.0,
+            'image_size_x': 800, 'image_size_y': 600, 'fov': 100
+        },
+        'Right': {
+            'type': 'sensor.camera.rgb',
+            'x': 0.7, 'y': 0.4, 'z': 1.60,
+            'roll': 0.0, 'pitch': 0.0, 'yaw': 45.0,
+            'image_size_x': 800, 'image_size_y': 600, 'fov': 100
+        },
+        'Sky': {
+            'type': 'sensor.camera.rgb',
+            'x': 0, 'y': 0, 'z': 50,
+            'roll': 0, 'pitch': -90.0, 'yaw': 0,
+            'image_size_x': 800, 'image_size_y': 600, 'fov': 100
+        },
+        'Lidar': {
+            'type': 'sensor.lidar.ray_cast',
+            'x': 0.7, 'y': -0.4, 'z': 1.60,
+            'roll': 0.0, 'pitch': 0.0, 'yaw': -45.0,
+            'range': 200,
+            'channels': 32,
+            'points_per_second': 600000,
+            'upper_fov': 15.0,
+            'lower_fov': -25.0,
+            'rotation_frequency': 10,
+            'sensor_tick': 0.05
+        },
+        'GPS': {
+            'type': 'sensor.other.gnss',
+            'x': 0.7, 'y': -0.4, 'z': 1.60
+        },
+        # Map is automatically published
+    }
+}
+
+client_state = {}
+
+def exit_handler(signal, frame):
+    print("Destroying actors...")
+    for vehicle, actors in client_state['actors'].items():
+        for actor in actors:
+            actor.destroy()
+        print("Destroyed actors on {}".format(vehicle))
+
+def setup(args):
+    client = carla.Client(args.host, args.port)
+    client.set_timeout(args.timeout)
+    world = client.get_world()
+    wmap = world.get_map()
+    bplib = world.get_blueprint_library()
+    
+    vehicle_actors = {}
+    for vehicle, config in args.configuration.items():
+        # Spawn vehicle
+        # TODO: add ability to switch vehicle model, vehicle color and spawn location
+        vehicle_model = random.choice(bplib.filter("vehicle.*"))
+        vehicle_model.set_attribute('role_name', vehicle)
+        spawn_points = wmap.get_spawn_points()
+        spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
+        actor = world.try_spawn_actor(vehicle_model, spawn_point)
+
+        # Spawn sensors on this vehicle
+        vehicle_actors[vehicle] = [actor]
+        for sensor_id, sensor_config in config.items():
+            spawn_pose = carla.Transform(
+                carla.Location(x=sensor_config.pop('x',0), y=sensor_config.pop('y',0), z=sensor_config.pop('z',0)),
+                carla.Rotation(roll=sensor_config.pop('roll',0), pitch=sensor_config.pop('pitch',0), yaw=sensor_config.pop('yaw',0))
+            )
+            
+            sensor_type = sensor_config.pop('type')
+            sensor_model = bplib.find(sensor_type)
+            sensor_model.set_attribute('role_name', sensor_id)
+            for prop, val in sensor_config.items():
+                sensor_model.set_attribute(prop, str(val))
+            
+            vehicle_actors[vehicle].append(world.spawn_actor(sensor_model, spawn_pose, attach_to=actor))
+
+    # Spin
+    client_state['client'] = client
+    client_state['actors'] = vehicle_actors
+    print("Start looping...")
+    signal.signal(signal.SIGINT, exit_handler)
+    signal.pause()
+
+def main():
+    argparser = argparse.ArgumentParser(
+        description='A simple script to spawn actors and use CARLA ROS bridge')
+    argparser.add_argument(
+        '-t', '--timeout',
+        default=4,
+        type=float,
+        help='CARLA server connection timeout (seconds, default: 4)')
+    argparser.add_argument(
+        '-d', '--host',
+        default='127.0.0.1',
+        help='IP of the host server (default: 127.0.0.1)')
+    argparser.add_argument(
+        '-p', '--port',
+        default=2000,
+        type=int,
+        help='TCP port to listen to (default: 2000)')
+    argparser.add_argument(
+        '-c', '--configuration',
+        type=str,
+        help='Configuration file to use. If not specified, an example configuration will be used.')
+
+    args = argparser.parse_args()
+    if args.configuration and os.path.exists(args.configuration):
+        args.configuration = json.load(args.configuration)
+    else:
+        args.configuration = default_sensor_configuration
+
+    setup(args)
+
+if __name__ == "__main__":
+    main()

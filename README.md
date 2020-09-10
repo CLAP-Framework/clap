@@ -95,10 +95,18 @@ sudo apt install libmsgpack-dev libtinyxml2-dev libeigen3-dev ros-melodic-gps-co
 
 
 ## CLAP系统对接Carla仿真
+####环境配置
+1.安装UnrealEngine4和Carla(大约需要100G空间), 安装教程：https://carla.readthedocs.io/en/latest/build_linux/
 
-...
+####运行步骤
+1.　启动roscore
 
+2.　打开安装好的carla目录，其中运行　dist/CARLA_Shipping_0.9.9-69-gd26f6995/linuxNoEditor/CarlaUE4.sh启动Carla客户端
 
+3.　运行zzz目录下 load_ScenarioRunner.sh即可开始测试。运行期间想用rviz查看信息可以直接在rviz中load zzz目录下carla.rviz配置文件。
+
+####注意事项
+暂无
 
 ## Carla with ros bridge
 1. Run docker or local binary. Export port to 2000, 2001
