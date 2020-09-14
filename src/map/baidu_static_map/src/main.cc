@@ -160,7 +160,7 @@ void pose_callback(const zzz_driver_msgs::RigidBodyStateStamped& msg) {
 
       int road_index = iter->second.road_index;
       out_map.header = msg.header;
-      // out_map.target_lane_index = static_cast<char>(iter->second.lane_index);
+      out_map.exit_lane_index.push_back(static_cast<char>(iter->second.lane_index));
  
       out_map.in_junction = road_in_junction[road_index];
       out_map.drivable_area.points.clear();
