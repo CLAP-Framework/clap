@@ -84,7 +84,7 @@ bagreplay_perception.sh 类似
 
 **如果想快速查看查看问题在车上的表现效果，可直接运行rosbag play bagfile + load_rviz.sh；** 
 **系統以來pkg列表（待後續完善）**
-sudo apt install libmsgpack-dev libtinyxml2-dev libeigen3-dev ros-melodic-gps-common ros-melodic-jsk-recognition-msgs ros-melodic-nmea-msgs ros-melodic-abseil-cpp
+sudo apt install libmsgpack-dev libtinyxml2-dev libeigen3-dev ros-melodic-gps-common ros-melodic-jsk-recognition-msgs ros-melodic-ackermann-msgs ros-melodic-nmea-msgs ros-melodic-abseil-cpp
 
 
 
