@@ -94,6 +94,13 @@ sudo apt install libmsgpack-dev libtinyxml2-dev libeigen3-dev ros-melodic-gps-co
 其中Record.txt有对bag内容的大致描述
 
 
+## 地图数据采集流程
+1. 启动roscore，其次启动./load_sensors.sh;
+2. rosbag 录制 '/localization/gps/fix' '/localization/imu/data'
+3. 使用tools/track_process.py --origin 1111,2222 --input bag_file --output track_ori_curve.txt --o2 track_points.txt
+4. 当数据存在多条车道，需要针对每条道路采集中心线录制bag 并使用track_process进行处理;
+5. 得到道路中心线后，根据navigation/map_provider 下 如ShouGang.py 进行必要的修改； 其中道路id定义左手边起0,1,2,3....， exit_lane_index表示进入下一个路口是从当前哪条lane驶出；
+
 ## CLAP系统对接Carla仿真
 ####环境配置
 1.安装UnrealEngine4和Carla(大约需要100G空间), 安装教程：https://carla.readthedocs.io/en/latest/build_linux/
@@ -123,4 +130,4 @@ sudo apt install libmsgpack-dev libtinyxml2-dev libeigen3-dev ros-melodic-gps-co
 > See `zzz/src/driver/simulators/carla/carla_adapter/scripts/server.tmuxp.yaml` for details
 
 
-
+## 其他， 推荐编辑工具vscode + 插件tabnine， 非常好用！
