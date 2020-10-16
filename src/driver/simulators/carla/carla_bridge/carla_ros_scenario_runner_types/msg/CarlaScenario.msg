@@ -1,0 +1,11 @@
+#
+# Copyright (c) 2020 Intel Corporation.
+#
+# This work is licensed under the terms of the MIT license.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+#
+string name
+string scenario_file
+geometry_msgs/Pose[] waypoints
+float64 target_speed
+
