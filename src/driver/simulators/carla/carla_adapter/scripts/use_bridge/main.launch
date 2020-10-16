@@ -1,8 +1,23 @@
 <launch>
+
+<!--
     <include file="$(env ZZZ_ROOT)/zzz/config/launch/full_stack/perception.launch">
         <arg name="enable_camera" value="false"/>
         <arg name="enable_lidar" value="true"/>
     </include>
+-->
+
+    <node pkg="zzz_navigation_map_provider_sumo" type="native_map_generator"
+            name="static_map_builder" output="screen" ns="/zzz/navigation">
+          <param name="reference_path_topic" value="/carla/ego_vehicle/waypoints"/>
+    </node>
+
+    <node pkg="zzz_navigation_pose_reporter" type="manual" respawn="true"
+        name="pose_reporter" output="screen" ns="zzz/navigation">
+        <param name="map_origin" value="[49,8,0]"/>
+        <param name="odom_input_topic" value="/carla/ego_vehicle/odometry"/>
+    </node>
+
     <include file="$(env ZZZ_ROOT)/zzz/config/launch/full_stack/planning.launch">
         <arg name="objects_topic" value="/zzz/perception/objects_truth"/>
     </include>

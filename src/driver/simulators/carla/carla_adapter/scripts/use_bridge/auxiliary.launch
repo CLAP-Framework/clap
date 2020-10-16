@@ -22,6 +22,6 @@
     </node>
 
     <!-- Visualization -->
-    <node pkg="zzz_visualization_web_dash" type="dashboard" name="dashboard">
-    </node>
+    <!-- <node pkg="zzz_visualization_web_dash" type="dashboard" name="dashboard">
+    </node> -->
 </launch>
