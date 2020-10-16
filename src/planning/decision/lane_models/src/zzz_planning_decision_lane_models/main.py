@@ -60,12 +60,10 @@ class MainDecision(object):
         
         trajectory, local_desired_speed = self._local_trajectory_instance.get_trajectory(dynamic_map, changing_lane_index, desired_speed)
 
-        if local_desired_speed <= 0.1/3.6 and ego_speed > 3/3.6: # TODO: clean this
-            local_desired_speed = 0.1/3.6
 
         msg = DecisionTrajectory()
         msg.trajectory = self.convert_ndarray_to_pathmsg(trajectory) # TODO: move to library
-        msg.desired_speed = local_desired_speed # TODO: Multi-resolution Planning
+        msg.desired_speed = local_desired_speed
         msg.RLS_action = self._lateral_model_instance.decision_action
 
         return msg

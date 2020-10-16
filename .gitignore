@@ -71,3 +71,6 @@ src.zip
 1.txt
 
 get-pip.py
+
+.idea/*
+Record.txt

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="f063c4be-d357-4408-bc36-8e9ffbc9c205" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
+  </component>
+  <component name="ProjectId" id="1gfMvd8aA657wFHVA0v2nS6RbCC" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../../../../../../../.." />
+  </component>
+  <component name="RunManager" selected="Python.NovAutoTesting">
+    <configuration name="NovAutoTesting" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="CaseGenerating" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/NovAutoTesting.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ScenarioCombiningWindow" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="CaseGenerating" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ScenarioCombiningWindow.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="write_setting" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="CaseGenerating" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/write_setting.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.NovAutoTesting" />
+      <item itemvalue="Python.ScenarioCombiningWindow" />
+      <item itemvalue="Python.write_setting" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.NovAutoTesting" />
+        <item itemvalue="Python.ScenarioCombiningWindow" />
+        <item itemvalue="Python.write_setting" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f063c4be-d357-4408-bc36-8e9ffbc9c205" name="Default Changelist" comment="" />
+      <created>1598501424869</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1598501424869</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="2799" y="485" width="424" height="484" key="FileChooserDialogImpl" timestamp="1599826131724">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state x="2799" y="485" width="424" height="484" key="FileChooserDialogImpl/67.27.1853.1053/1920.0.2560.1440@1920.0.2560.1440" timestamp="1599826131724" />
+    <state width="1817" height="314" key="GridCell.Tab.0.bottom" timestamp="1599826132775">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state width="1817" height="314" key="GridCell.Tab.0.bottom/67.27.1853.1053/1920.0.2560.1440@1920.0.2560.1440" timestamp="1599826132775" />
+    <state width="1817" height="314" key="GridCell.Tab.0.bottom/67.27.1853.1053/1920.0.2560.1440@67.27.1853.1053" timestamp="1599557418139" />
+    <state width="1817" height="314" key="GridCell.Tab.0.center" timestamp="1599826132775">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state width="1817" height="314" key="GridCell.Tab.0.center/67.27.1853.1053/1920.0.2560.1440@1920.0.2560.1440" timestamp="1599826132775" />
+    <state width="1817" height="314" key="GridCell.Tab.0.center/67.27.1853.1053/1920.0.2560.1440@67.27.1853.1053" timestamp="1599557418139" />
+    <state width="1817" height="314" key="GridCell.Tab.0.left" timestamp="1599826132775">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state width="1817" height="314" key="GridCell.Tab.0.left/67.27.1853.1053/1920.0.2560.1440@1920.0.2560.1440" timestamp="1599826132775" />
+    <state width="1817" height="314" key="GridCell.Tab.0.left/67.27.1853.1053/1920.0.2560.1440@67.27.1853.1053" timestamp="1599557418139" />
+    <state width="1817" height="314" key="GridCell.Tab.0.right" timestamp="1599826132775">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state width="1817" height="314" key="GridCell.Tab.0.right/67.27.1853.1053/1920.0.2560.1440@1920.0.2560.1440" timestamp="1599826132775" />
+    <state width="1817" height="314" key="GridCell.Tab.0.right/67.27.1853.1053/1920.0.2560.1440@67.27.1853.1053" timestamp="1599557418139" />
+    <state width="1817" height="478" key="GridCell.Tab.1.bottom" timestamp="1598617029387">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state width="1817" height="478" key="GridCell.Tab.1.bottom/67.27.1853.1053/1920.0.2560.1440@1920.0.2560.1440" timestamp="1598617029387" />
+    <state width="1817" height="478" key="GridCell.Tab.1.center" timestamp="1598617029387">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state width="1817" height="478" key="GridCell.Tab.1.center/67.27.1853.1053/1920.0.2560.1440@1920.0.2560.1440" timestamp="1598617029387" />
+    <state width="1817" height="478" key="GridCell.Tab.1.left" timestamp="1598617029387">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state width="1817" height="478" key="GridCell.Tab.1.left/67.27.1853.1053/1920.0.2560.1440@1920.0.2560.1440" timestamp="1598617029387" />
+    <state width="1817" height="478" key="GridCell.Tab.1.right" timestamp="1598617029387">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state width="1817" height="478" key="GridCell.Tab.1.right/67.27.1853.1053/1920.0.2560.1440@1920.0.2560.1440" timestamp="1598617029387" />
+    <state x="2527" y="236" width="1472" height="871" key="find.popup" timestamp="1598612409369">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state x="2527" y="236" width="1472" height="871" key="find.popup/67.27.1853.1053/1920.0.2560.1440@1920.0.2560.1440" timestamp="1598612409369" />
+  </component>
+</project>

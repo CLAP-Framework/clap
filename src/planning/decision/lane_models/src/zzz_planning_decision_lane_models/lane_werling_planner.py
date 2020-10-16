@@ -13,11 +13,11 @@ from zzz_navigation_msgs.msg import Lane
 from zzz_driver_msgs.utils import get_speed
 from zzz_cognition_msgs.msg import RoadObstacle
 from zzz_common.kinematics import get_frenet_state
-from zzz_common.geometry import dense_polyline2d
+from zzz_common.geometry import dense_polyline2d, dense_polyline2d_withvelocity
 from zzz_planning_msgs.msg import DecisionTrajectory
 
 from zzz_planning_decision_continuous_models.common import rviz_display, convert_ndarray_to_pathmsg, convert_path_to_ndarray
-from zzz_planning_decision_continuous_models.predict import predict
+from zzz_planning_decision_continuous_models.predict import LanePredict
 
 # Parameter
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
@@ -107,6 +107,13 @@ class Werling(object):
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
             self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
             self.rivz_element.collision_circle = self.obs_prediction.rviz_collision_checking_circle
+            print("lane trajectory_array:")
+            print(len(trajectory_array))
+            print("lane local_desired_speed_before fix:")
+            print(len(local_desired_speed))
+            local_desired_speed = local_desired_speed[:len(trajectory_array)]
+            print("lane local_desired_speed:")
+            print(len(local_desired_speed))
             return trajectory_array, local_desired_speed
         else:
             return None, None
@@ -116,8 +123,8 @@ class Werling(object):
         try:
             if self.csp is None:
                 self.build_frenet_path()
-            # initialize prediction module
-            self.obs_prediction = predict(dynamic_map, OBSTACLES_CONSIDERED, MAXT, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
+            # initialize prediction module  2020927lx::param 3rd 
+            self.obs_prediction = LanePredict(dynamic_map, OBSTACLES_CONSIDERED, 0, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
                                         get_speed(dynamic_map.ego_state))
             return True
         except:
@@ -166,7 +173,9 @@ class Werling(object):
         
         if fp_available:
             rospy.logdebug("Planning (lanes): ----> Lane Werling Successful Planning (No adjustment)")
-            return best_free_fp, low_resolution_speed
+            if low_resolution_speed < 10/3.6:
+                return best_free_fp, [low_resolution_speed] * len(best_free_fp.s_d)
+            return best_free_fp, best_free_fp.s_d
 
 
         # Lateral slight adjustment
@@ -183,7 +192,9 @@ class Werling(object):
 
         if fp_available:
             rospy.logdebug("Planning (lanes): ----> Lane Werling Successful Planning (Lateral slight adjustment)")
-            return generated_fp, low_resolution_speed
+            if low_resolution_speed < 10/3.6:
+                return best_free_fp, [low_resolution_speed] * len(best_free_fp.s_d)
+            return generated_fp, generated_fp.s_d
 
 
         # Speed adjustment
@@ -203,10 +214,11 @@ class Werling(object):
 
         if fp_available:
             rospy.logdebug("Planning (lanes): ----> Lane Werling Successful Planning (speed adjustment)")
-            return generated_fp, generated_fp.s_d[-1]
+            return generated_fp, generated_fp.s_d
             
         rospy.logdebug("Planning (lanes): ----> Lane Werling Fail to find a solution")
-        return best_free_fp, 0
+
+        return best_free_fp, [0] * len(best_free_fp.s_d)
 
     def calculate_path_in_given_range(self, csp, c_speed, start_state, di_range, Ti_range, vi_range):
 

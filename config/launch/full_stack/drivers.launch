@@ -5,14 +5,13 @@
   </include>
 
   <!-- all three lidar  -->
-  <!-- <include file="$(find rslidar_sync)/launch/rslidar_sync_3lidar.launch"> -->
-  <include file="$(find rslidar_sync)/launch/middle_lidar.launch" >
+  <include file="$(find rslidar_sync)/launch/middle_lidar.launch">
   </include>
 
 
   <!-- cannet get car's control/status info  -->
-  <!-- <include file="$(find xpmotors)/launch/xpmotors.launch">  
-  </include> -->
+  <include file="$(find canbus)/launch/canbus.launch">  
+  </include>
 
 
   <!-- oxford gps imu  -->

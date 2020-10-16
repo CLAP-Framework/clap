@@ -19,11 +19,11 @@ from nav_msgs.msg import Path, Odometry
 from cv_bridge import CvBridgeError, CvBridge
 from visualization_msgs.msg import Marker, MarkerArray
 
-from rslidar_msgs.msg import rslidarPacket
-from rslidar_msgs.msg import rslidarScan
+# from rslidar_msgs.msg import rslidarPacket
+# from rslidar_msgs.msg import rslidarScan
 from tf2_msgs.msg import TFMessage 
 
-from queue import Queue
+from Queue import Queue
 import argparse
 import utm
 import numpy as np
@@ -64,6 +64,7 @@ take_over_count = 0
 #current bag number and non-problem take over
 current_bag_number = 1
 non_problem_take_over = 0
+current_time = time.time()
 
 # bag record default 1 minutes
 window_seconds = 60*1.5
@@ -128,6 +129,7 @@ obstacles_marker_queue = Queue(5 * window_seconds)
 sent_ref_path_queue = Queue(20 * window_seconds)
 # 5 hz
 all_trajectory_path_queue = Queue(5 * window_seconds)
+
 # 5 hz
 decision_trajectory_path_queue = Queue(5 * window_seconds)
 # 20 hz
@@ -148,14 +150,20 @@ def start_capture(topic_queue_pairs):
 def write2bag(topic_queue_pairs):
 
     global current_bag_number
+    global current_time
+
+    click_time = current_time
+
     file_name = time.strftime("%Y-%m-%d_%H-%M-%S.bag", time.localtime())
     file_name = str(current_bag_number) + '_' + file_name
     # time.sleep(60)
     bag = rosbag.Bag(file_name, "w")
     for topic, que, _, _, _ in topic_queue_pairs:
-        for msg, t in list(que.queue):
-            bag.write(topic, msg, t)
-        que.queue.clear()
+        for msg, t, record_time in list(que.queue):
+            if click_time - record_time < window_seconds:
+                bag.write(topic, msg, t)
+            else:
+                break
     
     bag.flush()
     bag.close()
@@ -164,7 +172,8 @@ def write2bag(topic_queue_pairs):
 
 auto_capture = False
 def autostate_callback(msg):
-    global pose_queue, obs_queue, image_queue, last_autostate
+    global pose_queue, obs_queue, image_queue, last_autostate, current_time
+    current_time = time.time()
     
     if msg.CurDriveMode == 0 and last_autostate == 2:
         global auto_capture, global_topic_queue_pairs, take_over_count
@@ -175,35 +184,39 @@ def autostate_callback(msg):
 
     last_autostate = msg.CurDriveMode
     if not auto_queue.full():
-        auto_queue.put((msg, msg.header.stamp))
+        auto_queue.put((msg, msg.header.stamp, current_time))
     else:
         auto_queue.get()
 
 
 def auto_ctl_callback(msg):
+    global current_time
     if not auto_ctl_queue.full():
-        auto_ctl_queue.put((msg, msg.header.stamp))
+        auto_ctl_queue.put((msg, msg.header.stamp, current_time))
     else:
         auto_ctl_queue.get()
 
 
 def esc_callback(msg):
+    global current_time
     if not esc_queue.full():
-        esc_queue.put((msg, msg.header.stamp))
+        esc_queue.put((msg, msg.header.stamp, current_time))
     else:
         esc_queue.get()
 
 
 def eps_callback(msg):
+    global current_time
     if not eps_queue.full():
-        eps_queue.put((msg, msg.header.stamp))
+        eps_queue.put((msg, msg.header.stamp, current_time))
     else:
         eps_queue.get()
 
 
 def ego_pose_callback(msg):
+    global current_time
     if not pose_queue.full():
-        pose_queue.put((msg, msg.header.stamp))
+        pose_queue.put((msg, msg.header.stamp, current_time))
     else:
         pose_queue.get()
 
@@ -224,129 +237,146 @@ def ego_pose_callback(msg):
 
 
 def odom_callback(msg):
+    global current_time
     if not odom_queue.full():
-        odom_queue.put((msg, msg.header.stamp))
+        odom_queue.put((msg, msg.header.stamp, current_time))
     else:
         odom_queue.get()
 
 
 def gpsfix_callback(msg):
+    global current_time
     if not gpsfix_queue.full():
-        gpsfix_queue.put((msg, msg.header.stamp))
+        gpsfix_queue.put((msg, msg.header.stamp, current_time))
     else:
         gpsfix_queue.get()
 
 
 def imudat_callback(msg):
+    global current_time
     if not imudat_queue.full():
-        imudat_queue.put((msg, msg.header.stamp))
+        imudat_queue.put((msg, msg.header.stamp, current_time))
     else:
         imudat_queue.get()
 
 
 def obstacles_callback(msg):
+    global current_time
     if not obs_queue.full():
-        obs_queue.put((msg, msg.header.stamp))
+        obs_queue.put((msg, msg.header.stamp, current_time))
     else:
         obs_queue.get()
 
 
 def image_callback(msg):
+    global current_time
     if not image_queue.full():
-        image_queue.put((msg, msg.header.stamp))
+        image_queue.put((msg, msg.header.stamp, current_time))
     else:
         image_queue.get()
 
 
 def pcl_callback(msg):
+    global current_time
     if not pcl_queue.full():
-        pcl_queue.put((msg, msg.header.stamp))
+        pcl_queue.put((msg, msg.header.stamp, current_time))
     else:
         pcl_queue.get()
 
 
 def pcl_packets_callback(msg):
+    global current_time
     if not pcl_packets_queue.full():
-        pcl_packets_queue.put((msg, msg.header.stamp))
+        pcl_packets_queue.put((msg, msg.header.stamp, current_time))
     else:
         pcl_packets_queue.get()
 
 
 def pcl_packets_difop_callback(msg):
+    global current_time
     if not pcl_packets_difop_queue.full():
-        pcl_packets_difop_queue.put((msg, msg.header.stamp))
+        pcl_packets_difop_queue.put((msg, msg.header.stamp, current_time))
     else:
         pcl_packets_difop_queue.get()
 
 
 def ego_marker_callback(msg):
+    global current_time
     global ego_marker_queue
     if not ego_marker_queue.full():
-        ego_marker_queue.put((msg, rospy.Time.now()))
+        ego_marker_queue.put((msg, rospy.Time.now(), current_time))
     else:
         ego_marker_queue.get()
 
 
 def lanes_marker_callback(msg):
+    global current_time
     global lanes_marker_queue
     if not lanes_marker_queue.full():
-        lanes_marker_queue.put((msg, rospy.Time.now()))
+        lanes_marker_queue.put((msg, rospy.Time.now(), current_time))
     else:
         lanes_marker_queue.get()
 
 
 def obstacles_marker_callback(msg):
+    global current_time
     global obstacles_marker_queue
     if not obstacles_marker_queue.full():
-        obstacles_marker_queue.put((msg, rospy.Time.now()))
+        obstacles_marker_queue.put((msg, rospy.Time.now(), current_time))
     else:
         obstacles_marker_queue.get()
 
 
 def sent_ref_path_callback(msg):
+    global current_time
     global sent_ref_path_queue
     if not sent_ref_path_queue.full():
-        sent_ref_path_queue.put((msg, msg.header.stamp))
+        sent_ref_path_queue.put((msg, msg.header.stamp, current_time))
     else:
         sent_ref_path_queue.get()
     
 
 def all_trajectory_path_callback(msg):
+    global current_time
     global all_trajectory_path_queue
     if not all_trajectory_path_queue.full():
-        all_trajectory_path_queue.put((msg, rospy.Time.now()))
+        all_trajectory_path_queue.put((msg, rospy.Time.now(), current_time))
     else:
         all_trajectory_path_queue.get()
 
 
 def decision_trajectory_path_callback(msg):
+    global current_time
     global decision_trajectory_path_queue
     if not decision_trajectory_path_queue.full():
-        decision_trajectory_path_queue.put((msg, msg.header.stamp))
+        decision_trajectory_path_queue.put((msg, msg.header.stamp, current_time))
     else:
         decision_trajectory_path_queue.get()
 
 
 def prepoint_callback(msg):
+    global current_time
     global prepoint_queue
     if not prepoint_queue.full():
-        prepoint_queue.put((msg, msg.header.stamp))
+        prepoint_queue.put((msg, msg.header.stamp, current_time))
     else:
         prepoint_queue.get()
 
 
 def collision_callback(msg):
+    global current_time
     global collision_queue
     if not collision_queue.full():
-        collision_queue.put((msg, rospy.Time.now()))
+        collision_queue.put((msg, rospy.Time.now(), current_time))
     else:
         collision_queue.get()
 
 
 def tf_callback(msg):
+    global current_time
     global tf_queue
     if not tf_queue.full():
-        tf_queue.put((msg, msg.transforms[0].header.stamp))
+        tf_queue.put((msg, msg.transforms[0].header.stamp, current_time))
     else:
         tf_queue.get()
 
@@ -369,15 +399,15 @@ global_topic_queue_pairs = [
     (auto_ctl_topic, auto_ctl_queue, AutoCtlReq, auto_ctl_callback, 50),
     (eps_topic, eps_queue, EPSStatus, eps_callback, 50),
     (esc_topic, esc_queue, ESCStatus, esc_callback, 50),
-    (ego_pose_topic, pose_queue, RigidBodyStateStamped, ego_pose_callback, 100), 
+    (ego_pose_topic, pose_queue, RigidBodyStateStamped, ego_pose_callback, 100),
     (odom_topic, odom_queue, Odometry, odom_callback, 100),
     (gps_fix_topic, gpsfix_queue, NavSatFix, gpsfix_callback, 100),
     (imu_dat_topic, imudat_queue, Imu, imudat_callback, 100),
     (obs_topic, obs_queue, TrackingBoxArray, obstacles_callback, 10),
     (left_cam_topic, image_queue, CompressedImage, image_callback, 10),
     (pcl_topic, pcl_queue, PointCloud2, pcl_callback, 10),
-    (pcl_packets_topic, pcl_packets_queue, rslidarScan, pcl_packets_callback, 10),
-    (pcl_packets_difop_topic, pcl_packets_difop_queue, rslidarPacket, pcl_packets_difop_callback, 10),
+    # (pcl_packets_topic, pcl_packets_queue, rslidarScan, pcl_packets_callback, 10),
+    # (pcl_packets_difop_topic, pcl_packets_difop_queue, rslidarPacket, pcl_packets_difop_callback, 10),
     (ego_marker_topic, ego_marker_queue, MarkerArray, ego_marker_callback, 5),
     (lanes_marker_topic, lanes_marker_queue, MarkerArray, lanes_marker_callback, 5),
     (obstacles_marker_topic, obstacles_marker_queue, MarkerArray, obstacles_marker_callback, 10),
@@ -522,7 +552,7 @@ class MyViz(QWidget):
         global global_topic_queue_pairs, current_bag_number
         start_capture(global_topic_queue_pairs)
         with open('Record.txt', 'a+') as f:
-            f.write('BAG NO.{0} | Question bag | {1}'.format(str(current_bag_number), self.case_description.toPlainText()) + '\n')
+            f.write('BAG NO.{0} | Question bag | {1}'.format(str(current_bag_number), self.case_description.toPlainText()) + ' | ' + str(rospy.Time.now()) + '\n')
         self.case_description.clear()
         self.statusBar.showMessage('No.{0} bag captured'.format(str(current_bag_number)), 5000)
         current_bag_number += 1
@@ -532,7 +562,7 @@ class MyViz(QWidget):
         global global_topic_queue_pairs, current_bag_number
         start_capture(global_topic_queue_pairs)
         with open('Record.txt', 'a+') as f:
-            f.write('BAG NO.{0} | ShowCase bag | {1}'.format(str(current_bag_number), self.case_description.toPlainText()) + '\n')
+            f.write('BAG NO.{0} | ShowCase bag | {1}'.format(str(current_bag_number), self.case_description.toPlainText()) + ' | ' + str(rospy.Time.now()) +'\n')
         self.case_description.clear()
         self.statusBar.showMessage('No.{0} bag captured'.format(str(current_bag_number)), 5000)
         current_bag_number += 1
@@ -572,7 +602,7 @@ class MyViz(QWidget):
         
 
     def launch_system(self):
-	pass
+        pass
         #self.load_path_cmd = subprocess32.Popen(['/bin/bash', '-i', '-c', 'cd /home/novauto/CLAP/zzz&&./load_ref_path.sh'], start_new_session=True)
         # self.load_main_cmd = subprocess32.Popen(['/bin/bash', '-i', '-c', 'cd /home/novauto/CLAP/zzz&&./load_main.sh'], start_new_session=True)
         # print('CMD PID IS !!!!!!!!!{0}'.format(self.load_main_cmd.pid))

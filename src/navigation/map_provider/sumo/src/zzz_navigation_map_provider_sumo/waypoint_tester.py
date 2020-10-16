@@ -59,7 +59,7 @@ class CarlaToRosWaypointConverter(object):
         self._ego_pose_y = 0.0
 
         self.current_route = (np.loadtxt(
-            os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/shougang_ref_path.dat', 
+            os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/data/new-loop/big_loop.txt', 
             delimiter=',')).tolist()
 
         self.waypoint_publisher = rospy.Publisher(

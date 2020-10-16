@@ -1,2 +1,2 @@
 source devel/setup.bash
-python src/tools/bag_capture_gui.py
+python2 src/tools/bag_capture_gui.py

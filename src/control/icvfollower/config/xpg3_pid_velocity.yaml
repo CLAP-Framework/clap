@@ -1,0 +1,14 @@
+_xpg3_pid_parameters:
+ Kp: 0.15  #
+ Ki: 0.01 #
+ Kd: 0 # 
+ target_acc_smoothnumber: 6 
+ speed_error_max: 15
+ speed_error_min: -15
+ dt: 0.01 #cycle time
+ integrator_saturation_max: 3 #intergral value max
+ integrator_saturation_min: -3
+ out_acc_max: 2 #out accleration max
+ out_acc_min: -3 #out accleration min
+ out_acc_rate_max: 5
+ out_acc_rate_min: -5

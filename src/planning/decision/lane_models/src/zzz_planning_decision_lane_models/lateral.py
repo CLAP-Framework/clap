@@ -24,43 +24,44 @@ class LaneUtility(object):
 
         return target_index, target_speed
 
-    def generate_lane_change_index(self, change_lane_thres=0.5):
+    def generate_lane_change_index(self):
 
-        ego_lane_index = int(round(self.dynamic_map.mmap.ego_lane_index))
-        current_lane_utility = self.lane_utility(ego_lane_index) + change_lane_thres
+        candidate_lanes = self.get_candidate_lanes()
+        candidate_lanes_utility = [self.lane_utility(int(lane_index)) for lane_index in candidate_lanes]
+        target_lane = int(candidate_lanes[np.argmax(np.array(candidate_lanes_utility))])
 
-        if not self.lane_change_safe(ego_lane_index, ego_lane_index + 1):
-            left_lane_utility = -1
-        else:
-            left_lane_utility = self.lane_utility(ego_lane_index + 1)
+        return target_lane
 
-        if not self.lane_change_safe(ego_lane_index, ego_lane_index - 1):
-            right_lane_utility = -1
-        else:
-            right_lane_utility = self.lane_utility(ego_lane_index - 1)
+    def get_candidate_lanes(self, available_lane_change_range=1.2):
+        candidate_lanes = np.arange(
+            math.ceil(self.dynamic_map.mmap.ego_lane_index - available_lane_change_range),
+            math.floor(self.dynamic_map.mmap.ego_lane_index + available_lane_change_range)
+        )
 
-        # TODO: target lane = -1?
-        rospy.logdebug("Planning (lanes): left_utility = %f, ego_utility = %f, right_utility = %f",
-                            left_lane_utility, current_lane_utility, right_lane_utility)
-
-        if right_lane_utility > current_lane_utility and right_lane_utility >= left_lane_utility:
-            return ego_lane_index - 1
-
-        if left_lane_utility > current_lane_utility and left_lane_utility > right_lane_utility:
-            return ego_lane_index + 1
-
-        return ego_lane_index
+        return candidate_lanes
 
     def lane_utility(self, lane_index):
+
+        ego_lane_index = int(round(self.dynamic_map.mmap.ego_lane_index))
+
+        if not self.lane_change_safe(ego_lane_index, lane_index):
+            return -1
 
         available_speed = self.longitudinal_model_instance.longitudinal_speed(lane_index)
         exit_lanes = np.array(self.dynamic_map.mmap.exit_lane_index)
         mandatory_lanes_num = min(abs(exit_lanes - lane_index))
         distance_to_end = self.dynamic_map.mmap.distance_to_junction
         utility = available_speed*1.5 + 1/(mandatory_lanes_num+1)*max(0, (200-distance_to_end))*0.1
+
+        if ego_lane_index == lane_index:
+            utility += 0.5
+
         return utility
 
     def lane_change_safe(self, ego_lane_index, target_index):
+
+        if ego_lane_index == target_index:
+            return True
 
         if target_index < 0 or target_index > len(self.dynamic_map.mmap.lanes)-1:
             return False

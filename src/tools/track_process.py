@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 """
 Cubic Spline library on python
@@ -28,8 +28,11 @@ import rosbag
 import argparse
 
 import tf
- 
-from queue import Queue
+import sys
+if sys.version > '3':
+    from queue import Queue
+else:
+    from Queue import Queue
 
 """
 origin definations 

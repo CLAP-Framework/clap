@@ -175,6 +175,32 @@ def dense_polyline2d(np.ndarray line, float resolution, str interp="linear"):
 
     return np.array([x,y]).T
 
+def dense_polyline2d_withvelocity(np.ndarray line, np.ndarray velocity, float resolution, str interp="linear"):
+    """
+    Dense a polyline by linear interpolation.
+
+    :param resolution: the gap between each point should be lower than this resolution
+    :param interp: the interpolation method
+    :return: the densed polyline
+    """
+    if line is None or len(line) == 0:
+        raise ValueError("Line input is null")
+
+    if interp != "linear":
+        raise NotImplementedError("Other interpolation method is not implemented!")
+
+    cdef np.ndarray s
+    s = np.cumsum(npl.norm(np.diff(line, axis=0), axis=1))
+    s = np.concatenate([[0],s])
+    cdef int num = <int>ceil(s[-1]/resolution)
+
+    cdef np.ndarray s_space = np.linspace(0,s[-1],num = num)
+    cdef np.ndarray x = np.interp(s_space,s,line[:,0])
+    cdef np.ndarray y = np.interp(s_space,s,line[:,1])
+    cdef np.ndarray waypoints_velocity = np.interp(s_space,s,velocity)
+
+    return np.array([x,y]).T, waypoints_velocity
+
 def polygon_iou(p1, p2):
     """
     Intersection area / Union area of two polygons

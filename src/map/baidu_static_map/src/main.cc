@@ -382,7 +382,7 @@ int main (int argc, char** argv) {
             }
           }
         } 
-#if 0
+#if 1
         /** left boundry */
         for (auto& seg: lane_ptr->lane().left_boundary().curve().segment()) {
           for (auto& p: seg.line_segment().point()) {

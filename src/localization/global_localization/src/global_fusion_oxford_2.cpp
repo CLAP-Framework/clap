@@ -294,7 +294,7 @@ public:
         std::string utm0_zone;
         gps_common::LLtoUTM(lat0, lon0, UTMY0, UTMX0, utm0_zone);
 
-        // shougang map origin  (428191, 4417667)
+        // shougang map origin  (428191,4417667)
         UTMX0 = 428191;
         UTMY0 = 4417667;
         new_odom.header = Odom_msg->header;

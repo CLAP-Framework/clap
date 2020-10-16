@@ -147,8 +147,10 @@ include_directories(
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_executable(icv_carla_control
         src/icv_carla_control.cpp
-        src/icv_carla_roscore.cpp 
-        src/icv_carla_node.cpp  
+        src/xp_g3_ros_core.cpp 
+        src/xp_g3_rosnode.cpp  
+        src/loncontrol.cpp
+        src/pid_controller.cpp
         src/icv_carla_rviz.cpp     
         )
 target_link_libraries(icv_carla_control   ${YAML_CPP_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})

@@ -362,6 +362,7 @@ class NearestLocator:
         if len(lights) == 1:
             for i in range(total_lane_num):
                 if lights[0].signal.flags == ObjectSignals.TRAFFIC_LIGHT_RED:
+                    rospy.logwarn("RECEIVE RED LIGHT")
                     tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_STOP
                 elif lights[0].signal.flags == ObjectSignals.TRAFFIC_LIGHT_YELLOW:
                     tstates.dynamic_map.mmap.lanes[i].map_lane.stop_state = Lane.STOP_STATE_YIELD

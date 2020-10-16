@@ -16,7 +16,7 @@
   </include>
   
   <!-- cannet get car's control/status info  -->
-  <include file="$(find xpmotors)/launch/xpmotors.launch">  
+  <include file="$(find canbus)/launch/canbus.launch">  
   </include>
 
   <!-- <node pkg="xpmotors" name="auto_state"  type="auto_state_node" output="screen">
@@ -34,8 +34,8 @@
   </include>
 
   <!-- short range radar  -->
-  <!--include file="$(find srr_radar)/launch/srr_radar.launch">  
-  </include-->
+  <include file="$(find srr_radar)/launch/srr_radar.launch">  
+  </include>
 
   <!-- health checker  -->
   <!-- include file="$(find health_checker)/launch/health_checker.launch">  

@@ -19,11 +19,11 @@
         <arg name="objects_topic" value="/zzz/perception/objects_tracked"/>
     </include>
 
-    <include file="$(find icvfollower)/launch/ICVfollower.launch" />
-
+    <!-- <include file="$(find icvfollower)/launch/ICVfollower.launch" /> -->
+<!-- 
     <node pkg="zzz_visualization_web_dash" type="dashboard"
             name="dash_board" output="screen" ns="/zzz/visualization">
-    </node>
+    </node> -->
 
     <node pkg="zzz_visualization_rviz_box_visualizer" type="decision_trajactory"
             name="decision_trajactory" output="screen" ns="/zzz/visualization">

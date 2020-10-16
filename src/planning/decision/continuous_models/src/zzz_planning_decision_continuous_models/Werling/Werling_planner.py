@@ -13,7 +13,7 @@ from zzz_navigation_msgs.msg import Lane
 from zzz_driver_msgs.utils import get_speed
 from zzz_cognition_msgs.msg import RoadObstacle
 from zzz_common.kinematics import get_frenet_state
-from zzz_common.geometry import dense_polyline2d
+from zzz_common.geometry import dense_polyline2d, dense_polyline2d_withvelocity
 from zzz_planning_msgs.msg import DecisionTrajectory
 
 from zzz_planning_decision_continuous_models.common import rviz_display, convert_ndarray_to_pathmsg, convert_path_to_ndarray
@@ -108,7 +108,7 @@ class Werling(object):
 
             if generated_trajectory is not None:
                 k = min(len(generated_trajectory.s_d),5)-1
-                desired_speed = generated_trajectory.s_d[-1]
+                desired_speed = generated_trajectory.s_d
                 trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
                 trajectory_array = trajectory_array_ori#dense_polyline2d(trajectory_array_ori,1)
                 self.last_trajectory_array_rule = trajectory_array
@@ -118,20 +118,25 @@ class Werling(object):
             elif len(self.last_trajectory_array_rule) > 5 and self.c_speed > 1:
                 trajectory_array = self.last_trajectory_array_rule
                 generated_trajectory = self.last_trajectory_rule
-                desired_speed =  0 
+                desired_speed =  [0] * len(generated_trajectory.s_d)
                 rospy.logdebug("Planning (continuous): ----> Werling Fail to find a solution")
 
             else:
                 trajectory_array =  self.ref_path
-                desired_speed = 0
+                desired_speed = [0] * len(self.ref_path)
                 rospy.logdebug("Planning (continuous): ----> Werling Output ref path")
-            
-            if desired_speed < 0.1/3.6:
-                desired_speed = 0.1/3.6
-            
+
             msg = DecisionTrajectory()
-            msg.trajectory = convert_ndarray_to_pathmsg(dense_polyline2d(trajectory_array, 0.2))
-            msg.desired_speed = self.ref_tail_speed(dynamic_map, desired_speed)
+            # desired spped is calculate from frenet path, but sometimes frenet path is much longger than real path(spline2D), so we need to cut value in frenet according to th length of spline2D
+            desired_speed = desired_speed[:len(trajectory_array)]
+            trajectory, velocity_trajectory = dense_polyline2d_withvelocity(trajectory_array, np.array(desired_speed), 0.2)
+            msg.trajectory = convert_ndarray_to_pathmsg(trajectory)
+            msg.desired_speed = self.ref_tail_speed(dynamic_map, velocity_trajectory)
+
+            print("intersection trajectory_array:")
+            print(len(trajectory))
+            print("intersection local_desired_speed:")
+            print(len(msg.desired_speed))
 
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
             self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
@@ -163,28 +168,34 @@ class Werling(object):
 
     def ref_tail_speed(self, dynamic_map, desired_speed):
 
-        if self.ref_path is None:
-            return 0
+        velocity = []
+        for i in range(len(desired_speed)):
 
-        if self.dist_to_end[4] <= 15:
-            return 0
+            if self.ref_path is None:
+                velocity.append(0)
+                continue
 
-        dec = 0.1
+            if self.dist_to_end[4] <= 15:
+                velocity.append(0)
+                continue
 
-        available_speed = math.sqrt(2*dec*self.dist_to_end[4]) # m/s
-        ego_v = get_speed(dynamic_map.ego_state)
+            dec = 0.1
 
-        if available_speed > ego_v:
-            return desired_speed
-        
-        dt = 0.2
-        vehicle_dec = (ego_v - available_speed)*10
-        tail_speed = ego_v - vehicle_dec*dt
-        
-        if desired_speed > tail_speed:
-            return max(0, tail_speed)
+            available_speed = math.sqrt(2*dec*self.dist_to_end[4]) # m/s
+            ego_v = get_speed(dynamic_map.ego_state)
 
-        return desired_speed
+            if available_speed > ego_v:
+                velocity.append(desired_speed[i])
+                continue
+
+            dt = 0.2
+            vehicle_dec = (ego_v - available_speed)*10
+            tail_speed = ego_v - vehicle_dec*dt
+
+            if desired_speed[i] > tail_speed:
+                velocity.append(max(0, tail_speed))
+
+        return velocity
 
     def calculate_start_state(self, dynamic_map):
         start_state = Frenet_state()
@@ -326,7 +337,6 @@ class Werling(object):
     def calc_global_paths(self, fplist, csp):
 
         for fp in fplist:
-
             # calc global positions
             for i in range(len(fp.s)):
                 ix, iy = csp.calc_position(fp.s[i])

@@ -1,8 +1,0 @@
-<launch>
-  <node name="auto_control" pkg="xpmotors" type="auto_control_node" output="screen">
-  <rosparam file="$(find xpmotors)/conf.yaml"/>
-  </node>
-  <node name="auto_state" pkg="xpmotors" type="auto_state_node" output="screen">
-  </node>
-
-</launch>

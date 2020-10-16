@@ -56,7 +56,7 @@ class DecisionNode(object):
                 self._decision_trajectory_publisher.publish(publish_msg)
                 self._rviz_decision_trajectory_publisher.publish(publish_msg.trajectory)
                 rospy.loginfo(" Planning (lanes): Publish Trajectory length = %d, desired_speed = %f km/h",
-                    len(publish_msg.trajectory.poses), publish_msg.desired_speed*3.6)
+                    len(publish_msg.trajectory.poses), publish_msg.desired_speed[-1]*3.6)
 
             self.pub_rviz()
             self._rate.sleep()

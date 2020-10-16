@@ -20,6 +20,6 @@
         <arg name="objects_topic" value="/zzz/perception/objects_tracked"/>
     </include>
 
-    <include file="$(find icvfollower)/launch/ICVfollower.launch" /> 
+    <!-- <include file="$(find icvfollower)/launch/ICVfollower.launch" />  -->
 
 </launch>
