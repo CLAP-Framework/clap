@@ -64,7 +64,6 @@ ref/
 # Catkin generated
 src/CMakeLists.txt
 
-src/driver/simulators/carla/carla_bridge
 
 src.zip
 
