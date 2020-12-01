@@ -37,12 +37,11 @@ class MainDecision(object):
         # update_dynamic_local_map
         if self._dynamic_map_buffer is None:
             return None
+        if self._dynamic_map_buffer.model == self._dynamic_map_buffer.MODEL_JUNCTION_MAP:
+            return None
         else:
             dynamic_map = self._dynamic_map_buffer
 
-        # if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP:
-        #     return None
-        
         trajectory = None
         changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
         if desired_speed < 0: # TODO: clean this
