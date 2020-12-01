@@ -1,0 +1,34 @@
+# This is a example session file for tmux (load this using tmuxp)
+# [Note] Recommend to run roscore outside
+# [Note] create carla docker container before use:
+#    docker create -p 2000-2002:2000-2002 --gpus all --name dcarla carlasim/carla /bin/bash CarlaUE4.sh [args]
+
+session_name: 'carla'
+windows:
+- window_name: server
+  layout: main-vertical
+  start_directory: /mnt/storage/carla/carla_server/bridge # Note: Change to your carla ros-bridge location
+  shell_command_before:
+    - export ROS_MASTER_URI=http://172.16.0.1:11311
+    - export ROS_IP=172.16.0.1
+    - source devel/setup.bash
+    - export CARLA_ROOT=/mnt/storage/carla/carla_server # Note: Change to your carla binary location
+    - export CARLA_VERSION=0.9.6
+    - export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla:$CARLA_ROOT/PythonAPI/carla/dist/carla-$CARLA_VERSION-py2.7-linux-x86_64.egg
+  panes:
+  - shell_command: # scenario_runner workspace
+    - export ROOT_SCENARIO_RUNNER=/mnt/storage/carla/carla_server/scenario_runner
+    - export PYTHONPATH=$PYTHONPATH:$ROOT_SCENARIO_RUNNER
+    - export TEAM_CODE_ROOT=/home/carla/Carla/zzz/src/driver/simulators/carla/carla_adapter/scripts/use_srunner
+    - python ${ROOT_SCENARIO_RUNNER}/srunner/challenge/challenge_evaluator_routes.py --scenarios=${ROOT_SCENARIO_RUNNER}/srunner/challenge/all_towns_traffic_scenarios1_3_4.json --agent=$TEAM_CODE_ROOT/ZZZAgent.py
+  - docker start -a dcarla
+  - sleep 4s && roslaunch server.launch
+- window_name: ws
+  focus: 'true'
+  start_directory: /mnt/storage/carla/carla_server/bridge
+  shell_command_before:
+    - export ROS_MASTER_URI=http://172.16.0.1:11311
+    - export ROS_IP=172.16.0.1
+    - source devel/setup.bash
+  panes:
+  - sleep 8s

@@ -64,7 +64,6 @@ ref/
 # Catkin generated
 src/CMakeLists.txt
 
-src/driver/simulators/carla/carla_bridge
 
 src.zip
 
@@ -72,4 +71,4 @@ src.zip
 
 get-pip.py
 
-src/driver/simulators/carla/
+
