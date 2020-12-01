@@ -1,12 +1,11 @@
 <launch>
     <!-- Carla setup & conversion -->
-    <!-- carla-0.9.9 support <arg name="carla_settings_file" default="$(find zzz_driver_simulators_carla_adapter)/launch/server099.launch.yaml"/> -->
-    <arg name="carla_settings_file" default="$(find zzz_driver_simulators_carla_adapter)/launch/server.launch.yaml"/>
+    <arg name="carla_settings_file" default="$(find zzz_driver_simulators_carla_adapter)/launch/server099.launch.yaml"/>
     <arg name="vehicle_sensors_file" default="$(find zzz_driver_simulators_carla_adapter)/config/sensors.json"/>
     <arg name="static_sensors_file" default="$(find zzz_driver_simulators_carla_adapter)/config/static_sensors.example.json"/>
     <arg name="ego_actor" default='ego_vehicle'/>
     <arg name="ego_spawn" default="True"/> <!-- By default we use script to spawn vehicles -->
-    <arg name="ego_spawn_point" default=""/> <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
+    <arg name="ego_spawn_point" default=""/> <!-- use comma separated format "x,-y,z,roll,pitch,yaw" -->
     <arg name="spawn_ego_vehicle" default="True" />
 
     <rosparam file="$(arg carla_settings_file)" command="load" />

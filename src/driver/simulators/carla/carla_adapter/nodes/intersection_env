@@ -35,6 +35,8 @@ global stay
 stay = 0
 global collision_signal
 collision_signal = False
+global if_intersection
+if_intersection = False
 global if_write
 if_write = False
 global if_write_collision
@@ -119,6 +121,14 @@ def change_traffic_lights(carla_world):
 def collision_callback(msg):
     global collision_signal
     collision_signal = True
+
+def local_static_map_callback(msg):
+    #print("Now we enter local static map callback")
+    global if_intersection
+    if msg.in_junction:
+        if_intersection = True
+    else:
+        if_intersection = False
 
 ##########
 # Dynamic Traffic
@@ -232,10 +242,10 @@ def removed_stopped_vehicle(carla_world, stopped_time_thres = 20):
         # if vehicle.is_alive() is False:
         #     continue
         
-        x_max = 80
-        x_min = -90
-        y_max = 40
-        y_min = -125
+        x_max = 8000
+        x_min = -9000
+        y_max = 4000
+        y_min = -12500
 
         v_loc = vehicle.get_location()
         if (v_loc.x > x_max) or (v_loc.x < x_min) or (v_loc.y > y_max) or (v_loc.y < y_min):
@@ -335,7 +345,7 @@ def record_vehicle_states(carla_world, delay):
             elif 20.0 < location.x < 40 and 80.0 < location.y < 95.0:
                 v_in_fourth = v_in_fourth + 1
          
-        fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_vehicle.txt", 'a')   
+        fw = open("/home/carla/ZZZ/record_vehicle.txt", 'a')   
         fw.write(str(num_agents))   
         fw.write(",")   
         fw.write(str(v_in_one))   
@@ -359,7 +369,9 @@ def record_collsion_to_txt(ego_vehicle):
     global if_write_collision
     global stay
     global collision_signal
+    global if_intersection
 
+    '''
     if_intersection = False
     ego_x = ego_vehicle.get_location().x
     ego_y = -ego_vehicle.get_location().y
@@ -367,28 +379,36 @@ def record_collsion_to_txt(ego_vehicle):
         if -10.0 < ego_y < 10.0 or 80.0 < ego_y < 95.0:
             if_intersection = True
             # print("++++++++++++++++++++++++++ in intersection")
-            
-    else:
-        if_intersection = False
+    '''
+    ego_x = ego_vehicle.get_location().x
+    ego_y = -ego_vehicle.get_location().y
+
+    if not if_intersection:
         if_write = False
         if_write_collision = False
 
     if if_intersection == True and if_write == False:
-        fw = open("/home/zwt/zzz/data/veg/test_data/record_collision.txt", 'a')   
-        fw.write("into_intersection")   
+        fw = open("/home/carla/ZZZ/record_collision.txt", 'a')   
+        if (-55 < ego_x < -45 and 17 < ego_y < 27) or (25 < ego_x < 35 and 25 < ego_y < 35):
+            fw.write("0") # into false intersection
+        else:
+            fw.write("1") # into intersection
         fw.write("\n")
         fw.close()               
         print("++++++++++++++++++++++++++ in intersection")
 
         if_write = True
 
+    if if_intersection == True and collision_signal:
+        print("collision in intersection!!!\n\n\n\n")
 
     if if_intersection == True and if_write_collision == False:    
 
-        if collision_signal and stay < 10:
+        if collision_signal:
             # fw = open("/home/carla/ZZZ/zzz/src/driver/simulators/carla/carla_adapter/nodes/record_collision.txt", 'a')   
-            fw = open("/home/zwt/zzz/data/veg/test_data/record_collision.txt", 'a')   
-            fw.write("collision")
+            fw = open("/home/carla/ZZZ/record_collision.txt", 'a')   
+            fw.write("10") # collision
+            fw.write("\n")
             fw.close()   
             
             # fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_vehicle.txt", 'a')   
@@ -424,10 +444,10 @@ def adjust_ref_path(ego_x, ego_y):
 
 def ego_vehicle_outside_world(ego_x, ego_y):
 
-    x_max = 80
-    x_min = -90
-    y_max = 40
-    y_min = -125
+    x_max = 8000
+    x_min = -9000
+    y_max = 4000
+    y_min = -12500
 
     if (ego_x-x_max)*(ego_x-x_min)<0 and (ego_y-y_max)*(ego_y-y_min)<0:
         return False
@@ -547,7 +567,7 @@ if __name__ == "__main__":
 
 
     # Publish and Subscribe messages
-    _local_map_publisher = rospy.Publisher("/zzz/navigation/local_static_map", Map, queue_size=1)
+    _local_map_subscriber = rospy.Subscriber("/zzz/navigation/local_static_map", Map, local_static_map_callback)
     _reference_path_publisher = rospy.Publisher("/carla/ego_vehicle/waypoints", Path, queue_size=1, latch=True)
     _collision_subscriber = rospy.Subscriber("/carla/ego_vehicle/collision", CarlaCollisionEvent, collision_callback)
     role_name = rospy.get_param("~role_name", 'ego_vehicle')
@@ -559,7 +579,7 @@ if __name__ == "__main__":
     rate = rospy.Rate(20)
 
     # Generate Reference Path
-    dao = GlobalRoutePlannerDAO(carla_world.get_map())
+    dao = GlobalRoutePlannerDAO(carla_world.get_map(), 1)
     calculate_route(first_start, first_goal)
     # ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world, first_start, first_goal)
     trajectory_state = 1
@@ -580,7 +600,7 @@ if __name__ == "__main__":
         ego_loc = ego_vehicle.get_location()
         
         # Record txt (must before restart)
-        # record_collsion_to_txt(ego_vehicle)
+        record_collsion_to_txt(ego_vehicle)
 
         # Restart ego when needed
         restart_ego_vehicle(ego_vehicle)
