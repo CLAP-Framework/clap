@@ -247,7 +247,7 @@ def removed_stopped_vehicle(carla_world, stopped_time_thres = 20):
         velocity = vehicle.get_velocity()
         dist_from_origin = vehicle.get_location().distance(circle_center)
         if stopped_time[vehicle.id] >= 0:
-            if velocity.x < 0.02 and velocity.y < 0.02:
+            if abs(velocity.x) < 0.02 and abs(velocity.y) < 0.02:
                 stopped_time[vehicle.id] = stopped_time[vehicle.id] + 1
             else:
                 stopped_time[vehicle.id] = 0

@@ -71,6 +71,7 @@ class LocalMap(object):
             converted_file = os.path.join(tempfile.gettempdir(), "sumomap.temp")
             file_created = True
         assert os.path.exists(file)
+        
         if mtype == 'unknown':
             rospy.logerr("Cannot load map with unknown type")
         elif mtype == 'opendrive':
