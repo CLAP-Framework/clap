@@ -52,7 +52,6 @@
           name="idm_lane_utility" output="screen" ns="/zzz/planning">
     </node> -->
 
-
     <node pkg="zzz_planning_decision_lane_models" type="rls_train"  respawn="true"
           name="rls_train" output="screen" ns="/zzz/planning">
     </node>
