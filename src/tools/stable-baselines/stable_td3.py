@@ -1,6 +1,6 @@
 import gym
 import numpy as np
-import gym_routing
+import gym_routing_contiuous
 
 
 from stable_baselines.ddpg.policies import MlpPolicy

@@ -2,6 +2,6 @@ from gym.envs.registration import register
 
 register(
     id='zzz-v1',
-    entry_point='gym_routing.envs:ZZZCarlaEnv'
+    entry_point='gym_routing_contiuous.envs:ZZZCarlaEnv'
     
 )
