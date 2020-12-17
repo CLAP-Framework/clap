@@ -72,3 +72,5 @@ src.zip
 get-pip.py
 
 
+
+src/driver/simulators/carla/carla_bridge
