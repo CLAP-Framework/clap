@@ -89,7 +89,7 @@ class VEG_Planner(object):
             sent_RL_msg.append(0.0 - ACTION_SPACE_SYMMERTY) # Rule_based_point.vs
             self.sock.sendall(msgpack.packb(sent_RL_msg))
             try:
-                RLS_action = msgpack.unpackb(self.sock.recv(self._buffer_size))
+                received_msg = msgpack.unpackb(self.sock.recv(self._buffer_size))
             except:
                 pass
             
@@ -115,10 +115,8 @@ class VEG_Planner(object):
             # received RL action and plan a RL trajectory
             try:
                 received_msg = msgpack.unpackb(self.sock.recv(self._buffer_size))
-                rl_action = [received_msg[0], received_msg[1]]
-                rl_q = received_msg[2]
-                rule_q = received_msg[3]
-                return self.generate_VEG_trajectory(rl_q, rule_q, rl_action, rule_trajectory_msg)
+                rls_action = [received_msg[0], received_msg[1]]
+                return self._rule_based_trajectory_model_instance.generate_VEG_trajectory(rls_action)
             
             except:
                 rospy.logerr("Continous RLS Model cannot receive an action")
@@ -208,18 +206,3 @@ class VEG_Planner(object):
                       
         return RLpoint
 
-    def generate_VEG_trajectory(self, rl_q, rule_q, rl_action, rule_trajectory_msg):
-        
-        print("rl_action", rl_action[0], rl_action[1])
-        print("rl_q", rl_q)
-        print("rule_q", rule_q)
-
-        if rl_q - rule_q > THRESHOLD and rl_action[0] < 2333 and rl_action[1] < 2333:
-            rl_action[1] = rl_action[1] + ACTION_SPACE_SYMMERTY
-            self.kick_in_signal = self.rivz_element.draw_kick_in_circles(self._dynamic_map.ego_state.pose.pose.position.x,
-                        self._dynamic_map.ego_state.pose.pose.position.y, 3.5)
-            return self._rule_based_trajectory_model_instance.trajectory_update_RL_kick(self._dynamic_map, rl_action)
-                               
-        else:
-            self.kick_in_signal = None
-            return rule_trajectory_msg
