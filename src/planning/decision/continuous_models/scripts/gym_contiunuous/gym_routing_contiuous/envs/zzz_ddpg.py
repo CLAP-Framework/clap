@@ -47,7 +47,7 @@ class ZZZCarlaEnv(gym.Env):
         self.sock_conn, addr = self.sock.accept()
         self.sock_conn.settimeout(socket_time_out) # Set time out
         self.rule_based_action = []
-        print("ZZZ connected at {}".format(addr))
+        print("ZZZ-v1 connected at {}".format(addr))
 
         # Set action space
         low_action = np.array([-4.0,-15/3.6]) # di - ROAD_WIDTH, tv - TARGET_SPEED - D_T_S * N_S_SAMPLE

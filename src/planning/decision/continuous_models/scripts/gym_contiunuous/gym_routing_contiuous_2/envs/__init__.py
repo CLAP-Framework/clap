@@ -1,1 +1,1 @@
-from gym_routing_contiuous.envs.zzz_ddpg import ZZZCarlaEnv
+from gym_routing_contiuous_2.envs.zzz_ddpg import ZZZCarlaEnv

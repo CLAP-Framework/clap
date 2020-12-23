@@ -50,9 +50,8 @@ class ZZZCarlaEnv(gym.Env):
         print("ZZZ connected at {}".format(addr))
 
         # Set action space
-        low_action = np.array([-4.0,-15/3.6]) # di - ROAD_WIDTH, tv - TARGET_SPEED - D_T_S * N_S_SAMPLE
-        high_action = np.array([4.0, 15/3.6])  #Should be symmetry for DDPG
-        self.action_space = spaces.Box(low=low_action, high=high_action, dtype=np.float32)
+        self.action_space = spaces.Discrete(91) # len(fplist +1) 
+        # 0: rule-based policy
 
         self.state_dimention = 16
 
@@ -63,7 +62,7 @@ class ZZZCarlaEnv(gym.Env):
         self.seed()
 
 
-    def step(self, action, q_value, rule_action, rule_q):
+    def step(self, action):
 
         # send action to zzz planning module
         
@@ -71,114 +70,73 @@ class ZZZCarlaEnv(gym.Env):
         action = action.tolist()
         print("-------------",type(action),action)
         while True:
-            try:
-                send_action = action
-                send_action.append(q_value)
-                send_action.append(rule_q)                
-                self.sock_conn.sendall(msgpack.packb(send_action))
+            # try:
+            send_action = action         
+            self.sock_conn.sendall(msgpack.packb(send_action))
 
-                # wait next state
-                received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
-                print("-------------received msg in step")
-                self.state = received_msg[0:16]
-                collision = received_msg[16]
-                leave_current_mmap = received_msg[17]
-                threshold = received_msg[18]
-                RLpointx = received_msg[19]
-                RLpointy = received_msg[20]
-                self.rule_based_action = [(RLpointx, RLpointy)]
-
-                # calculate reward
-                reward = 50 - (abs(action[0] - RLpointx) + abs(action[1] - (RLpointy))) #+ 0.5 * ego_s
-              
-                # judge if finish
-                done = False
-
-                if collision:
-                    done = True
-                    reward = -1500#-1000
-                    print("+++++++++++++++++++++ received collision")
-                
-                if leave_current_mmap == 1:
-                    done = True
-                    reward = 500#+500
-                    print("+++++++++++++++++++++ successful pass intersection")
-
-                elif leave_current_mmap == 2:
-                    done = True
-                    print("+++++++++++++++++++++ restart by code")
-                
-                # self.record_rl_intxt(action, q_value, RLpointx, RLpointy, rule_q, collision, leave_current_mmap, ego_s, threshold)
-                return np.array(self.state), reward, done,  {}, np.array(self.rule_based_action)
-
-            except:
-                print("RL cannot receive an state")
-
-                continue
+            # wait next state
+            received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
+            print("-------------received msg in step",received_msg)
+            self.state = received_msg[0:16]
+            collision = received_msg[16]
+            leave_current_mmap = received_msg[17]
             
-    def record_rl_intxt(self, action, q_value, RLpointx, RLpointy, rule_q, collision, leave_current_mmap, ego_s, threshold):
-        fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_rl.txt", 'a')   
-        fw.write(str(action[0]))   
-        fw.write(",")   
-        fw.write(str(action[1]))
-        fw.write(",")   
-        fw.write(str(q_value))
-        fw.write(",")   
-        fw.write(str(RLpointx))
-        fw.write(",")   
-        fw.write(str(RLpointy))
-        fw.write(",")   
-        fw.write(str(rule_q))
-        fw.write(",")   
-        fw.write(str(collision))
-        fw.write(",")   
-        fw.write(str(leave_current_mmap))
-        fw.write(",")   
-        fw.write(str(ego_s))   
-        fw.write(",")   
 
-        if q_value - rule_q > threshold:
-            fw.write("kick in")  
-            print("kick in!！！!！!！!！!！!！!") 
-        fw.write("\n")
-        fw.close()
+            # calculate reward
+            reward = 0
+            
+            # judge if finish
+            done = False
+
+            if collision:
+                done = True
+                reward = -10#-1000
+                print("+++++++++++++++++++++ received collision")
+            
+            if leave_current_mmap == 1:
+                done = True
+                reward = 1#+500
+                print("+++++++++++++++++++++ successful pass intersection")
+
+            elif leave_current_mmap == 2:
+                done = True
+                print("+++++++++++++++++++++ restart by code")
+            
+            # self.record_rl_intxt(action, q_value, RLpointx, RLpointy, rule_q, collision, leave_current_mmap, ego_s, threshold)
+            return np.array(self.state), reward, done,  {}
+
+            
 
     def reset(self, **kargs):
        
         # receive state
         # if the received information meets requirements
         while True:
-            try:
-                action = [2333,2333,0,0]
-                print("-------------",type(action),action)
+            # try:
+            # action = 0.1
+            # print("-------------",type(action),action)
 
-                self.sock_conn.sendall(msgpack.packb(action))
-                print("-------------try received msg in reset")
+            # self.sock_conn.sendall(msgpack.packb(action))
+            received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
+            print("-------------received msg in reset",received_msg)
 
-                received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
-                print("-------------received msg in reset")
+            self.state = received_msg[0:16]
+            collision = received_msg[16]
+            leave_current_mmap = received_msg[17]
+            
 
-                self.state = received_msg[0:16]
-                collision = received_msg[16]
-                leave_current_mmap = received_msg[17]
-                RLpointx = received_msg[18]
-                RLpointy = received_msg[19]
-                self.rule_based_action = [(RLpointx,RLpointy - 12.5/3.6)]
-
-                return np.array(self.state), np.array(self.rule_based_action)
+            return np.array(self.state)
 
                 # if not collision and not leave_current_mmap:
-            except:
-                print("------------- not received msg in reset")
-                collision = 0
-                leave_current_mmap = 0
-                RLpointx = 0
-                RLpointy = 0
-                self.rule_based_action = [(RLpointx,RLpointy - 12.5/3.6)]
+            # except:
+            #     print("------------- not received msg in reset")
+            #     collision = 0
+            #     leave_current_mmap = 0
 
-                return np.array(self.state), np.array(self.rule_based_action)
 
-        return np.array(self.state), np.array(self.rule_based_action)
+            #     return np.array(self.state)
+
+        return np.array(self.state)
 
 
     def render(self, mode='human'):

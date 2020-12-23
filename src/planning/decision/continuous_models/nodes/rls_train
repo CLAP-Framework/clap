@@ -6,6 +6,8 @@ from zzz_cognition_msgs.msg import MapState
 
 from zzz_planning_decision_continuous_models.VEG_ITSC.VEG_planner import VEG_Planner_ITSC
 from zzz_planning_decision_continuous_models.VEG.VEG_planner import VEG_Planner
+from zzz_planning_decision_continuous_models.VEG_2.VEG_planner_cost import VEG_Planner_cost
+
 from zzz_planning_decision_continuous_models import MainDecision
 
 from visualization_msgs.msg import Marker, MarkerArray
@@ -30,7 +32,7 @@ class RLSNode(object):
         )
         self._rate = rospy.Rate(params.hz)
         
-        model_trajectory = VEG_Planner()
+        model_trajectory = VEG_Planner_cost()
         self._decision_instance = MainDecision(trajectory_planner=model_trajectory)
 
         # ROS messages

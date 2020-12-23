@@ -29,12 +29,13 @@ DT = 0.3  # time tick [s]
 MAXT = 4.6  # max prediction time [m]
 MINT = 4.0  # min prediction time [m]
 TARGET_SPEED = 15.0 / 3.6  # target speed [m/s]
-D_T_S = 5.0 / 3.6  # target speed sampling length [m/s]
-N_S_SAMPLE = 2  # sampling number of target speed
+D_T_S = 10.0 / 3.6  # target speed sampling length [m/s]
+N_S_SAMPLE = 1  # sampling number of target speed
 
 # RL paramter
 MIN_SPEED_RL = 3/3.6 # min speed for rl planning [m/s]
-KICK_IN_TIME = 2.25 # kick in time for rl action [s]
+KICK_IN_TIME = 3 # kick in time for rl action [s]
+KICK_IN_NUM = int(KICK_IN_TIME / DT)
 
 # collision check
 OBSTACLES_CONSIDERED = 3
@@ -49,6 +50,7 @@ KT = 0.1
 KD = 1.0
 KLAT = 1.0
 KLON = 1.0
+KRLS = 1.0
 
 class Werling(object):
 
@@ -66,6 +68,7 @@ class Werling(object):
         self.ref_path_tangets = None
         self.ob = None
         self.csp = None
+        self.kick_in_num = KICK_IN_NUM
 
         self.rivz_element = rviz_display()
     
@@ -88,7 +91,7 @@ class Werling(object):
             generated_trajectory = self.frenet_optimal_planning(self.csp, self.c_speed, start_state)
 
             if generated_trajectory is not None:
-                desired_speed = generated_trajectory.s_d[-1]
+                desired_speed = generated_trajectory.s_d[KICK_IN_NUM]
                 trajectory_array_ori = np.c_[generated_trajectory.x, generated_trajectory.y]
                 trajectory_array = trajectory_array_ori
                 self.last_trajectory_array_rule = trajectory_array
@@ -118,7 +121,28 @@ class Werling(object):
             return None
 
     def trajectory_update_RLS(self, dynamic_map, RLS_action):
+        fplist = self.all_trajectory
+        if RLS_action == 0:
+            print("----> VEG: Rule-based planning")           
+            return None
         
+        bestpath = fplist[RLS_action]
+
+        # find minimum cost path
+        # mincost = float("inf")
+        # bestpath = None
+        # for fp in fplist:
+        #     RLS_cost = KRLS * (math.fabs(RLS_action[0] - fp.d[KICK_IN_NUM]) + math.fabs(RLS_action[1] - fp.s_d[KICK_IN_NUM]))
+        #     if mincost >= (fp.cf + RLS_cost):
+        #         mincost = fp.cf + RLS_cost
+        #         bestpath = fp
+
+        msg = DecisionTrajectory()
+        msg.trajectory = convert_ndarray_to_pathmsg(bestpath)
+        msg.desired_speed = bestpath.s_d[KICK_IN_NUM]
+        print("----> VEG: Successful Planning")           
+
+        return msg
   
 
     def initialize(self, dynamic_map):
