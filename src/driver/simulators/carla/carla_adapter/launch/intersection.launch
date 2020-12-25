@@ -27,7 +27,6 @@
     <node pkg="carla_ros_bridge" name="carla_ros_bridge" type="bridge.py" output="screen" respawn="true" />
     <!-- <node pkg="carla_waypoint_publisher" type="carla_waypoint_publisher.py" name="carla_waypoint_publisher" output="screen">  -->
          <param name="role_name" value="$(arg ego_actor)" /> 
-    
     <node pkg="zzz_driver_simulators_carla_adapter" type="intersection_env" name="intersection_env" output="screen" respawn="true"> 
     </node>
 

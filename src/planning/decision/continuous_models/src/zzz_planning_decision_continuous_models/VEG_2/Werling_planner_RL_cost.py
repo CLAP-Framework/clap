@@ -23,8 +23,8 @@ from zzz_planning_decision_continuous_models.predict import predict
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 10.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 500.0  # maximum curvature [1/m]
-MAX_ROAD_WIDTH = 6.0   # maximum road width [m] # related to RL action space
-D_ROAD_W = 1.5  # road width sampling length [m]
+MAX_ROAD_WIDTH = 3.0   # maximum road width [m] # related to RL action space
+D_ROAD_W = 3.0  # road width sampling length [m]
 DT = 0.3  # time tick [s]
 MAXT = 4.6  # max prediction time [m]
 MINT = 4.0  # min prediction time [m]
@@ -39,10 +39,10 @@ KICK_IN_NUM = int(KICK_IN_TIME / DT)
 
 # collision check
 OBSTACLES_CONSIDERED = 3
-ROBOT_RADIUS = 3.5  # robot radius [m]
-RADIUS_SPEED_RATIO = 0.25 # higher speed, bigger circle
+ROBOT_RADIUS = 3.0  # robot radius [m]
+RADIUS_SPEED_RATIO = 0.1 # higher speed, bigger circle
 MOVE_GAP = 1.0
-ONLY_SAMPLE_TO_RIGHT = True
+ONLY_SAMPLE_TO_RIGHT = False
 
 # Cost weights
 KJ = 0.1
@@ -121,12 +121,8 @@ class Werling(object):
             return None
 
     def trajectory_update_RLS(self, dynamic_map, RLS_action):
-        fplist = self.all_trajectory
-        if RLS_action == 0:
-            print("----> VEG: Rule-based planning")           
-            return None
-        
-        bestpath = fplist[RLS_action]
+        fplist = self.all_trajectory      
+        bestpath = fplist[RLS_action - 1]
 
         # find minimum cost path
         # mincost = float("inf")
@@ -199,10 +195,10 @@ class Werling(object):
 
     def frenet_optimal_planning(self, csp, c_speed, start_state):
         fplist = self.calc_frenet_paths(c_speed, start_state)
+        self.all_trajectory = fplist
+        print("---------------------len fplist",len(fplist))
         fplist = self.calc_global_paths(fplist, csp)
         fplist = self.check_paths(fplist)
-
-        self.all_trajectory = fplist
 
         # find minimum cost path
         mincost = float("inf")

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>carla_msgs</name>
-  <version>0.1.0</version>
+  <version>1.2.0</version>
   <description>The carla_msgs package</description>
   <maintainer email="carla.simulator@gmail.com">CARLA Simulator Team</maintainer>
   <license>MIT</license>
@@ -9,7 +9,9 @@
   <build_depend>message_generation</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
+  <build_depend>diagnostic_msgs</build_depend>
   <run_depend>message_runtime</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>geometry_msgs</run_depend>
+  <run_depend>diagnostic_msgs</run_depend>
 </package>

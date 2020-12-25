@@ -34,7 +34,7 @@ class VEG_Planner_cost(object):
         self._buffer_size = recv_buffer
         self._collision_signal = False
         self._collision_times = 0
-        self._has_clear_buff = False
+        self._has_clear_buff = True
 
         self.reference_path = None
         self.ref_path = None
@@ -69,7 +69,6 @@ class VEG_Planner_cost(object):
 
     def clear_buff(self, dynamic_map):
         self._rule_based_trajectory_model_instance.clear_buff(dynamic_map)
-        self._collision_signal = False
         self.reference_path = None
         self.ref_path = None
         self.ref_path_tangets = None
@@ -77,17 +76,27 @@ class VEG_Planner_cost(object):
         if self._has_clear_buff == False:
             ego_x = dynamic_map.ego_state.pose.pose.position.x
             ego_y = dynamic_map.ego_state.pose.pose.position.y
+            # if self._collision_signal == True:
+            #     leave_current_mmap = 2
+
+            #     sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # ego and obs state
+            #     sent_RL_msg.append(self._collision_signal)
+            #     sent_RL_msg.append(leave_current_mmap)
+
+            #     print("Send State Msg:",sent_RL_msg)
+            #     self.sock.sendall(msgpack.packb(sent_RL_msg))
+
             if math.pow((ego_x+10),2) + math.pow((ego_y-94),2) < 64:  # restart point
                 leave_current_mmap = 2
             else:  
                 leave_current_mmap = 1
 
-                sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # ego and obs state
-                sent_RL_msg.append(self._collision_signal)
-                sent_RL_msg.append(leave_current_mmap)
+            sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # ego and obs state
+            sent_RL_msg.append(self._collision_signal)
+            sent_RL_msg.append(leave_current_mmap)
 
-                print("Send State Msg:",sent_RL_msg)
-                self.sock.sendall(msgpack.packb(sent_RL_msg))
+            print("Send State Msg:",sent_RL_msg)
+            self.sock.sendall(msgpack.packb(sent_RL_msg))
             # try:
                 # received_msg = msgpack.unpackb(self.sock.recv(self._buffer_size))
                 # print("Received Action11:",received_msg)
@@ -95,6 +104,8 @@ class VEG_Planner_cost(object):
             # except:
             #     pass
             self._has_clear_buff = True
+        self._collision_signal = False
+
         return None
 
     def trajectory_update(self, dynamic_map):
@@ -111,18 +122,17 @@ class VEG_Planner_cost(object):
             rule_trajectory_msg = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
             
             # received RL action and plan a RL trajectory
-            # try:
-            received_msg = msgpack.unpackb(self.sock.recv(self._buffer_size))
-            rls_action = received_msg
-            print("Received Action:",rls_action)
-            if rls_action == 0:
-                return rule_trajectory_msg
-            else:
-                return self._rule_based_trajectory_model_instance.trajectory_update_RLS(dynamic_map, rls_action)
-
-            # except:
-            #     rospy.logerr("Continous RLS Model cannot receive an action")
-            #     return rule_trajectory_msg
+            try:
+                received_msg = msgpack.unpackb(self.sock.recv(self._buffer_size))
+                rls_action = received_msg
+                print("Received Action:",rls_action)
+                if rls_action == 0:
+                    print("----> VEG: Rule-based planning")           
+                    return rule_trajectory_msg
+                else:
+                    return self._rule_based_trajectory_model_instance.trajectory_update_RLS(dynamic_map, rls_action)
+            except:
+                return None        
         else:
             return None   
             

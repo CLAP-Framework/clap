@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #
-# Copyright (c) 2018-2019 Intel Corporation
+# Copyright (c) 2018-2020 Intel Corporation
 #
 # This work is licensed under the terms of the MIT license.
 # For a copy, see <https://opensource.org/licenses/MIT>.
@@ -16,13 +16,13 @@ import rospy
 
 from std_msgs.msg import ColorRGBA
 from std_msgs.msg import Bool
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Transform
 
 from carla import VehicleControl
 from carla import Vector3D
 
 from carla_ros_bridge.vehicle import Vehicle
-import carla_ros_bridge.transforms as transforms
+import carla_common.transforms as transforms
 
 from carla_msgs.msg import CarlaEgoVehicleInfo, CarlaEgoVehicleInfoWheel,\
     CarlaEgoVehicleControl, CarlaEgoVehicleStatus
@@ -34,25 +34,40 @@ class EgoVehicle(Vehicle):
     Vehicle implementation details for the ego vehicle
     """
 
-    def __init__(self, carla_actor, parent, communication, vehicle_control_applied_callback):
+    def __init__(self, uid, name, parent, node, carla_actor, vehicle_control_applied_callback):
         """
         Constructor
 
-        :param carla_actor: carla actor object
-        :type carla_actor: carla.Actor
+        :param uid: unique identifier for this object
+        :type uid: int
+        :param name: name identiying this object
+        :type name: string
         :param parent: the parent of this
         :type parent: carla_ros_bridge.Parent
-        :param communication: communication-handle
-        :type communication: carla_ros_bridge.communication
+        :param node: node-handle
+        :type node: carla_ros_bridge.CarlaRosBridge
+        :param carla_actor: carla actor object
+        :type carla_actor: carla.Actor
         """
-        super(EgoVehicle, self).__init__(carla_actor=carla_actor,
+        super(EgoVehicle, self).__init__(uid=uid,
+                                         name=name,
                                          parent=parent,
-                                         communication=communication,
-                                         prefix=carla_actor.attributes.get('role_name'))
+                                         node=node,
+                                         carla_actor=carla_actor)
 
         self.vehicle_info_published = False
         self.vehicle_control_override = False
         self._vehicle_control_applied_callback = vehicle_control_applied_callback
+
+        self.vehicle_status_publisher = rospy.Publisher(
+            self.get_topic_prefix() + "/vehicle_status",
+            CarlaEgoVehicleStatus,
+            queue_size=10)
+        self.vehicle_info_publisher = rospy.Publisher(self.get_topic_prefix() +
+                                                      "/vehicle_info",
+                                                      CarlaEgoVehicleInfo,
+                                                      queue_size=10,
+                                                      latch=True)
 
         self.control_subscriber = rospy.Subscriber(
             self.get_topic_prefix() + "/vehicle_control_cmd",
@@ -71,10 +86,6 @@ class EgoVehicle(Vehicle):
         self.enable_autopilot_subscriber = rospy.Subscriber(
             self.get_topic_prefix() + "/enable_autopilot",
             Bool, self.enable_autopilot_updated)
-
-        self.twist_control_subscriber = rospy.Subscriber(
-            self.get_topic_prefix() + "/twist_cmd",
-            Twist, self.twist_command_updated)
 
     def get_marker_color(self):
         """
@@ -100,9 +111,7 @@ class EgoVehicle(Vehicle):
         vehicle_status = CarlaEgoVehicleStatus(
             header=self.get_msg_header("map"))
         vehicle_status.velocity = self.get_vehicle_speed_abs(self.carla_actor)
-        vehicle_status.acceleration.linear = transforms.carla_vector_to_ros_vector_rotated(
-            self.carla_actor.get_acceleration(),
-            self.carla_actor.get_transform().rotation)
+        vehicle_status.acceleration.linear = self.get_current_ros_accel().linear
         vehicle_status.orientation = self.get_current_ros_pose().orientation
         vehicle_status.control.throttle = self.carla_actor.get_control().throttle
         vehicle_status.control.steer = self.carla_actor.get_control().steer
@@ -111,7 +120,7 @@ class EgoVehicle(Vehicle):
         vehicle_status.control.reverse = self.carla_actor.get_control().reverse
         vehicle_status.control.gear = self.carla_actor.get_control().gear
         vehicle_status.control.manual_gear_shift = self.carla_actor.get_control().manual_gear_shift
-        self.publish_message(self.get_topic_prefix() + "/vehicle_status", vehicle_status)
+        self.vehicle_status_publisher.publish(vehicle_status)
 
         # only send vehicle once (in latched-mode)
         if not self.vehicle_info_published:
@@ -127,6 +136,15 @@ class EgoVehicle(Vehicle):
                 wheel_info.tire_friction = wheel.tire_friction
                 wheel_info.damping_rate = wheel.damping_rate
                 wheel_info.max_steer_angle = math.radians(wheel.max_steer_angle)
+                wheel_info.radius = wheel.radius
+                wheel_info.max_brake_torque = wheel.max_brake_torque
+                wheel_info.max_handbrake_torque = wheel.max_handbrake_torque
+                wheel_info.position.x = (wheel.position.x/100.0) - \
+                    self.carla_actor.get_transform().location.x
+                wheel_info.position.y = -((wheel.position.y/100.0) -
+                                          self.carla_actor.get_transform().location.y)
+                wheel_info.position.z = (wheel.position.z/100.0) - \
+                    self.carla_actor.get_transform().location.z
                 vehicle_info.wheels.append(wheel_info)
 
             vehicle_info.max_rpm = vehicle_physics.max_rpm
@@ -146,7 +164,7 @@ class EgoVehicle(Vehicle):
             vehicle_info.center_of_mass.y = vehicle_physics.center_of_mass.y
             vehicle_info.center_of_mass.z = vehicle_physics.center_of_mass.z
 
-            self.publish_message(self.get_topic_prefix() + "/vehicle_info", vehicle_info, True)
+            self.vehicle_info_publisher.publish(vehicle_info)
 
     def update(self, frame, timestamp):
         """
@@ -173,35 +191,11 @@ class EgoVehicle(Vehicle):
         self.control_subscriber = None
         self.enable_autopilot_subscriber.unregister()
         self.enable_autopilot_subscriber = None
-        self.twist_control_subscriber.unregister()
-        self.twist_control_subscriber = None
         self.control_override_subscriber.unregister()
         self.control_override_subscriber = None
         self.manual_control_subscriber.unregister()
         self.manual_control_subscriber = None
         super(EgoVehicle, self).destroy()
-
-    def twist_command_updated(self, twist):
-        """
-        Set angular/linear velocity (this does not respect vehicle dynamics)
-        """
-        if not self.vehicle_control_override:
-            angular_velocity = Vector3D()
-            angular_velocity.z = math.degrees(twist.angular.z)
-
-            rotation_matrix = transforms.carla_rotation_to_numpy_rotation_matrix(
-                self.carla_actor.get_transform().rotation)
-            linear_vector = numpy.array([twist.linear.x, twist.linear.y, twist.linear.z])
-            rotated_linear_vector = rotation_matrix.dot(linear_vector)
-            linear_velocity = Vector3D()
-            linear_velocity.x = rotated_linear_vector[0]
-            linear_velocity.y = -rotated_linear_vector[1]
-            linear_velocity.z = rotated_linear_vector[2]
-
-            rospy.logdebug("Set velocity linear: {}, angular: {}".format(
-                linear_velocity, angular_velocity))
-            self.carla_actor.set_velocity(linear_velocity)
-            self.carla_actor.set_angular_velocity(angular_velocity)
 
     def control_command_override(self, enable):
         """

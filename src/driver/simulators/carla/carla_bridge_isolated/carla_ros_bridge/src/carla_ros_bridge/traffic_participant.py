@@ -10,11 +10,15 @@
 Classes to handle Carla traffic participants
 """
 
+import rospy
+
 from derived_object_msgs.msg import Object
-from nav_msgs.msg import Odometry
 from shape_msgs.msg import SolidPrimitive
+from std_msgs.msg import ColorRGBA
+from visualization_msgs.msg import Marker
 
 from carla_ros_bridge.actor import Actor
+import carla_common.transforms as trans
 
 
 class TrafficParticipant(Actor):
@@ -23,24 +27,27 @@ class TrafficParticipant(Actor):
     actor implementation details for traffic participant
     """
 
-    def __init__(self, carla_actor, parent, communication, prefix):
+    def __init__(self, uid, name, parent, node, carla_actor):
         """
         Constructor
 
-        :param carla_actor: carla actor object
-        :type carla_actor: carla.Actor
+        :param uid: unique identifier for this object
+        :type uid: int
+        :param name: name identiying this object
+        :type name: string
         :param parent: the parent of this
         :type parent: carla_ros_bridge.Parent
-        :param communication: communication-handle
-        :type communication: carla_ros_bridge.communication
-        :param prefix: the topic prefix to be used for this actor
-        :type prefix: string
+        :param node: node-handle
+        :type node: carla_ros_bridge.CarlaRosBridge
+        :param carla_actor: carla actor object
+        :type carla_actor: carla.Actor
         """
         self.classification_age = 0
-        super(TrafficParticipant, self).__init__(carla_actor=carla_actor,
+        super(TrafficParticipant, self).__init__(uid=uid,
+                                                 name=name,
                                                  parent=parent,
-                                                 communication=communication,
-                                                 prefix=prefix)
+                                                 node=node,
+                                                 carla_actor=carla_actor)
 
     def update(self, frame, timestamp):
         """
@@ -54,22 +61,7 @@ class TrafficParticipant(Actor):
         :return:
         """
         self.classification_age += 1
-        self.publish_transform(self.get_ros_transform())
-        self.publish_marker()
-        self.send_odometry()
-
         super(TrafficParticipant, self).update(frame, timestamp)
-
-    def send_odometry(self):
-        """
-        Sends odometry
-        :return:
-        """
-        odometry = Odometry(header=self.get_msg_header("map"))
-        odometry.child_frame_id = self.get_prefix()
-        odometry.pose.pose = self.get_current_ros_pose()
-        odometry.twist.twist = self.get_current_ros_twist()
-        self.publish_message(self.get_topic_prefix() + "/odometry", odometry)
 
     def get_object_info(self):
         """
@@ -99,7 +91,7 @@ class TrafficParticipant(Actor):
         if self.get_classification() != Object.CLASSIFICATION_UNKNOWN:
             obj.object_classified = True
             obj.classification = self.get_classification()
-            obj.classification_certainty = 1.0
+            obj.classification_certainty = 255
             obj.classification_age = self.classification_age
 
         return obj
@@ -109,3 +101,44 @@ class TrafficParticipant(Actor):
         Function to get object classification (overridden in subclasses)
         """
         return Object.CLASSIFICATION_UNKNOWN
+
+    def get_marker_color(self):  # pylint: disable=no-self-use
+        """
+        Function (override) to return the color for marker messages.
+
+        :return: default color used by traffic participants
+        :rtpye : std_msgs.msg.ColorRGBA
+        """
+        color = ColorRGBA()
+        color.r = 0
+        color.g = 0
+        color.b = 255
+        return color
+
+    def get_marker_pose(self):
+        """
+        Function to return the pose for traffic participants.
+
+        :return: the pose of the traffic participant.
+        :rtype: geometry_msgs.msg.Pose
+        """
+        return trans.carla_transform_to_ros_pose(self.carla_actor.get_transform())
+
+    def get_marker(self):
+        """
+        Helper function to create a ROS visualization_msgs.msg.Marker for the actor
+
+        :return:
+        visualization_msgs.msg.Marker
+        """
+        marker = Marker(header=self.get_msg_header(frame_id="map"))
+        marker.color = self.get_marker_color()
+        marker.color.a = 0.3
+        marker.id = self.get_id()
+        marker.type = Marker.CUBE
+
+        marker.pose = self.get_marker_pose()
+        marker.scale.x = self.carla_actor.bounding_box.extent.x * 2.0
+        marker.scale.y = self.carla_actor.bounding_box.extent.y * 2.0
+        marker.scale.z = self.carla_actor.bounding_box.extent.z * 2.0
+        return marker

@@ -73,14 +73,12 @@ class NearestLocator:
         # - static_map_lane_tangets
         # - surrounding_object_list
         tstates = edict()
-
         # Skip if not ready
         if not self._ego_vehicle_state_buffer:
             return None
 
         with self._ego_vehicle_state_lock:
             tstates.ego_state = copy.deepcopy(self._ego_vehicle_state_buffer) 
-
         # Update buffer information
         tstates.surrounding_object_list = copy.deepcopy(self._surrounding_object_list_buffer or [])
 
@@ -317,7 +315,7 @@ class NearestLocator:
         # Now we set the multilane speed limit as 40 km/h.
         total_lane_num = len(tstates.static_map.lanes)
         for i in range(total_lane_num):
-            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 25
+            tstates.dynamic_map.mmap.lanes[i].map_lane.speed_limit = 50
 
     # TODO(zyxin): Move this function into separate prediction module
     def predict_vehicle_behavior(self, vehicle, tstates, lane_change_thres = 0.2):

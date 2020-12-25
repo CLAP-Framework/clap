@@ -2,7 +2,9 @@
 <launch>
   <arg name='host' default=''/>
   <arg name='port' default=''/>
+  <arg name='timeout' default=''/>
   <arg name='rosbag_fname' default=''/>
+  <arg name='passive' default=''/>
   <arg name='synchronous_mode' default=''/>
   <arg name='synchronous_mode_wait_for_vehicle_control_command' default=''/>
   <arg name='fixed_delta_seconds' default=''/>
@@ -11,6 +13,8 @@
   <rosparam file="$(find carla_ros_bridge)/config/settings.yaml" command="load" />
   <param name="carla/host" value="$(arg host)" unless="$(eval host == '')"/>
   <param name="carla/port" value="$(arg port)" unless="$(eval port == '')"/>
+  <param name="carla/timeout" value="$(arg timeout)" unless="$(eval timeout == '')"/>
+  <param name="carla/passive" value="$(arg passive)" unless="$(eval passive == '')"/>
   <param
     name="carla/synchronous_mode"
     value="$(arg synchronous_mode)"
@@ -28,6 +32,6 @@
     value="$(arg town)"
     unless="$(eval town == '')"/>
 
-  <node pkg="carla_ros_bridge" name="carla_ros_bridge" type="bridge.py" output="screen"/>
+  <node pkg="carla_ros_bridge" name="carla_ros_bridge" type="bridge.py" output="screen" required="true"/>
     
 </launch>

@@ -23,30 +23,44 @@ class Walker(TrafficParticipant):
     Actor implementation details for pedestrians
     """
 
-    def __init__(self, carla_actor, parent, communication, prefix=None):
+    def __init__(self, uid, name, parent, node, carla_actor):
         """
         Constructor
 
-        :param carla_actor: carla walker actor object
-        :type carla_actor: carla.Walker
+        :param uid: unique identifier for this object
+        :type uid: int
+        :param name: name identiying this object
+        :type name: string
         :param parent: the parent of this
         :type parent: carla_ros_bridge.Parent
-        :param communication: communication-handle
-        :type communication: carla_ros_bridge.communication
-        :param prefix: the topic prefix to be used for this actor
-        :type prefix: string
+        :param node: node-handle
+        :type node: carla_ros_bridge.CarlaRosBridge
+        :param carla_actor: carla walker actor object
+        :type carla_actor: carla.Walker
         """
-        if not prefix:
-            prefix = "walker/{:03}".format(carla_actor.id)
-
-        super(Walker, self).__init__(carla_actor=carla_actor,
+        super(Walker, self).__init__(uid=uid,
+                                     name=name,
                                      parent=parent,
-                                     communication=communication,
-                                     prefix=prefix)
+                                     node=node,
+                                     carla_actor=carla_actor)
 
         self.control_subscriber = rospy.Subscriber(
             self.get_topic_prefix() + "/walker_control_cmd",
             CarlaWalkerControl, self.control_command_updated)
+
+    def destroy(self):
+        """
+        Function (override) to destroy this object.
+
+        Terminate ROS subscriptions
+        Finally forward call to super class.
+
+        :return:
+        """
+        rospy.logdebug("Destroy Walker(id={})".format(self.get_id()))
+        self.control_subscriber.unregister()
+        self.control_subscriber = None
+        super(Walker, self).destroy()
 
     def control_command_updated(self, ros_walker_control):
         """

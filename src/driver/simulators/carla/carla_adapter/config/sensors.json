@@ -45,9 +45,9 @@
             "lens_y_size": 0.08
         },
         {
-            "type": "sensor.other.collision",
-            "id": "collision1",
-            "x": 0.0, "y": 0.0, "z": 0.0
+            "type": "sensor.other.gnss",
+            "id": "gnss",
+            "x": 1.0, "y": 0.0, "z": 2.0
         }
     ]
 }

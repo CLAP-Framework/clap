@@ -13,32 +13,30 @@ Class to handle the carla map
 import rospy
 
 from carla_msgs.msg import CarlaWorldInfo
-from carla_ros_bridge.pseudo_actor import PseudoActor
 
 
-class WorldInfo(PseudoActor):
+class WorldInfo(object):
 
     """
     Publish the map
     """
 
-    def __init__(self, carla_world, communication):
+    def __init__(self, carla_world):
         """
         Constructor
 
         :param carla_world: carla world object
         :type carla_world: carla.World
-        :param communication: communication-handle
-        :type communication: carla_ros_bridge.communication
         """
-
-        super(WorldInfo, self).__init__(parent=None,
-                                        communication=communication,
-                                        prefix="world_info")
 
         self.carla_map = carla_world.get_map()
 
         self.map_published = False
+
+        self.world_info_publisher = rospy.Publisher("/carla/world_info",
+                                                    CarlaWorldInfo,
+                                                    queue_size=10,
+                                                    latch=True)
 
     def destroy(self):
         """
@@ -51,7 +49,6 @@ class WorldInfo(PseudoActor):
         """
         rospy.logdebug("Destroying WorldInfo()")
         self.carla_map = None
-        super(WorldInfo, self).destroy()
 
     def update(self, frame, timestamp):
         """
@@ -63,5 +60,5 @@ class WorldInfo(PseudoActor):
             open_drive_msg = CarlaWorldInfo()
             open_drive_msg.map_name = self.carla_map.name
             open_drive_msg.opendrive = self.carla_map.to_opendrive()
-            self.publish_message(self.get_topic_prefix(), open_drive_msg, is_latched=True)
+            self.world_info_publisher.publish(open_drive_msg)
             self.map_published = True

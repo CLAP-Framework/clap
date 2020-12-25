@@ -10,6 +10,8 @@
 Classes to handle lane invasion events
 """
 
+import rospy
+
 from carla_ros_bridge.sensor import Sensor
 from carla_msgs.msg import CarlaLaneInvasionEvent
 
@@ -20,25 +22,38 @@ class LaneInvasionSensor(Sensor):
     Actor implementation details for a lane invasion sensor
     """
 
-    def __init__(self, carla_actor, parent, communication, synchronous_mode):
+    def __init__(self, uid, name, parent, relative_spawn_pose, node, carla_actor, synchronous_mode):
         """
         Constructor
 
-        :param carla_actor: carla actor object
-        :type carla_actor: carla.Actor
+        :param uid: unique identifier for this object
+        :type uid: int
+        :param name: name identiying this object
+        :type name: string
         :param parent: the parent of this
         :type parent: carla_ros_bridge.Parent
-        :param communication: communication-handle
-        :type communication: carla_ros_bridge.communication
+        :param relative_spawn_pose: the spawn pose of this
+        :type relative_spawn_pose: geometry_msgs.Pose
+        :param node: node-handle
+        :type node: carla_ros_bridge.CarlaRosBridge
+        :param carla_actor: carla actor object
+        :type carla_actor: carla.Actor
         :param synchronous_mode: use in synchronous mode?
         :type synchronous_mode: bool
         """
-        super(LaneInvasionSensor, self).__init__(carla_actor=carla_actor,
+        super(LaneInvasionSensor, self).__init__(uid=uid,
+                                                 name=name,
                                                  parent=parent,
-                                                 communication=communication,
+                                                 relative_spawn_pose=relative_spawn_pose,
+                                                 node=node,
+                                                 carla_actor=carla_actor,
                                                  synchronous_mode=synchronous_mode,
-                                                 is_event_sensor=True,
-                                                 prefix="lane_invasion")
+                                                 is_event_sensor=True)
+
+        self.lane_invasion_publisher = rospy.Publisher(self.get_topic_prefix(),
+                                                       CarlaLaneInvasionEvent,
+                                                       queue_size=10)
+        self.listen()
 
     # pylint: disable=arguments-differ
     def sensor_data_updated(self, lane_invasion_event):
@@ -52,5 +67,4 @@ class LaneInvasionSensor(Sensor):
         lane_invasion_msg.header = self.get_msg_header()
         for marking in lane_invasion_event.crossed_lane_markings:
             lane_invasion_msg.crossed_lane_markings.append(marking.type)
-        self.publish_message(
-            self.get_topic_prefix(), lane_invasion_msg)
+        self.lane_invasion_publisher.publish(lane_invasion_msg)

@@ -12,11 +12,9 @@ Base Classes to handle Actor objects
 
 import numpy as np
 from geometry_msgs.msg import TransformStamped
-from std_msgs.msg import ColorRGBA
-from visualization_msgs.msg import Marker
 
 from carla_ros_bridge.pseudo_actor import PseudoActor
-import carla_ros_bridge.transforms as trans
+import carla_common.transforms as trans
 
 
 class Actor(PseudoActor):
@@ -25,26 +23,26 @@ class Actor(PseudoActor):
     Generic base class for all carla actors
     """
 
-    def __init__(self, carla_actor, parent, communication, prefix=None):
+    def __init__(self, uid, name, parent, node, carla_actor):
         """
         Constructor
-        :param carla_actor: carla vehicle actor object
-        :type carla_actor: carla.Vehicle
+
+        :param uid: unique identifier for this object
+        :type uid: int
+        :param name: name identiying this object
+        :type name: string
         :param parent: the parent of this
         :type parent: carla_ros_bridge.Parent
-        :param communication: communication-handle
-        :type communication: carla_ros_bridge.communication
-        :param prefix: the topic prefix to be used for this actor
-        :type prefix: string
+        :param node: node-handle
+        :type node: carla_ros_bridge.CarlaRosBridge
+        :param carla_actor: carla actor object
+        :type carla_actor: carla.Actor
         """
-        super(Actor, self).__init__(parent=parent,
-                                    prefix=prefix,
-                                    communication=communication)
+        super(Actor, self).__init__(uid=uid,
+                                    name=name,
+                                    parent=parent,
+                                    node=node)
         self.carla_actor = carla_actor
-
-        if carla_actor.id > np.iinfo(np.uint32).max:
-            raise ValueError("Actor ID exceeds maximum supported value '{}'".format(carla_actor.id))
-
         self.carla_actor_id = carla_actor.id
 
     def destroy(self):
@@ -66,6 +64,18 @@ class Actor(PseudoActor):
         return trans.carla_transform_to_ros_pose(
             self.carla_actor.get_transform())
 
+    def get_current_ros_twist_rotated(self):
+        """
+        Function to provide the current ROS twist rotated
+
+        :return: the ROS twist of this actor
+        :rtype: geometry_msgs.msg.Twist
+        """
+        return trans.carla_velocity_to_ros_twist(
+            self.carla_actor.get_velocity(),
+            self.carla_actor.get_angular_velocity(),
+            self.carla_actor.get_transform().rotation)
+
     def get_current_ros_twist(self):
         """
         Function to provide the current ROS twist
@@ -75,8 +85,7 @@ class Actor(PseudoActor):
         """
         return trans.carla_velocity_to_ros_twist(
             self.carla_actor.get_velocity(),
-            self.carla_actor.get_angular_velocity(),
-            self.carla_actor.get_transform().rotation)
+            self.carla_actor.get_angular_velocity())
 
     def get_current_ros_accel(self):
         """
@@ -96,7 +105,7 @@ class Actor(PseudoActor):
         """
         return self.carla_actor_id
 
-    def get_ros_transform(self, transform=None):
+    def get_ros_transform(self, transform=None, frame_id=None, child_frame_id=None):
         """
         Function to provide the current ROS transform
 
@@ -104,10 +113,16 @@ class Actor(PseudoActor):
         :rtype: geometry_msgs.msg.TransformStamped
         """
         tf_msg = TransformStamped()
-        tf_msg.header = self.get_msg_header("map")
-        tf_msg.child_frame_id = self.get_prefix()
+        if frame_id:
+            tf_msg.header = self.get_msg_header(frame_id)
+        else:
+            tf_msg.header = self.get_msg_header("map")
+        if child_frame_id:
+            tf_msg.child_frame_id = child_frame_id
+        else:
+            tf_msg.child_frame_id = self.get_prefix()
         if transform:
-            tf_msg.transform = trans.carla_transform_to_ros_transform(transform)
+            tf_msg.transform = transform
         else:
             tf_msg.transform = trans.carla_transform_to_ros_transform(
                 self.carla_actor.get_transform())
@@ -119,52 +134,4 @@ class Actor(PseudoActor):
 
         :return:
         """
-        self.publish_message('tf', ros_transform_msg)
-
-    def get_marker_color(self):  # pylint: disable=no-self-use
-        """
-        Function (override) to return the color for marker messages.
-
-        :return: the color used by a walkers marker
-        :rtpye : std_msgs.msg.ColorRGBA
-        """
-        color = ColorRGBA()
-        color.r = 0
-        color.g = 0
-        color.b = 255
-        return color
-
-    def get_marker(self):
-        """
-        Helper function to create a ROS visualization_msgs.msg.Marker for the actor
-
-        :param use_parent_frame: per default (True) the header.frame_id
-            is set to the frame of the actor's parent.
-            If this is set to False, the actor's own frame is used as basis.
-        :type use_parent_frame:  boolean
-        :return:
-        visualization_msgs.msg.Marker
-        """
-        marker = Marker(
-            header=self.get_msg_header())
-        marker.color = self.get_marker_color()
-        marker.color.a = 0.3
-        marker.id = self.get_id()
-        marker.text = "id = {}".format(marker.id)
-        return marker
-
-    def publish_marker(self):
-        """
-        Function to send marker messages of this walker.
-
-        :return:
-        """
-        marker = self.get_marker()
-        marker.type = Marker.CUBE
-
-        marker.pose = trans.carla_location_to_pose(
-            self.carla_actor.bounding_box.location)
-        marker.scale.x = self.carla_actor.bounding_box.extent.x * 2.0
-        marker.scale.y = self.carla_actor.bounding_box.extent.y * 2.0
-        marker.scale.z = self.carla_actor.bounding_box.extent.z * 2.0
-        self.publish_message('/carla/marker', marker)
+        self.node.publish_tf_message(ros_transform_msg)

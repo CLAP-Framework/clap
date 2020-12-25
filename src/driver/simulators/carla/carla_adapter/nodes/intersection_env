@@ -544,7 +544,7 @@ def restart_ego_vehicle(ego_vehicle):
         #     if vehicle.attributes['role_name'] == "ego_vehicle":
         #         vehicle.set_transform(first_start)
 
-        ego_vehicle.set_velocity(carla.Vector3D())
+        # ego_vehicle.set_velocity(carla.Vector3D())
         ego_vehicle.set_transform(first_start)
         trajectory_state = 1
 
