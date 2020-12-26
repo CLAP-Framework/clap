@@ -106,8 +106,8 @@ def change_the_world(carla_world):
 def change_traffic_lights(carla_world):
     traffic_lights = carla_world.get_actors().filter('*traffic_light*')
     for tl in traffic_lights:
-        tl.set_state(carla.TrafficLightState.Green)
-        tl.freeze(1)
+        tl.set_green_time(5)
+        tl.set_red_time(5)
         # tl.set_green_time(9.0)
         # tl.set_yellow_time(0.01)
         # tl.set_red_time(0.01)
