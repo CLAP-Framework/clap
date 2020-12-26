@@ -5,15 +5,7 @@
             "type": "sensor.pseudo.traffic_lights",
             "id": "traffic_lights"
         },
-<<<<<<< HEAD
 
-=======
-        {
-            "type": "sensor.pseudo.objects",
-            "id": "objects"
-        },
->>>>>>> master
-        
         {
             "type": "sensor.pseudo.actor_list",
             "id": "actor_list"

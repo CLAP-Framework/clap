@@ -1,10 +1,7 @@
 <launch>
     <arg name="ego_actor" default='ego_vehicle'/>
-<<<<<<< HEAD
     <arg name="carla_settings_file" default="$(find zzz_driver_simulators_carla_adapter)/launch/server.launch.yaml"/>
     <rosparam file="$(arg carla_settings_file)" command="load" />
-=======
->>>>>>> master
 
     <arg name="role_name" value="$(arg ego_actor)" />
     <arg name="objects_definition_file" default='$(find zzz_driver_simulators_carla_adapter)/config/sensors_0911.json'/>
