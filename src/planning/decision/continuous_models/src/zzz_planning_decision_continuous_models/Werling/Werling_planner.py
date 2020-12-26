@@ -24,20 +24,20 @@ MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 10.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 500.0  # maximum curvature [1/m]
 MAX_ROAD_WIDTH = 6.0   # maximum road width [m] # related to RL action space
-D_ROAD_W = 1.5  # road width sampling length [m]
+D_ROAD_W = 3.0  # road width sampling length [m]
 DT = 0.3  # time tick [s]
 MAXT = 4.6  # max prediction time [m]
 MINT = 4.0  # min prediction time [m]
-TARGET_SPEED = 15.0 / 3.6  # target speed [m/s]
-D_T_S = 5.0 / 3.6  # target speed sampling length [m/s]
-N_S_SAMPLE = 2  # sampling number of target speed
+TARGET_SPEED = 25.0 / 3.6  # target speed [m/s]
+D_T_S = 10.0 / 3.6  # target speed sampling length [m/s]
+N_S_SAMPLE = 1  # sampling number of target speed
 
 # collision check
 OBSTACLES_CONSIDERED = 5
 ROBOT_RADIUS = 3.5  # robot radius [m]
 RADIUS_SPEED_RATIO = 0.25 # higher speed, bigger circle
 MOVE_GAP = 1.0
-ONLY_SAMPLE_TO_RIGHT = True
+ONLY_SAMPLE_TO_RIGHT = False
 
 # Cost weights
 KJ = 0.1
@@ -312,13 +312,13 @@ class Werling(object):
         for i, _ in enumerate(fplist):
 
             if any([v > MAX_SPEED for v in fplist[i].s_d]):  # Max speed check
-                # rospy.logdebug("exceeding max speed")
+                rospy.logdebug("exceeding max speed")
                 continue
             elif any([abs(a) > MAX_ACCEL for a in fplist[i].s_dd]):  # Max accel check
-                # rospy.logdebug("exceeding max accel")
+                rospy.logdebug("exceeding max accel")
                 continue
             elif any([abs(c) > MAX_CURVATURE for c in fplist[i].c]):  # Max curvature check
-                # rospy.logdebug("exceeding max curvature")
+                rospy.logdebug("exceeding max curvature")
                 continue
             if not self.obs_prediction.check_collision(fplist[i]):
                 continue

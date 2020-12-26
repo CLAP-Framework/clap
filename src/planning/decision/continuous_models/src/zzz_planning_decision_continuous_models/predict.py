@@ -35,11 +35,11 @@ class predict():
             self.obs = self.found_closest_obstacles()
             self.obs_paths = self.prediction_obstacle(self.obs, self.maxt, self.dt)
         except:
-            rospy.logdebug("continous module: fail to initialize prediction")
+            rospy.logdebug("Continous module: Fail to initialize prediction")
             self.obs_paths = []
         
         
-    def check_collision(self, fp):
+    def check_collision(self, fp):      
         if len(self.obs_paths) == 0 or len(fp.t) < 2 :
             return True
             

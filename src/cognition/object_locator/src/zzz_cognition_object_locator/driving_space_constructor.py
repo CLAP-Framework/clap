@@ -249,6 +249,7 @@ class DrivingSpaceConstructor:
         #3. obstacle
         self._obstacles_markerarray = MarkerArray()
         
+        
         count = 0
         if tstates.surrounding_object_list is not None:
             for obs in tstates.surrounding_object_list:
@@ -316,9 +317,18 @@ class DrivingSpaceConstructor:
                     startpoint.x = obs.state.pose.pose.position.x
                     startpoint.y = obs.state.pose.pose.position.y
                     startpoint.z = obs.state.pose.pose.position.z
-                    endpoint.x = obs.state.pose.pose.position.x + obs.state.twist.twist.linear.x
-                    endpoint.y = obs.state.pose.pose.position.y + obs.state.twist.twist.linear.y
-                    endpoint.z = obs.state.pose.pose.position.z + obs.state.twist.twist.linear.z
+                    
+                    vel_self = np.array([[obs.state.twist.twist.linear.x], [obs.state.twist.twist.linear.y], [obs.state.twist.twist.linear.z]])
+                    # vel_world = np.matmul(rotation_mat_inverse, vel_self)
+                    # #check if it should be reversed
+                    vx_world = vel_self[0]
+                    vy_world = vel_self[1]
+                    vz_world = vel_self[2]
+
+
+                    endpoint.x = obs.state.pose.pose.position.x + vx_world
+                    endpoint.y = obs.state.pose.pose.position.y + vy_world
+                    endpoint.z = obs.state.pose.pose.position.z + vz_world
                     tempmarker.points.append(startpoint)
                     tempmarker.points.append(endpoint)
 

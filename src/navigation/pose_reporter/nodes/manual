@@ -20,9 +20,9 @@ class Node(object):
     # TODO: we don't have to guess for the origin of the map in Carla, but in a real car we need to get the starting point of a GPS
     def __init__(self):
         params = parse_private_args(
-            odom_input_topic = "/zzz/perception/odometry",
+            odom_input_topic = "/carla/ego_vehicle/odometry",
             pose_output_topic = "ego_pose",
-            gnss_input_topic = "/zzz/drivers/gnss",
+            gnss_input_topic = '/carla/ego_vehicle/gnss',#"/zzz/drivers/gnss",
             map_origin = [0, 0, 0], # [lon, lat, alt]
             odom_translatin = [0, 0, 0], # [x, y, z] in UTC
             odom_rotation = [0, 0, 0, 1], # [x, y, z, w]
@@ -34,6 +34,7 @@ class Node(object):
         self._tfupdate = False
         self._guess_from_start = params.guess_from_start
 
+        # self._gnss_new_subscriber = rospy.Subscriber(params.gnss_input_topic, NavSatFix, self.gnss_new_callback)
         self._map_origin = params.map_origin # GPS location of map origin. Map origin is (0,0,0) in local ENU frame
         self._odom_translation = params.odom_translatin # translation from map origin to odom start
         self._odom_rotation = params.odom_rotation # rotation from map axis (ENU) to odom start axis
@@ -47,6 +48,9 @@ class Node(object):
             self._gnss_synchronizer = ApproximateTimeSynchronizer(
                 self._gnss_subscriber, 5, 0.1)
             self._gnss_synchronizer.registerCallback(self.gnss_callback)
+
+    # def gnss_new_callback(self, gnss):
+    #     print("------------------")
 
     def gnss_callback(self, gnss, odom):
         map_proj = utm.from_latlon(self._map_origin[0], self._map_origin[1])
@@ -72,7 +76,6 @@ class Node(object):
         if self._tfupdate:
             self._tfreporter.sendTransform(self.create_map_odom_transform())
             self._tfupdate = False
-        
         # Transformation from odom frame to map is static
         odom_state = RigidBodyStateStamped()
         odom_state.header.frame_id = "map"

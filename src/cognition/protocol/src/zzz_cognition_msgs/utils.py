@@ -72,7 +72,7 @@ def convert_tracking_box(array, pose):
         rotation_mat_inverse = np.linalg.inv(rotation_mat) #those are the correct way to deal with quaternion
 
         vel_self = np.array([[obj.twist.twist.linear.x], [obj.twist.twist.linear.y], [obj.twist.twist.linear.z]])
-        vel_world = np.matmul(rotation_mat_inverse, vel_self)
+        vel_world = vel_self#np.matmul(rotation_mat_inverse, vel_self)
         #print("shape: ", vel_self.shape, vel_world.shape)
         #check if it should be reversed
         obstacle.state.twist.twist.linear.x = vel_world[0]
