@@ -7,7 +7,6 @@ from zzz_cognition_msgs.msg import MapState
 from zzz_planning_decision_continuous_models.VEG_ITSC.VEG_planner import VEG_Planner_ITSC
 from zzz_planning_decision_continuous_models.VEG.VEG_planner import VEG_Planner
 from zzz_planning_decision_continuous_models.VEG_2.VEG_planner_cost import VEG_Planner_cost
-
 from zzz_planning_decision_continuous_models import MainDecision
 
 from visualization_msgs.msg import Marker, MarkerArray
@@ -28,7 +27,7 @@ class RLSNode(object):
             RVIZ_predi_trajectory_topic="predi_trajectory_path", 
             RVIZ_collision_circle_topic="collision_circle", 
             RVIZ_kick_in_signal_topic="kick_in_signal",
-            hz = 2,
+            hz = 10,
         )
         self._rate = rospy.Rate(params.hz)
         
@@ -49,17 +48,18 @@ class RLSNode(object):
 
     def loop(self):
         while not rospy.is_shutdown():
+
             publish_msg = self._decision_instance.update_trajectory()
             if publish_msg:
                 self._decision_trajectory_publisher.publish(publish_msg)
                 publish_msg2 = publish_msg.trajectory
                 self._rviz_decision_trajectory_publisher.publish(publish_msg2)
-                rospy.logdebug("PUBLISH: trajectory length = %d, desired_speed = %f", 
-                    len(publish_msg.trajectory.poses), publish_msg.desired_speed)
+                # rospy.logdebug("Planning (continuous): trajectory length = ", 
+                #     len(publish_msg.trajectory.poses))
             try:
                 self.pub_rviz()
             except:
-                print("rviz_display failed")
+                rospy.logdebug("rviz_display failed")
                 
             self._rate.sleep()
         
@@ -67,7 +67,7 @@ class RLSNode(object):
         all_trajectory = self._decision_instance._trajectory_planner._rule_based_trajectory_model_instance.rivz_element.candidates_trajectory
         obs_paths = self._decision_instance._trajectory_planner._rule_based_trajectory_model_instance.rivz_element.prediciton_trajectory
         collision_circle = self._decision_instance._trajectory_planner._rule_based_trajectory_model_instance.rivz_element.collision_circle
-        kick_in_signal = self._decision_instance._trajectory_planner.kick_in_signal
+        kick_in_signal = self._decision_instance._trajectory_planner.rivz_element.kick_in_signal
         
         if all_trajectory:
             self._rviz_all_trajectory_publisher.publish(all_trajectory)
@@ -77,10 +77,7 @@ class RLSNode(object):
             self._rviz_collision_circle_publisher.publish(collision_circle)
         if kick_in_signal:
             self._rviz_kick_in_signal_publisher.publish(kick_in_signal)
-
-
-    def collision_callback(self, msg):
-        self._decision_instance._trajectory_planner._collision_signal = True
+    
 
 if __name__ == "__main__":
 

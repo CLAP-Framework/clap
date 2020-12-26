@@ -50,13 +50,13 @@ class ZZZCarlaEnv(gym.Env):
         print("ZZZ connected at {}".format(addr))
 
         # Set action space
-        self.action_space = spaces.Discrete(9) # len(fplist +1) 
+        self.action_space = spaces.Discrete(17) # len(fplist +1) 
         # 0: rule-based policy
 
-        self.state_dimention = 16
+        self.state_dimention = 20
 
-        low  = np.array([-100,  -100,   -20,  -20,  -100, -100,  -20,   -20,   -100, -100,   -20,  -20, -100,  -100, -20, -20])
-        high = np.array([100, 100, 20, 20, 100, 100, 20, 20, 100, 100, 20, 20,100, 100, 20, 20])    
+        low  = np.array([-100,  -100,   -20,  -20,-100,  -100,   -20,  -20,  -100, -100,  -20,   -20,   -100, -100,   -20,  -20, -100,  -100, -20, -20])
+        high = np.array([100, 100, 20, 20, 100, 100, 20, 20, 100, 100, 20, 20, 100, 100, 20, 20,100, 100, 20, 20])    
 
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
         self.seed()
@@ -77,9 +77,9 @@ class ZZZCarlaEnv(gym.Env):
                 # wait next state
                 received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
                 print("[GYM]: Received msg in step",received_msg)
-                self.state = received_msg[0:16]
-                collision = received_msg[16]
-                leave_current_mmap = received_msg[17]
+                self.state = received_msg[0:20]
+                collision = received_msg[20]
+                leave_current_mmap = received_msg[21]
                 
 
                 # calculate reward
@@ -95,10 +95,11 @@ class ZZZCarlaEnv(gym.Env):
                 
                 if leave_current_mmap == 1:
                     done = True
-                    reward = 1#+500
+                    reward = 0#+500
                     print("[CARLA]: Successful pass intersection")
 
                 elif leave_current_mmap == 2:
+                    reward = -1
                     done = True
                     print("[CARLA]: Restart by code")
                 
@@ -121,9 +122,9 @@ class ZZZCarlaEnv(gym.Env):
                 received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
                 print("[GYM]: Received msg in reset",received_msg)
 
-                self.state = received_msg[0:16]
-                collision = received_msg[16]
-                leave_current_mmap = received_msg[17]
+                self.state = received_msg[0:20]
+                collision = received_msg[20]
+                leave_current_mmap = received_msg[21]
             
 
                 return np.array(self.state)

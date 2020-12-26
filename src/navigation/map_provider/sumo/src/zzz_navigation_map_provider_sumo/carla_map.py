@@ -83,7 +83,7 @@ class CarlaMap(object):
         '''
         init_static_map = Map()
         init_static_map.in_junction = False
-        init_static_map.target_lane_index = 1
+        init_static_map.exit_lane_index.append(1)
         return init_static_map
 
 
@@ -123,6 +123,7 @@ class CarlaMap(object):
             point.position.x = x
             point.position.y = -y
             lane_wrapped.central_path_points.append(point)
+        lane_wrapped.speed_limit = 60
 
         return lane_wrapped
 

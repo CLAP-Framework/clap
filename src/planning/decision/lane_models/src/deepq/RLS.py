@@ -1,10 +1,7 @@
 import os
 import os.path as osp
 import random
-import numpy as np
 from rtree import index as rindex
-from collections import deque
-
 
 class RLS(object):
 
@@ -138,7 +135,7 @@ class RLS(object):
 
     def _calculate_visited_times(self, obs, visited_state_tree):
 
-        return sum(1 for _ in visited_state_tree.intersection(obs.tolist()))
+    return sum(1 for _ in visited_state_tree.intersection(obs.tolist()))
 
     def _calculate_statistics_index(self, obs, visited_state_value, visited_state_tree):
         """

@@ -16,6 +16,7 @@ class rviz_display():
         self.candidates_trajectory = None
         self.prediciton_trajectory = None
         self.collision_circle = None
+        self.kick_in_signal = None
     
     def put_trajectory_into_marker(self, fplist):
         if fplist is None or len(fplist)<1:
@@ -38,7 +39,7 @@ class rviz_display():
                 tempmarker.color.b = 0.5
                 tempmarker.color.a = 0.5
                 tempmarker.lifetime = rospy.Duration(1.0)
-                for t in range(len(fp.t)):
+                for t in range(len(fp.x)):
                     p = Point()
                     p.x = fp.x[t]
                     p.y = fp.y[t]
@@ -117,34 +118,58 @@ class rviz_display():
             tempmarker.color.a = 0.5
             tempmarker.lifetime = rospy.Duration(1.0)
             tempmarker.lifetime = rospy.Duration(1.0)
-            for t in range(len(fp.t)):
-                tempmarker.pose.position.x = fp.x[0]
-                tempmarker.pose.position.y = fp.y[0]
+            for t in range(len(fp[0].x)):
+                tempmarker.pose.position.x = fp[0].x[0]
+                tempmarker.pose.position.y = fp[0].y[0]
                 tempmarkerarray.markers.append(tempmarker)
             count = count + 1
         return tempmarkerarray
     
-    def draw_kick_in_circles(self, x, y, radius):
+    def draw_kick_in_path(self, path):
         tempmarkerarray = MarkerArray()
-
+            
         tempmarker = Marker() 
         tempmarker.header.frame_id = "map"
         tempmarker.header.stamp = rospy.Time.now()
         tempmarker.ns = "zzz/decision"
         tempmarker.id = 1
-        tempmarker.type = Marker.CYLINDER
+        tempmarker.type = Marker.LINE_STRIP
         tempmarker.action = Marker.ADD
-        tempmarker.scale.x = radius
-        tempmarker.scale.y = radius
-        tempmarker.scale.z = radius
+        tempmarker.scale.x = 0.3
         tempmarker.color.r = 1.0
         tempmarker.color.g = 0.0
         tempmarker.color.b = 0.0
-        tempmarker.color.a = 0.0
+        tempmarker.color.a = 1.0
         tempmarker.lifetime = rospy.Duration(1.0)
+        for wp in path:
+            p = Point()
+            p.x = wp[0]
+            p.y = wp[1]
+            tempmarker.points.append(p)
+        tempmarkerarray.markers.append(tempmarker)
+        return tempmarkerarray
+
+    def draw_rule_path(self, path):
+        tempmarkerarray = MarkerArray()
+            
+        tempmarker = Marker() 
+        tempmarker.header.frame_id = "map"
+        tempmarker.header.stamp = rospy.Time.now()
+        tempmarker.ns = "zzz/decision"
+        tempmarker.id = 1
+        tempmarker.type = Marker.LINE_STRIP
+        tempmarker.action = Marker.ADD
+        tempmarker.scale.x = 0.3
+        tempmarker.color.r = 0.0
+        tempmarker.color.g = 0.0
+        tempmarker.color.b = 1.0
+        tempmarker.color.a = 1.0
         tempmarker.lifetime = rospy.Duration(1.0)
-        tempmarker.pose.position.x = x
-        tempmarker.pose.position.y = y
+        for wp in path:
+            p = Point()
+            p.x = wp[0]
+            p.y = wp[1]
+            tempmarker.points.append(p)
         tempmarkerarray.markers.append(tempmarker)
         return tempmarkerarray
 
@@ -158,7 +183,7 @@ def convert_ndarray_to_pathmsg(path):
         pose.pose.position.y = wp[1]
         msg.poses.append(pose)
     msg.header.frame_id = "map" 
-
+    msg.header.stamp = rospy.Time.now()
     return msg
 
 
@@ -177,5 +202,6 @@ def convert_XY_to_pathmsg(XX,YY,path_id = 'map'):
         
         msg.poses.append(pose)
     msg.header.frame_id = path_id 
+    msg.header.stamp = rospy.Time.now()
     return msg
 

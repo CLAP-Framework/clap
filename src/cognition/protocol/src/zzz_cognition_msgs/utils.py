@@ -10,9 +10,10 @@ def default_msg(msg_type):
     '''
     if msg_type == LaneState:
         msg = LaneState()
-        msg.stop_distance = float('inf')
+        msg.ego_dis_to_lane_tail = float('inf')
     elif msg_type == MapState:
         msg = MapState()
+        msg.jmap.distance_to_lanes = float('inf')
     elif msg_type == RoadObstacle:
         msg = RoadObstacle()
     elif msg_type == JunctionMapState:
@@ -38,8 +39,9 @@ def convert_tracking_box(array, pose):
             trackpose.state.pose = obj.bbox.pose
             trackpose.state.twist = obj.twist
             trackpose.state.accel = obj.accel
-            abspose = get_absolute_state(trackpose, pose)
-
+            # abspose = get_absolute_state(trackpose, pose)
+            # TODO
+            abspose = trackpose
             assert abspose.header.frame_id == 'map'
         else:
             abspose = RigidBodyStateStamped()
@@ -53,6 +55,8 @@ def convert_tracking_box(array, pose):
         obstacle.state = abspose.state
         if len(obj.classes) > 0:
             obstacle.cls = obj.classes[0]
+            if obstacle.cls.classid == 0:
+                continue
         else:
             obstacle.cls.classid = ObjectClass.UNKNOWN
             obstacle.cls.score = 1
@@ -62,22 +66,22 @@ def convert_tracking_box(array, pose):
         #print("twist before transform: %f %f %f\n", obstacle.state.twist.twist.linear.x, obstacle.state.twist.twist.linear.y, obstacle.state.twist.twist.linear.z)
         
         # jxy: Convert velocity (twist)
+        # x = obj.bbox.pose.pose.orientation.x
+        # y = obj.bbox.pose.pose.orientation.y
+        # z = obj.bbox.pose.pose.orientation.z
+        # w = obj.bbox.pose.pose.orientation.w
+
+        # rotation_mat = np.array([[1-2*y*y-2*z*z, 2*x*y+2*w*z, 2*x*z-2*w*y], [2*x*y-2*w*z, 1-2*x*x-2*z*z, 2*y*z+2*w*x], [2*x*z+2*w*y, 2*y*z-2*w*x, 1-2*x*x-2*y*y]])
+        # rotation_mat_inverse = np.linalg.inv(rotation_mat) #those are the correct way to deal with quaternion
+
+        # vel_self = np.array([[obj.twist.twist.linear.x], [obj.twist.twist.linear.y], [obj.twist.twist.linear.z]])
+        # vel_world = np.matmul(rotation_mat_inverse, vel_self)
         
-        x = obj.bbox.pose.pose.orientation.x
-        y = obj.bbox.pose.pose.orientation.y
-        z = obj.bbox.pose.pose.orientation.z
-        w = obj.bbox.pose.pose.orientation.w
-
-        rotation_mat = np.array([[1-2*y*y-2*z*z, 2*x*y+2*w*z, 2*x*z-2*w*y], [2*x*y-2*w*z, 1-2*x*x-2*z*z, 2*y*z+2*w*x], [2*x*z+2*w*y, 2*y*z-2*w*x, 1-2*x*x-2*y*y]])
-        rotation_mat_inverse = np.linalg.inv(rotation_mat) #those are the correct way to deal with quaternion
-
-        vel_self = np.array([[obj.twist.twist.linear.x], [obj.twist.twist.linear.y], [obj.twist.twist.linear.z]])
-        vel_world = vel_self#np.matmul(rotation_mat_inverse, vel_self)
         #print("shape: ", vel_self.shape, vel_world.shape)
         #check if it should be reversed
-        obstacle.state.twist.twist.linear.x = vel_world[0]
-        obstacle.state.twist.twist.linear.y = vel_world[1]
-        obstacle.state.twist.twist.linear.z = vel_world[2]
+        obstacle.state.twist.twist.linear.x = obj.twist.twist.linear.x
+        obstacle.state.twist.twist.linear.y = obj.twist.twist.linear.y
+        obstacle.state.twist.twist.linear.z = obj.twist.twist.linear.z
 
         #print("quaternion: %f %f %f %f\n", x, y, z, w)
 

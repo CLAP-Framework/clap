@@ -56,8 +56,6 @@ class DrivingSpaceConstructor:
         assert type(static_map) == Map
         with self._static_map_lock:
             self._static_map_buffer = static_map
-            rospy.loginfo("Updated Local Static Map: lanes_num = %d, in_junction = %d, target_lane_index = %d",
-                len(static_map.lanes), int(static_map.in_junction), static_map.target_lane_index)
 
     def receive_object_list(self, object_list):
         assert type(object_list) == TrackingBoxArray
@@ -71,6 +69,7 @@ class DrivingSpaceConstructor:
         with self._ego_vehicle_state_lock:
             self._ego_vehicle_state_buffer = state
             #TODO: wrap ego vehicle just like wrapping obstacle
+
 
     def receive_traffic_light_detection(self, detection):
         assert type(detection) == DetectionBoxArray
@@ -106,7 +105,6 @@ class DrivingSpaceConstructor:
 
         # Update driving_space with tstate
         if static_map.in_junction or len(static_map.lanes) == 0:
-            rospy.logdebug("In junction due to static map report junction location")
             self.calculate_drivable_area(tstates)
         else:
             for lane in tstates.static_map.lanes:
@@ -117,14 +115,13 @@ class DrivingSpaceConstructor:
             self.locate_stop_sign_in_lanes(tstates)
             self.locate_speed_limit_in_lanes(tstates)
             self.calculate_drivable_area(tstates)
-            self.calculate_next_drivable_area(tstates)
+            # self.calculate_next_drivable_area(tstates)
         
         self._driving_space.header.frame_id = "map"
         self._driving_space.header.stamp = rospy.Time.now()
         self._driving_space.ego_state = tstates.ego_vehicle_state.state
         #TODO: drivable area. It should be updated by obstacles. Only static drivable area is not OK.
         self._driving_space.obstacles = tstates.obstacles
-        rospy.logdebug("len(self._static_map.lanes): %d", len(tstates.static_map.lanes))
 
         self.dynamic_boundary = DynamicBoundary()
         self.dynamic_boundary.header.frame_id = "map"
@@ -158,9 +155,9 @@ class DrivingSpaceConstructor:
                 tempmarker.type = Marker.LINE_STRIP
                 tempmarker.action = Marker.ADD
                 tempmarker.scale.x = 0.12
-                tempmarker.color.r = 1.0
-                tempmarker.color.g = 0.0
-                tempmarker.color.b = 0.0
+                tempmarker.color.r = 0.1
+                tempmarker.color.g = 0.8
+                tempmarker.color.b = 0.7
                 tempmarker.color.a = 0.5
                 tempmarker.lifetime = rospy.Duration(0.5)
 
@@ -249,7 +246,6 @@ class DrivingSpaceConstructor:
         #3. obstacle
         self._obstacles_markerarray = MarkerArray()
         
-        
         count = 0
         if tstates.surrounding_object_list is not None:
             for obs in tstates.surrounding_object_list:
@@ -317,18 +313,9 @@ class DrivingSpaceConstructor:
                     startpoint.x = obs.state.pose.pose.position.x
                     startpoint.y = obs.state.pose.pose.position.y
                     startpoint.z = obs.state.pose.pose.position.z
-                    
-                    vel_self = np.array([[obs.state.twist.twist.linear.x], [obs.state.twist.twist.linear.y], [obs.state.twist.twist.linear.z]])
-                    # vel_world = np.matmul(rotation_mat_inverse, vel_self)
-                    # #check if it should be reversed
-                    vx_world = vel_self[0]
-                    vy_world = vel_self[1]
-                    vz_world = vel_self[2]
-
-
-                    endpoint.x = obs.state.pose.pose.position.x + vx_world
-                    endpoint.y = obs.state.pose.pose.position.y + vy_world
-                    endpoint.z = obs.state.pose.pose.position.z + vz_world
+                    endpoint.x = obs.state.pose.pose.position.x + obs.state.twist.twist.linear.x
+                    endpoint.y = obs.state.pose.pose.position.y + obs.state.twist.twist.linear.y
+                    endpoint.z = obs.state.pose.pose.position.z + obs.state.twist.twist.linear.z
                     tempmarker.points.append(startpoint)
                     tempmarker.points.append(endpoint)
 
@@ -652,11 +639,6 @@ class DrivingSpaceConstructor:
         self._traffic_lights_markerarray = MarkerArray()
 
         #TODO: now no lights are in. I'll check it when I run the codes.
-        
-        #lights = self._traffic_light_detection.detections
-        #rospy.loginfo("lights num: %d\n\n", len(lights))
-        
-        rospy.logdebug("Updated driving space")
 
         return True
 
@@ -810,13 +792,11 @@ class DrivingSpaceConstructor:
             # Drive into junction, wait until next map
             tstates.ego_lane_index = -1
             tstates.ego_s = ego_s
-            rospy.logdebug("In junction due to close to intersection, ego_lane_index = %f, dist_to_lane_tail = %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[int(ego_lane_index)])
             return
         else:
             tstates.ego_lane_index = ego_lane_index
             tstates.ego_s = ego_s
             #TODO: this is not modified!
-        rospy.logdebug("Distance to end: (lane %f) %f", ego_lane_index, self._ego_vehicle_distance_to_lane_tail[ego_lane_index_rounded])
 
     def calculate_next_drivable_area(self, tstates):
         '''
@@ -967,8 +947,8 @@ class DrivingSpaceConstructor:
                                 if dist_list[j] > obstacle_dist:
                                     dist_list[j] = obstacle_dist
                                     angle_list[j] = math.atan2(cross_position_y - ego_y, cross_position_x - ego_x) #might slightly differ
-                                    vx = obs.state.twist.twist.linear.x[0]
-                                    vy = obs.state.twist.twist.linear.y[0]
+                                    vx = obs.state.twist.twist.linear.x
+                                    vy = obs.state.twist.twist.linear.y
                                     #a boundary only has vertical velocity, thus the direction is fixed. Only need to calculate the velocity value.
                                     v_value = vx * math.cos(direction + math.pi/2) + vy * math.sin(direction + math.pi/2)
                                     vx_list[j] = v_value * math.cos(direction + math.pi/2)
@@ -1004,8 +984,8 @@ class DrivingSpaceConstructor:
                                 if dist_list[j] > obstacle_dist:
                                     dist_list[j] = obstacle_dist
                                     angle_list[j] = math.atan2(cross_position_y - ego_y, cross_position_x - ego_x) #might slightly differ
-                                    vx = obs.state.twist.twist.linear.x[0]
-                                    vy = obs.state.twist.twist.linear.y[0]
+                                    vx = obs.state.twist.twist.linear.x
+                                    vy = obs.state.twist.twist.linear.y #[0]
                                     #a boundary only has vertical velocity, thus the direction is fixed. Only need to calculate the velocity value.
                                     v_value = vx * math.cos(direction + math.pi/2) + vy * math.sin(direction + math.pi/2)
                                     vx_list[j] = v_value * math.cos(direction + math.pi/2)

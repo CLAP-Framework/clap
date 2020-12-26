@@ -104,13 +104,7 @@ class DQN(OffPolicyRLModel):
         self.summary = None
         self.episode_reward = None
 
-        self.RLS = RLS(visited_times_thres = 30,   #FIXME(zhcao)
-                    is_training = True,
-                    debug = True,
-                    save_new_data = True,
-                    create_new_train_file = True,
-                    create_new_record_file = True,
-                    save_new_driving_data = True)
+        self.RLS = RLS()
 
         if _init_setup_model:
             self.setup_model()

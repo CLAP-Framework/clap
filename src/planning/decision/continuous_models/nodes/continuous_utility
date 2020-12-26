@@ -25,7 +25,8 @@ class DecisionNode(object):
             RVIZ_all_trajectory_topic="all_trajectory_path", 
             RVIZ_predi_trajectory_topic="predi_trajectory_path", 
             RVIZ_collision_circle_topic="collision_circle", 
-            hz = 20,
+            RVIZ_received_ref_path_topic="temp_planning_received_ref_path",
+            hz = 5,
         )
         self._rate = rospy.Rate(params.hz)
 
@@ -40,6 +41,7 @@ class DecisionNode(object):
         self._rviz_all_trajectory_publisher = rospy.Publisher(params.RVIZ_all_trajectory_topic, MarkerArray, queue_size=1)
         self._rviz_predi_trajectory_publisher = rospy.Publisher(params.RVIZ_predi_trajectory_topic, MarkerArray, queue_size=1)
         self._rviz_collision_circle_publisher = rospy.Publisher(params.RVIZ_collision_circle_topic, MarkerArray, queue_size=1)
+        self._rviz_received_ref_path_publisher = rospy.Publisher(params.RVIZ_received_ref_path_topic, Path, queue_size=1)
 
     def loop(self):
         while not rospy.is_shutdown():
@@ -48,12 +50,10 @@ class DecisionNode(object):
                 self._decision_trajectory_publisher.publish(publish_msg)
                 publish_msg2 = publish_msg.trajectory
                 self._rviz_decision_trajectory_publisher.publish(publish_msg2)
-                rospy.loginfo("continous model: PUBLISH: trajectory length = %d, desired_speed = %.1f", 
-                    len(publish_msg.trajectory.poses), publish_msg.desired_speed)
-            try:
-                self.pub_rviz()
-            except:
-                rospy.logerror("rviz_display failed")
+                rospy.loginfo(" Planning (continuous): Publish Trajectory length = %d, desired_speed = %f km/h",
+                    len(publish_msg.trajectory.poses), publish_msg.desired_speed[-1]*3.6)
+            
+            self.pub_rviz()
                 
             self._rate.sleep()
         
@@ -61,7 +61,10 @@ class DecisionNode(object):
         all_trajectory = self._decision_instance._trajectory_planner.rivz_element.candidates_trajectory
         obs_paths = self._decision_instance._trajectory_planner.rivz_element.prediciton_trajectory
         collision_circle = self._decision_instance._trajectory_planner.rivz_element.collision_circle
+        received_ref_path = self._decision_instance._trajectory_planner.ref_path_rviz
         
+        if received_ref_path:
+            self._rviz_received_ref_path_publisher.publish(received_ref_path)
         if all_trajectory:
             self._rviz_all_trajectory_publisher.publish(all_trajectory)
         if obs_paths:

@@ -5,6 +5,9 @@ from cvxopt import solvers, matrix
 from zzz_common.geometry import dense_polyline2d, dist_from_point_to_polyline2d
 from zzz_cognition_msgs.msg import MapState
 from zzz_driver_msgs.utils import get_speed, get_yaw
+from lane_werling_planner import Werling
+from zzz_navigation_msgs.msg import LanePoint
+
 
 
 class MPCTrajectory(object):
@@ -384,7 +387,6 @@ class PolylineTrajectory(object):
 
         # replace lane change path into ahead path
         smoothen_lc_path = np.concatenate((lc_path,path_after_lc),axis = 0)
-
         return smoothen_lc_path
 
     def cubic_hermite_spline(self, p0, p1, m0, m1, resolution = 20):
@@ -409,3 +411,73 @@ class PolylineTrajectory(object):
         m1 = m1.reshape(1,2)
 
         return np.matmul(h00,p0) + np.matmul(h10,m0) + np.matmul(h01,p1) + np.matmul(h11,m1)
+
+
+class Werling_planner(object):
+    def __init__(self):
+        self.last_target_lane_index = -10
+        self.lanes = []
+
+
+    def build_frenet_lane(self,dynamic_map):
+        if len(self.lanes) > 0:
+            return
+
+        lane_num = len(dynamic_map.mmap.lanes)
+        for lane_idx,lane in enumerate(dynamic_map.mmap.lanes):
+            central_path = lane.map_lane.central_path_points
+            extend_centrol_path = self.extend_path(central_path)
+            self.lanes.append(Werling(extend_centrol_path,lane_idx,lane_num))
+
+    def clean_frenet_lane(self):
+        self.lanes = []
+        self.last_target_lane_index = -1
+
+    def get_trajectory(self, dynamic_map, target_lane_index, desired_speed):
+        # ego_x = dynamic_map.ego_state.pose.pose.position.x
+        # ego_y = dynamic_map.ego_state.pose.pose.position.y
+
+        ego_lane_idx = int(round(dynamic_map.mmap.ego_lane_index))
+
+        # if len(self.lanes) <= 0:
+        # if self.last_target_lane_index < 0:
+        #     self.build_frenet_lane(dynamic_map)
+
+        if target_lane_index != self.last_target_lane_index:
+            for werlinglane in self.lanes:
+                werlinglane.lane_change_clean_buff()
+
+            self.last_target_lane_index = target_lane_index
+            
+        return self.lanes[int(target_lane_index)].trajectory_update(dynamic_map, desired_speed, ego_lane_idx)
+
+    def extend_path(self, path):
+        
+        dx = path[1].position.x - path[0].position.x
+        dy = path[1].position.y - path[0].position.y
+        
+        for i in range(1,30):
+            point = LanePoint()
+            point.position.x = path[0].position.x - dx
+            point.position.y = path[0].position.y - dy
+            path.insert(0, point)
+
+        return path
+
+    def get_rviz_info(self):
+        
+        if self.last_target_lane_index < 0:
+            return None, None, None
+        
+        all_trajectory = self.lanes[self.last_target_lane_index].rivz_element.candidates_trajectory
+        obs_paths = self.lanes[self.last_target_lane_index].rivz_element.prediciton_trajectory
+        collision_circle = self.lanes[self.last_target_lane_index].rivz_element.collision_circle
+
+        return all_trajectory, obs_paths, collision_circle
+
+    # TODO(zyxin): Add these to zzz_navigation_msgs.utils
+    def convert_path_to_ndarray(self, path):
+        point_list = [(point.position.x, point.position.y) for point in path]
+        return np.array(point_list)
+
+    

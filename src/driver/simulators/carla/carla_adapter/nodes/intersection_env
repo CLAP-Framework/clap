@@ -47,6 +47,14 @@ global trajectory_state
 trajectory_state = 0
 global needed_generate
 needed_generate = 0
+global intersection_num
+intersection_num = 0
+global collision_num
+collision_num = 0
+global stuck_num
+stuck_num = 0
+global if_stuck
+if_stuck = False
 
 global first_goal
 first_goal = Transform()
@@ -130,175 +138,6 @@ def local_static_map_callback(msg):
     else:
         if_intersection = False
 
-##########
-# Dynamic Traffic
-##########
-
-def generate_traffic_098(carla_world, blueprints_ori, spawn_points_ori, delay = 0.05):
-    
-    blueprints = [x for x in blueprints_ori if int(x.get_attribute('number_of_wheels')) == 4]
-    blueprints = [x for x in blueprints if not x.id.endswith('isetta')]
-    blueprints = [x for x in blueprints if not x.id.endswith('carlacola')]
-    blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
-    blueprints = [x for x in blueprints if not x.id.endswith('t2')]
-
-    SpawnActor = carla.command.SpawnActor
-    SetAutopilot = carla.command.SetAutopilot
-    FutureActor = carla.command.FutureActor
-    synchronous_master = False
-
-    x_max = 80
-    x_min = -90
-    y_max = 40
-    y_min = -125
-    # --------------
-    # Spawn vehicles
-    # --------------
-    batch = []
-    max_agents = randint(40,50) #70
-    recommended_points = [2,3,13,14,153,154,77,78,51,52,65,66,85,86,199,200,71,72,89,90,93,94,166,168,175,181,116,117]
-    actor_list = carla_world.get_actors()
-    vehicle_list = actor_list.filter("*vehicle*")
-    num_agents = len(vehicle_list)
-    added_vehicle_num = max_agents - num_agents
-    if added_vehicle_num > 2:
-        added_vehicle_num = 0
-    if added_vehicle_num > 0:
-        for i in recommended_points:
-
-            transform = spawn_points_ori[i]
-
-            min_d = 100
-            for vehicle in vehicle_list:
-                d = vehicle.get_location().distance(transform.location)
-                if d < min_d:
-                    min_d = d
-                if min_d < 20:
-                    break
-            if min_d < 20:
-                continue
-            blueprint = random.choice(blueprints)
-            if blueprint.has_attribute('color'):
-                color = random.choice(blueprint.get_attribute('color').recommended_values)
-                blueprint.set_attribute('color', color)
-            if blueprint.has_attribute('driver_id'):
-                driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
-                blueprint.set_attribute('driver_id', driver_id)
-            blueprint.set_attribute('role_name', 'autopilot')
-            batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
-            if len(batch) >= added_vehicle_num:
-                break
-        
-        carla_client.apply_batch_sync(batch, synchronous_master)
-
-def generate_traffic(carla_world, blueprints_ori, spawn_points_ori, delay = 0.05):
-    
-    # generate surrounding vehicles   
-    blueprint = random.choice(blueprints_ori)
-    blueprint.set_attribute('role_name', 'autopilot')
-
-    spawn_points = list(spawn_points_ori) # FIXME(zhcao): DO NOT USE THE SAME VARIABLE NAME WITH THE INPUT !!!!!!!!! 
-    
-    recommended_points = [1, 2, 3, 5, 7, 11, 12, 18, 20, 21, 22, 43, 44, 65, 71, 72, 75, 76, 77, 78, 83, 84, 102, 103, 110, 111, 118, 119, 124, 135, 136, 150, 158, 168, 173, 176, 203, 205, 238, 239, 249, 250, 274, 275]
-
-    #set_ramdom_vehicle_number
-    max_agents = randint(40,50) #70
-
-    actor_list = carla_world.get_actors()
-    vehicle_list = actor_list.filter("*vehicle*")
-    num_agents = len(vehicle_list)
-    # print("num of agents",num_agents)
-    if num_agents < max_agents: 
-        # random.shuffle(spawn_points)
-        spawn_point = spawn_points[random.choice(recommended_points)]
-        # if -120 < spawn_point.location.x < 100 and -150 < spawn_point.location.y < 70:
-        min_d = 100
-        for vehicle in vehicle_list:
-            d = vehicle.get_location().distance(spawn_point.location)
-            if d < min_d:
-                min_d = d
-        if min_d > 20:
-            new_vehicle = carla_world.try_spawn_actor(blueprint, spawn_point)
-            if new_vehicle:
-                # if "vehicle" in new_vehicle.type_id:
-                new_vehicle.set_autopilot(True)
-                return
-
-def removed_stopped_vehicle(carla_world, stopped_time_thres = 20):
-    # carla_world = ego_vehicle.get_world()
-    global stopped_time
-
-    actor_list = carla_world.get_actors()
-    vehicle_list = actor_list.filter("*vehicle*")
-
-    for vehicle in vehicle_list:
-        
-        if vehicle.attributes['role_name'] == "ego_vehicle":
-            continue
-        
-        if stopped_time[vehicle.id] < -100:
-            continue
-
-        # if vehicle.is_alive() is False:
-        #     continue
-        
-        x_max = 8000
-        x_min = -9000
-        y_max = 4000
-        y_min = -12500
-
-        v_loc = vehicle.get_location()
-        if (v_loc.x > x_max) or (v_loc.x < x_min) or (v_loc.y > y_max) or (v_loc.y < y_min):
-            print("delete vehicle move too far",v_loc.x, v_loc.y)
-            stopped_time[vehicle.id] = -100000
-            vehicle.destroy()
-            continue
-        
-        velocity = vehicle.get_velocity()
-        dist_from_origin = vehicle.get_location().distance(circle_center)
-        if stopped_time[vehicle.id] >= 0:
-            if velocity.x < 0.02 and velocity.y < 0.02:
-                stopped_time[vehicle.id] = stopped_time[vehicle.id] + 1
-            else:
-                stopped_time[vehicle.id] = 0
-
-        if stopped_time[vehicle.id] > stopped_time_thres:
-            print("delete vehicle stay too long")
-            stopped_time[vehicle.id] = -100000
-            vehicle.destroy()
-
-        # print("delete someone, vehicle.id=",vehicle.id)
-        # print("stopped_time[vehicle.id]=",stopped_time[vehicle.id])
-        # print("dist_from_origin=",dist_from_origin)
-
-                    
-
-def generate_remove_traffic(carla_world, delay = 0.5):
-    # traffic main function
-    # generate surrounding vehicles
-    # global needed_generate
-    blueprints = carla_world.get_blueprint_library().filter('vehicle.*')
-    spawn_points = carla_world.get_map().get_spawn_points()
-
-    while not rospy.is_shutdown():
-        generate_traffic_098(carla_world, blueprints, spawn_points)
-        removed_stopped_vehicle(carla_world, 20/delay)
-        time.sleep(delay)
-
-    # if rospy.Time.now().to_sec() - needed_generate > 0.5:
-    #     # Generate surrounding vehicles
-    #     generate_traffic(carla_world, blueprints, spawn_points)  #0 for fix point, 1 for random
-
-    #     # Generate pedestrians
-    #     # generate_pedestrians(carla_world,carla_client,0)
-
-    #     # Remove traffic stop and too far
-    #     removed_stopped_vehicle(carla_world, 20/delay)
-    #     # move_stopped_vehicle(carla_world, spawn_points, 10/delay)
-    #     # time.sleep(delay)
-    #     needed_generate = rospy.Time.now().to_sec()
-
-
 #######
 # Data Recording
 #######
@@ -370,55 +209,57 @@ def record_collsion_to_txt(ego_vehicle):
     global stay
     global collision_signal
     global if_intersection
-
-    '''
+    global intersection_num #FIXME: read these nums from txt
+    global collision_num
+    global stuck_num
+    global if_stuck
+    
     if_intersection = False
     ego_x = ego_vehicle.get_location().x
     ego_y = -ego_vehicle.get_location().y
     if -55.0 < ego_x < -40.0 or 20.0 < ego_x < 40:
         if -10.0 < ego_y < 10.0 or 80.0 < ego_y < 95.0:
             if_intersection = True
-            # print("++++++++++++++++++++++++++ in intersection")
-    '''
-    ego_x = ego_vehicle.get_location().x
-    ego_y = -ego_vehicle.get_location().y
 
     if not if_intersection:
         if_write = False
         if_write_collision = False
-
-    if if_intersection == True and if_write == False:
-        fw = open("/home/carla/ZZZ/record_collision.txt", 'a')   
-        if (-55 < ego_x < -45 and 17 < ego_y < 27) or (25 < ego_x < 35 and 25 < ego_y < 35):
-            fw.write("0") # into false intersection
-        else:
-            fw.write("1") # into intersection
-        fw.write("\n")
-        fw.close()               
-        print("++++++++++++++++++++++++++ in intersection")
-
-        if_write = True
-
-    if if_intersection == True and collision_signal:
-        print("collision in intersection!!!\n\n\n\n")
+    
+    if if_stuck == True:
+        stuck_num = stuck_num + 1          
+        print("Record To Txt: Stuck")
+        if_stuck = False
 
     if if_intersection == True and if_write_collision == False:    
-
         if collision_signal:
-            # fw = open("/home/carla/ZZZ/zzz/src/driver/simulators/carla/carla_adapter/nodes/record_collision.txt", 'a')   
-            fw = open("/home/carla/ZZZ/record_collision.txt", 'a')   
-            fw.write("10") # collision
-            fw.write("\n")
-            fw.close()   
-            
-            # fw = open("/home/carla/openai_baselines_update/zwt_ddpg/test_data/record_vehicle.txt", 'a')   
-            # fw.write("collision")
-            # fw.write("\n")
-            # fw.close()   
-
-            print("++++++++++++++++++++++++++ write something")
+            collision_num = collision_num + 1
+            print("Record To Txt: Collision")
             if_write_collision = True
-
+    
+    if if_intersection == True and if_write == False:
+        intersection_num = intersection_num + 1
+        print("Record To Txt: In intersection")
+        if_write = True
+    
+        # Refresh num
+        stuck_rate = float(stuck_num) / float(intersection_num)
+        collision_rate = float(collision_num) / float(intersection_num)
+        pass_rate = 1 - ((float(collision_num) + float(stuck_num)) / float(intersection_num))
+        fw = open("/home/icv/zwt_rls/record_collision.txt", 'a')   
+        # Write num
+        fw.write(str(intersection_num)) 
+        fw.write(", ")
+        fw.write(str(stuck_num)) 
+        fw.write(", ")
+        fw.write(str(collision_num)) 
+        fw.write(", ")
+        fw.write(str(stuck_rate)) 
+        fw.write(", ")
+        fw.write(str(collision_rate)) 
+        fw.write(", ")
+        fw.write(str(pass_rate)) 
+        fw.write("\n")
+        fw.close()               
 #########
 # Ego vehicle related
 #########
@@ -431,15 +272,12 @@ def adjust_ref_path(ego_x, ego_y):
         if trajectory_state != 2:              
             calculate_route(second_start, second_goal)
             trajectory_state = 2
-            print("calculated second path")
         return
         
     if math.pow((ego_x+10),2) + math.pow((ego_y-90),2) < 100:
         if trajectory_state != 1:    
             calculate_route(first_start, first_goal)
             trajectory_state = 1
-            print("calculated first path")
-
     return
 
 def ego_vehicle_outside_world(ego_x, ego_y):
@@ -454,7 +292,7 @@ def ego_vehicle_outside_world(ego_x, ego_y):
 
     return True
 
-def stay_too_long(ego_v, stay_thres = 30):
+def stay_too_long(ego_v, stay_thres = 50):
     # FIXME(zhcao): use ego_vehicle directly
     
     global stay
@@ -510,6 +348,7 @@ def restart_ego_vehicle(ego_vehicle):
     global trajectory_state
     global first_start
     global first_goal
+    global if_stuck
     
     ego_loc = ego_vehicle.get_location()
     ego_vel = ego_vehicle.get_velocity()
@@ -519,9 +358,6 @@ def restart_ego_vehicle(ego_vehicle):
 
     restart = False
 
-    # if math.pow((ego_x+10),2) + math.pow((-ego_y-90),2) < 100:
-    #     return
-
     if collision_signal:
         restart = True
         collision_signal = False
@@ -529,21 +365,15 @@ def restart_ego_vehicle(ego_vehicle):
 
     if not restart and stay_too_long(ego_v):
         restart = True
-        print("----> Restart: ego vehicle stucked")
+        if_stuck = True
+        print("----> Restart: Ego vehicle stucked")
 
     if not restart and ego_vehicle_outside_world(ego_x, ego_y):
         restart = True
-        print("----> Restart: ego vehicle out of range")
-
+        print("----> Restart: Ego vehicle out of range")
+    time.sleep(0.5)
     if restart is True:
         stay = 0
-        # actor_list = carla_world.get_actors()
-        # vehicle_list = actor_list.filter("vehicle.*")
-        # for vehicle in vehicle_list:
-        #     # Location = vehicle.get_location()
-        #     if vehicle.attributes['role_name'] == "ego_vehicle":
-        #         vehicle.set_transform(first_start)
-
         # ego_vehicle.set_velocity(carla.Vector3D())
         ego_vehicle.set_transform(first_start)
         trajectory_state = 1
@@ -581,7 +411,6 @@ if __name__ == "__main__":
     # Generate Reference Path
     dao = GlobalRoutePlannerDAO(carla_world.get_map(), 1)
     calculate_route(first_start, first_goal)
-    # ReferencePathGenerator = CarlaToRosWaypointConverter(carla_world, first_start, first_goal)
     trajectory_state = 1
     
     count = 0

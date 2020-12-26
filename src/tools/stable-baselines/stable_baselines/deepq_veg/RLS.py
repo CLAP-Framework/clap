@@ -15,7 +15,7 @@ class RLS(object):
                  is_training = True,
                  debug = True,
                  save_new_data = True,
-                 create_new_train_file = False,
+                 create_new_train_file = True,
                  create_new_record_file = True,
                  save_new_driving_data = True):
 
@@ -27,20 +27,20 @@ class RLS(object):
         self.create_new_train_file = create_new_train_file
         self.create_new_record_file = create_new_record_file
         self.save_new_driving_data = save_new_driving_data
-        self.obs_dimension = 16  
+        self.obs_dimension = 20  
         self.gamma = 0.95
         self._setup_data_saving()
         
     def _setup_data_saving(self):
 
         if self.create_new_train_file:
-            if osp.exists("$SAVEROOT/state_index.dat"):
-                os.remove("$SAVEROOT/state_index.dat")
-                os.remove("$SAVEROOT/state_index.idx")
-            if osp.exists("$SAVEROOT/visited_state.txt"):
-                os.remove("$SAVEROOT/visited_state.txt")
-            if osp.exists("$SAVEROOT/visited_value.txt"):
-                os.remove("$SAVEROOT/visited_value.txt")
+            if osp.exists("state_index.dat"):
+                os.remove("state_index.dat")
+                os.remove("state_index.idx")
+            if osp.exists("visited_state.txt"):
+                os.remove("visited_state.txt")
+            if osp.exists("visited_value.txt"):
+                os.remove("visited_value.txt")
 
             self.visited_state_value = []
             self.visited_state_counter = 0
@@ -60,7 +60,7 @@ class RLS(object):
         # ego_x, ego_y, ego_vx, ego_vy, 0f_x, 0f_y, 0f_vx, 0f_vy, 1f_x, 1f_y, 
         # 1f_vx, 1f_vy, 0r_x, 0r_y, 0r_vx, 0r_vy, 1r_x, 1r_y, 1r_vx, 1r_vy
         # 0, -1~2, 
-        self.visited_state_dist = np.array([[1, 0.3, 3, 1, 10, 0.3, 3, 1, 10, 0.3, 3, 1, 10, 0.3, 3, 1, 0.1]])
+        self.visited_state_dist = np.array([[1, 0.3, 3, 1, 10, 0.3, 3, 1,  10, 0.3, 3, 1, 10, 0.3, 3, 1, 10, 0.3, 3, 1, 0.1]])
         self.visited_state_tree = rindex.Index('state_index',properties=visited_state_tree_prop)
 
         if self.create_new_record_file:
@@ -105,11 +105,11 @@ class RLS(object):
             return True
 
         # Rule perform good
-        # mean_rule in (-1,0)
-        explore_motivation = random.uniform(-1,0)
+        # mean_rule in (-10,0), related to reward
+        explore_motivation = random.uniform(-10,0)
         if explore_motivation < mean_rule:
-            print("[RLS]: RL exploration")
             return True
+        print("[RLS]: RL exploration")
         return False
 
     def act_test(self, obs, RL_action):
@@ -121,7 +121,7 @@ class RLS(object):
         mean_rule, var_rule, sigma_rule = self._calculate_statistics_index(rule_state,
                                                                     self.visited_state_value,
                                                                     self.visited_state_tree) 
-        for candidate_action in range(1,91):
+        for candidate_action in range(1,16):
 
             RL_state = self.state_with_action(obs,candidate_action)
             visited_times_RL = self._calculate_visited_times(RL_state,self.visited_state_tree)

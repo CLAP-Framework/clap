@@ -17,7 +17,7 @@ from zzz_planning_decision_continuous_models.common import rviz_display, convert
 from zzz_planning_decision_continuous_models.predict import predict
 
 # PARAMETERS
-OBSTACLES_CONSIDERED = 3
+OBSTACLES_CONSIDERED = 4
 ACTION_SPACE_SYMMERTY = 15/3.6 
 
 
@@ -35,6 +35,7 @@ class VEG_Planner_cost(object):
         self._collision_signal = False
         self._collision_times = 0
         self._has_clear_buff = True
+        self.has_send_colli_to_gym = False
 
         self.reference_path = None
         self.ref_path = None
@@ -72,6 +73,7 @@ class VEG_Planner_cost(object):
         self.reference_path = None
         self.ref_path = None
         self.ref_path_tangets = None
+        self.has_send_colli_to_gym = False
         # send done to OPENAI
         if self._has_clear_buff == False:
             ego_x = dynamic_map.ego_state.pose.pose.position.x
@@ -91,18 +93,12 @@ class VEG_Planner_cost(object):
             else:  
                 leave_current_mmap = 1
 
-            sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # ego and obs state
+            sent_RL_msg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # ego and obs state
             sent_RL_msg.append(self._collision_signal)
             sent_RL_msg.append(leave_current_mmap)
 
             print("Send State Msg:",sent_RL_msg)
             self.sock.sendall(msgpack.packb(sent_RL_msg))
-            # try:
-                # received_msg = msgpack.unpackb(self.sock.recv(self._buffer_size))
-                # print("Received Action11:",received_msg)
-
-            # except:
-            #     pass
             self._has_clear_buff = True
         self._collision_signal = False
 
@@ -110,29 +106,35 @@ class VEG_Planner_cost(object):
 
     def trajectory_update(self, dynamic_map):
         if self.initialize(dynamic_map):
+
             self._has_clear_buff = False
             self._dynamic_map = dynamic_map
 
+            # rule-based planner
+            rule_trajectory_msg = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
+
             # wrap states
+            if self._collision_signal == True and self.has_send_colli_to_gym == True: # Only send collision state to gym once
+                return rule_trajectory_msg
+            
             sent_RL_msg = self.wrap_state()
             print("Send State Msg:",sent_RL_msg)
             self.sock.sendall(msgpack.packb(sent_RL_msg))
 
-            # rule-based planner
-            rule_trajectory_msg = self._rule_based_trajectory_model_instance.trajectory_update(dynamic_map)
-            
             # received RL action and plan a RL trajectory
-            try:
-                received_msg = msgpack.unpackb(self.sock.recv(self._buffer_size))
-                rls_action = received_msg
-                print("Received Action:",rls_action)
-                if rls_action == 0:
-                    print("----> VEG: Rule-based planning")           
-                    return rule_trajectory_msg
-                else:
-                    return self._rule_based_trajectory_model_instance.trajectory_update_RLS(dynamic_map, rls_action)
-            except:
-                return None        
+            if self._collision_signal == False and self.has_send_colli_to_gym == False: # Only received action at no collision time
+                try:
+                    received_msg = msgpack.unpackb(self.sock.recv(self._buffer_size))
+                    rls_action = received_msg
+                    print("Received Action:",rls_action)
+                    if rls_action == 0:
+                        print("----> VEG: Rule-based planning")           
+                        return rule_trajectory_msg
+                    else:
+                        return self._rule_based_trajectory_model_instance.trajectory_update_RLS(dynamic_map, rls_action)
+                except:
+                    print("----> VEG: Fail to Received ActionW")
+                    return None      
         else:
             return None   
             
@@ -141,7 +143,7 @@ class VEG_Planner_cost(object):
         # obstacle 0 : x0(4), y0(5), vx0(6), vy0(7)
         # obstacle 1 : x0(8), y0(9), vx0(10), vy0(11)
         # obstacle 2 : x0(12), y0(13), vx0(14), vy0(15)
-        state = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        state = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
         if self._dynamic_map is not None:
             #  ego state
@@ -167,7 +169,9 @@ class VEG_Planner_cost(object):
         
         # if collision
         collision = int(self._collision_signal)
-        self._collision_signal = False
+        if self._collision_signal == True:
+            self.has_send_colli_to_gym = True
+            self._collision_signal = False
         state.append(collision)
 
         # if finish
@@ -180,20 +184,25 @@ class VEG_Planner_cost(object):
         obs_tuples = []
         
         for obs in self._dynamic_map.jmap.obstacles: 
-            # calculate distance
+            
+            # Calculate distance
             p1 = np.array([self._dynamic_map.ego_state.pose.pose.position.x , self._dynamic_map.ego_state.pose.pose.position.y])
             p2 = np.array([obs.state.pose.pose.position.x , obs.state.pose.pose.position.y])
             p3 = p2 - p1
             p4 = math.hypot(p3[0],p3[1])
 
-            # transfer to frenet
+            # Obstacles too far
+            if p4 > 50:
+                continue
+
+            # Transfer to frenet
             obs_ffstate = get_frenet_state(obs.state, self.ref_path, self.ref_path_tangets)
             one_obs = (obs.state.pose.pose.position.x , obs.state.pose.pose.position.y , obs.state.twist.twist.linear.x ,
                      obs.state.twist.twist.linear.y , p4 , obs_ffstate.s , -obs_ffstate.d , obs_ffstate.vs, obs_ffstate.vd, 
                      obs.state.accel.accel.linear.x, obs.state.accel.accel.linear.y)
             obs_tuples.append(one_obs)
 
-        # sort by distance
+        # Sort by distance
         sorted_obs = sorted(obs_tuples, key=lambda obs: obs[4])   
         i = 0
         for obs in sorted_obs:
