@@ -40,11 +40,11 @@
             <param name="trajectory_topic" value="/veh0/zzz/planning/safeguard_trajectory"/>
         </node>
 
-        <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_command">
+        <!-- <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_command">
             <param name="input_topic" value="/veh0/zzz/control/command" />
             <param name="output_topic" value="/carla/zzz_veh0/vehicle_control_cmd" />
             <param name="msg_type" value="ControlCommand" />
-        </node>
+        </node> -->
         <node pkg="zzz_driver_simulators_carla_adapter" type="convert_topic" name="convert_objects">
             <param name="input_topic" value="/carla/zzz_veh0/objects" />
             <param name="output_topic" value="/veh0/zzz/perception/objects_truth" />

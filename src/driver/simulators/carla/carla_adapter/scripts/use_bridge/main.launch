@@ -1,11 +1,11 @@
 <launch>
     <arg name="ego_actor" default='hero'/>
 
-    <include file="/home/jacobz/Carla/zzz/config/launch/full_stack/perception.launch">
+    <include file="/home/jacobz/ZZZ/config/launch/full_stack/perception.launch">
         <arg name="enable_camera" value="false"/>
         <arg name="enable_lidar" value="false"/>
     </include>
-    <include file="/home/jacobz/Carla/zzz/config/launch/full_stack/planning.launch">
+    <include file="/home/jacobz/ZZZ/config/launch/full_stack/planning.launch">
         <arg name="odom_topic" value="/carla/$(arg ego_actor)/odometry"/>
         <arg name="waypoint_topic" value="/carla/$(arg ego_actor)/waypoints"/>
         <arg name="objects_topic" value="/zzz/perception/objects_truth"/>

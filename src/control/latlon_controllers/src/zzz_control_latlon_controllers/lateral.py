@@ -32,7 +32,7 @@ class PurePersuitLateralController():
         if current_speed > 10:
             control_target_dt = 0.58 - (current_speed - 10)*0.01
         else:
-            control_target_dt = 0.58
+            control_target_dt = 1 #0.58
 
         control_target_distance = control_target_dt * current_speed  ## m
         if control_target_distance < 3:
