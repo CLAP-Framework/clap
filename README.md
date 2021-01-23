@@ -3,7 +3,7 @@
 [![Simluator](https://img.shields.io/badge/Simluator-Carla-blue)](https://github.com/carla-simulator/carla)
 [![Platform](https://img.shields.io/badge/Supporting-ROS-orange)](https://www.ros.org/about-ros/)
 
-[![zzz](docs/CLAP_Flow.jpg)](https://gitlab.com/umvdl/zzz/zzz)
+[![zzz](docs/CLAP_Flow.jpg)](docs/CLAP_Flow.jpg)
 
 ## Table of Contents
 
