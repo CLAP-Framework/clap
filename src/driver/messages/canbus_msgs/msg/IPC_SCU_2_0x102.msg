@@ -8,5 +8,6 @@ float32 IPC_SCU_AccDecelReq
 uint8 IPC_SCU_AccDecelReqVD
 float32 IPC_SCU_VehSpd
 uint8 IPC_SCU_VehSpdVD
+float32 IPC_SCU_StopDist
 uint8 IPC_SCU_2_MsgCounter
 uint8 IPC_SCU_2_Checksum

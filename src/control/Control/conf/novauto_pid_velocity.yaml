@@ -1,0 +1,10 @@
+novauto_pid_parameters:
+ Kp: 40.0  #
+ Ki: 1 #
+ Kd: 0 # 
+ target_acc_smoothnumber: 6 #	
+ speed_error_max: 1.5
+ speed_error_min: -1.5
+ dt: 0.02 #cycle time
+ integrator_saturation_max: 5
+ integrator_saturation_min: -5

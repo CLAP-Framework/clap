@@ -8,6 +8,7 @@
  * 	SCU_IPC_5_0x208.msg
  * 	SCU_IPC_6_0x209.msg 
  * 	SCU_IPC_7_0x301.msg 
+ *  	POWER_MANAGE_0xB9.msg 
  *
  * @author yafei.sun@novauto.com.cn
  * @version 0.0.1
@@ -25,6 +26,7 @@
 #include "canbus_msgs/SCU_IPC_5_0x208.h"
 #include "canbus_msgs/SCU_IPC_6_0x209.h"
 #include "canbus_msgs/SCU_IPC_7_0x301.h"
+#include "canbus_msgs/POWER_MANAGE_0xB9.h"
 #include "XUdp.h"
 #include "param.h"
 
@@ -38,6 +40,7 @@
 #include "receive/Can_SCU_IPC_5_0x208.hpp"
 #include "receive/Can_SCU_IPC_6_0x209.hpp"
 #include "receive/Can_SCU_IPC_7_0x301.hpp"
+#include "receive/Can_POWER_MANAGE_0xB9.hpp"
  
 using namespace ros;
 using namespace std;
@@ -68,6 +71,7 @@ main (int argc, char **argv)
   Can_SCU_IPC_5_0x208 SCU_IPC_5_0x208;
   Can_SCU_IPC_6_0x209 SCU_IPC_6_0x209;
   Can_SCU_IPC_7_0x301 SCU_IPC_7_0x301;
+  Can_POWER_MANAGE_0xB9 POWER_MANAGE_0xB9;
 
   ipAddr = getParam < string > ("auto_control/addr", "192.168.110.101");
   ipPort = getParam < int >("auto_control/port", 4001);
@@ -79,6 +83,7 @@ main (int argc, char **argv)
   Publisher pub_SCU_IPC_5 = n.advertise < canbus_msgs::SCU_IPC_5_0x208 > ("/canbus/SCU_IPC_5", 1000);
   Publisher pub_SCU_IPC_6 = n.advertise < canbus_msgs::SCU_IPC_6_0x209 > ("/canbus/SCU_IPC_6", 1000);
   Publisher pub_SCU_IPC_7 = n.advertise < canbus_msgs::SCU_IPC_7_0x301 > ("/canbus/SCU_IPC_7", 1000);
+  Publisher pub_POWER_MANAGE = n.advertise < canbus_msgs::POWER_MANAGE_0xB9 > ("/canbus/POWER_MANAGE", 1000);
 
   if (xudp.Bind (ipPort) < 0){
     ROS_ERROR("canbus - bind socket fail");
@@ -393,6 +398,21 @@ main (int argc, char **argv)
 			scu_ipc_7_0x301.SCU_IPC_OverrideRes = override_res;	
 
 			pub_SCU_IPC_7.publish(scu_ipc_7_0x301);
+			break;
+		}
+
+		case 0xB9:
+		{
+  			canbus_msgs::POWER_MANAGE_0xB9 power_manage_0xB9;
+			POWER_MANAGE_0xB9.SetData(Tframe);
+			POWER_MANAGE_0xB9.decode();
+			CanFrame_POWER_MANAGE_0xB9 dataB9 = *(POWER_MANAGE_0xB9.data());
+
+			uint8 auto_mode_keep_enb = dataB9.AutoModeKeepEnb;
+			if(auto_mode_keep_enb > 1)  auto_mode_keep_enb=1;
+			power_manage_0xB9.POWER_MANAGE_AutoModeKeepEnb = auto_mode_keep_enb;
+
+			pub_POWER_MANAGE.publish(power_manage_0xB9);
 			break;
 		}
 

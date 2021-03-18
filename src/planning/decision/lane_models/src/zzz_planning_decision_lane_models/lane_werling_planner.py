@@ -107,13 +107,7 @@ class Werling(object):
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
             self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
             self.rivz_element.collision_circle = self.obs_prediction.rviz_collision_checking_circle
-            print("lane trajectory_array:")
-            print(len(trajectory_array))
-            print("lane local_desired_speed_before fix:")
-            print(len(local_desired_speed))
             local_desired_speed = local_desired_speed[:len(trajectory_array)]
-            print("lane local_desired_speed:")
-            print(len(local_desired_speed))
             return trajectory_array, local_desired_speed
         else:
             return None, None
@@ -124,7 +118,7 @@ class Werling(object):
             if self.csp is None:
                 self.build_frenet_path()
             # initialize prediction module  2020927lx::param 3rd 
-            self.obs_prediction = LanePredict(dynamic_map, OBSTACLES_CONSIDERED, 0, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
+            self.obs_prediction = LanePredict(dynamic_map, OBSTACLES_CONSIDERED, 5, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
                                         get_speed(dynamic_map.ego_state))
             return True
         except:

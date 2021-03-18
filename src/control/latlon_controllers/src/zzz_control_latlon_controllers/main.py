@@ -28,7 +28,7 @@ class MainController():
     def update_decision(self, decision):
         with self._trajectory_lock:
             self.desired_trajectory = decision.trajectory
-            self.desired_speed = decision.desired_speed
+            self.desired_speed = decision.desired_speed[-1]
 
     def update_pose(self, pose):
         with self._ego_state_lock:

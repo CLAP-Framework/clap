@@ -241,8 +241,8 @@ class NearestLocator:
 
             for vehicle_idx, vehicle in enumerate(tstates.surrounding_object_list):
                 # TODO: separate vehicle and other objects?
-                if vehicle.cls.classid == vehicle.cls.HUMAN and ego_v < 20/3.6:
-                    continue
+                # if vehicle.cls.classid == vehicle.cls.HUMAN and ego_v < 20/3.6:
+                #     continue
 
                 roll, pitch, yaw = quaternion_to_eular(vehicle.state.pose.pose.orientation.x,
                                                        vehicle.state.pose.pose.orientation.y,
@@ -404,14 +404,16 @@ class NearestLocator:
         for i, lane in enumerate(tstates.dynamic_map.mmap.lanes):
             traffic_rule_speed_limit = tstates.static_map.lanes[i].speed_limit
             traffic_light_available_speed = self.traffic_light_available_speed(lane, tstates.static_map.lanes[i].traffic_light_pos)
-            lane_tail_available_speed = self.lane_tail_available_speed(tstates, lane.ego_dis_to_lane_tail)
-            lane.map_lane.speed_limit = max(0, min(traffic_rule_speed_limit, traffic_light_available_speed, lane_tail_available_speed))
+            lane_tail_available_speed = self.lane_tail_available_speed(lane.ego_dis_to_lane_tail,0) #FIXME
+            lane.map_lane.speed_limit = max(0, min(traffic_rule_speed_limit, 
+                                            traffic_light_available_speed, 
+                                            lane_tail_available_speed))
             rospy.logdebug("Cognition: lane id: %d, speed limit: %.1f km/h, rule:%.1f km/h, "
                            "traffic light:%.1f km/h, lane tail:%.1f km/h",
                            i, lane.map_lane.speed_limit, traffic_rule_speed_limit,
                            traffic_light_available_speed, lane_tail_available_speed)
 
-    def traffic_light_available_speed(self, lane, traffic_light_pos, d_thres=5, dec=0.4):
+    def traffic_light_available_speed(self, lane, traffic_light_pos):
 
         if lane.map_lane.stop_state == Lane.STOP_STATE_THRU:
             return float("inf")
@@ -424,34 +426,25 @@ class NearestLocator:
             d = lane.ego_dis_to_lane_tail - pos
             break
 
-        if d < d_thres:
-            return 0
-        
-        available_speed = math.sqrt(2*dec*(d - d_thres))# m/s
-        
-        return available_speed*3.6
+        return self.lane_tail_available_speed(d, 0)
 
-    def lane_tail_available_speed(self, tstates, distance_to_tail=0, tail_speed=20/3.6):
+    def navigation_available_speed(self, tstates):
+
+        return 0
+
+    def lane_tail_available_speed(self, distance_to_tail, tail_speed=20/3.6, 
+                                        d_thres=5, dec=0.2):
         '''
         Calculate the speed when close to the tail
         TODO(zhcao): should according to the tail required speed, if tail speed is 0, it is a stop sign or red traffic light
         '''
-        if distance_to_tail <= 0:
-            return 0.0
+        if distance_to_tail <= d_thres:
+            return tail_speed
 
-        dec = 0.4
-        available_speed = math.sqrt(2 * dec * distance_to_tail)  # m/s
-        ego_v = get_speed(tstates.ego_state.state)
-
-        if available_speed > ego_v:
-            return float("inf")
-
-        dt = 0.4
-        vehicle_dec = (ego_v - available_speed) * 5
-
-        return (ego_v - vehicle_dec * dt)*3.6
+        available_speed = math.sqrt(2*dec*distance_to_tail+tail_speed**2)  # m/s
+        
+        return available_speed*3.6
       
-    # TODO(zyxin): Move this function into separate prediction module
     def predict_vehicle_behavior(self, vehicle, tstates, lane_change_thres = 0.2):
         '''
         Detect the behaviors of surrounding vehicles

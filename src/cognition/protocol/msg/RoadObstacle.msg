@@ -24,7 +24,7 @@ float32 lane_dist_right_t
 float32 lane_dist_s # s position in the road
 
 # A flag to mark whether the object is static
-bool static
+bool is_static
 
 # XXX: Do we need history trajectories?
 

@@ -1,0 +1,63 @@
+##xiaopeng  G3
+_xpg3_pid_parameters:
+ Kp: 0.15  #
+ Ki: 0.01 #
+ Kd: 0 # 
+ target_acc_smoothnumber: 6 
+ speed_error_max: 15
+ speed_error_min: -15
+ dt: 0.01 #cycle time
+ integrator_saturation_max: 1 #intergral value max
+ integrator_saturation_min: -1
+ out_acc_max: 2 #out accleration max
+ out_acc_min: -3 #out accleration min
+ out_acc_rate_max: 5
+ out_acc_rate_min: -5
+ USE_CHASSIS_ACC_LIMIT_FLAG: 0
+
+##Novacar
+novauto_pid_parameters:
+ Kp: 40.0  #
+ Ki: 1 #
+ Kd: 0 # 
+ target_acc_smoothnumber: 6 #	
+ speed_error_max: 1.5
+ speed_error_min: -1.5
+ dt: 0.02 #cycle time
+ integrator_saturation_max: 5
+ integrator_saturation_min: -5
+ 
+
+ ##carla
+carla_pid_parameters:
+ Kp: 0.15  #
+ Ki: 0.05 #
+ Kd: 0 # 
+ target_acc_smoothnumber: 6 #	
+ speed_error_max: 10
+ speed_error_min: -10
+ dt: 0.01 #cycle time
+ integrator_saturation_max: 2
+ integrator_saturation_min: -2
+ out_acc_max: 0.5 #out accleration max
+ out_acc_min: -0.5 #out accleration min
+ out_acc_rate_max: 5
+ out_acc_rate_min: -5
+
+
+##  futian
+_truck_pid_parameters:
+ Kp: 0.4  #
+ Ki: 0.01 #
+ Kd: 0 # 
+ target_acc_smoothnumber: 6 
+ speed_error_max: 5
+ speed_error_min: -7
+ dt: 0.02 #cycle time
+ integrator_saturation_max: 1 #intergral value max
+ integrator_saturation_min: -1
+ out_acc_max: 2 #out accleration max
+ out_acc_min: -2 #out accleration min
+ out_acc_rate_max: 2
+ out_acc_rate_min: -2
+ cutoff: 10

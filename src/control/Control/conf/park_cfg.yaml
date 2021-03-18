@@ -1,0 +1,20 @@
+Vehiclemodel:
+
+ LLrear: 23
+ KKrear: 300
+ LLfront: -5
+ KKfront: -10
+
+Controlparam:
+ _distance_pre: 0.0  #车辆坐标向前迭代0.7s*v
+ _delta_T: 0.15 #计算周期
+ _t_preview: 0.72 #s 预瞄时间  0.72jingdugao 
+ _t_preview_turn: 0.72 #预瞄时间2	
+
+
+ _dis_pre_max: 30
+ _dis_pre_min: 2
+ _wheel_angle_degree_max: 510 #
+ _wheel_angle_degree_sec: 200  #
+ _smoothsteernum: 6 #方向盘输出平滑个数
+

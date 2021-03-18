@@ -1,0 +1,35 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(rslidar_pointcloud)
+
+add_compile_options(-O2)
+
+add_compile_options(-std=c++11)
+set(CMAKE_BUILD_TYPE Release)#RelWithDebInfo
+set(${PROJECT_NAME}_CATKIN_DEPS
+    angles
+    nodelet
+    pcl_ros
+    sensor_msgs
+    tf
+    rslidar_driver
+    rslidar_msgs
+    dynamic_reconfigure
+)
+
+find_package(catkin REQUIRED COMPONENTS
+             ${${PROJECT_NAME}_CATKIN_DEPS} 
+	     pcl_conversions)
+	     #health_checker)
+find_package(Boost COMPONENTS signals system filesystem)
+find_package(PkgConfig REQUIRED)
+include_directories(${catkin_INCLUDE_DIRS}
+  ${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake
+)
+
+generate_dynamic_reconfigure_options(cfg/CloudNode.cfg)
+
+catkin_package(
+        CATKIN_DEPENDS ${${PROJECT_NAME}_CATKIN_DEPS}
+)
+
+add_subdirectory(src)

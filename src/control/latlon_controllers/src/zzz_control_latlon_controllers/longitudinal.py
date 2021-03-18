@@ -14,7 +14,7 @@ class PIDLongitudinalController():
         K_I: Integral term
         dt: time differential in seconds
         """
-        self._K_P = 0.25/3.6
+        self._K_P = 0.75/3.6
         self._K_D = 0.01
         self._K_I = 0.012
         self._dt = 0.05 # TODO: timestep

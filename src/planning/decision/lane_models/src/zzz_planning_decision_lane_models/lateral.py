@@ -33,10 +33,13 @@ class LaneUtility(object):
         return target_lane
 
     def get_candidate_lanes(self, available_lane_change_range=1.2):
-        candidate_lanes = np.arange(
-            math.ceil(self.dynamic_map.mmap.ego_lane_index - available_lane_change_range),
-            math.floor(self.dynamic_map.mmap.ego_lane_index + available_lane_change_range)
-        )
+        
+        rightest_lane = max(0, math.ceil(self.dynamic_map.mmap.ego_lane_index - 
+                                                available_lane_change_range))
+        leftest_lane = min(len(self.dynamic_map.mmap.lanes)-1,
+                                math.floor(self.dynamic_map.mmap.ego_lane_index + 
+                                                available_lane_change_range))
+        candidate_lanes = np.arange(rightest_lane,leftest_lane+1)
 
         return candidate_lanes
 

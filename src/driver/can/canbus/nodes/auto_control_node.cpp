@@ -45,6 +45,10 @@ SendCanFrame_IPC_SCU_1 (const canbus_msgs::IPC_SCU_1_0x106 & msg)
   if (msg.IPC_SCU_DBWReq >= 0 && msg.IPC_SCU_DBWReq <= 15)
     DBWReq = msg.IPC_SCU_DBWReq;
 
+  uint16_t refSpd = round((msg.IPC_SCU_RefSpd+4) * 100);    //-4～4
+  if(refSpd  > 800) 
+    refSpd = 800;
+
   uint8_t ReadyReq;
   if (msg.IPC_SCU_ReadyReq == 0x00 || msg.IPC_SCU_ReadyReq == 0x01)
     ReadyReq = msg.IPC_SCU_ReadyReq;
@@ -91,7 +95,8 @@ SendCanFrame_IPC_SCU_1 (const canbus_msgs::IPC_SCU_1_0x106 & msg)
   Buf106[4] = 0x06;   //0x0106
 
   //////////////data segment/////////////
-  Buf106[5] = DBWReq << 4;      //Motorola MSB
+  Buf106[5] = (DBWReq << 4) | ((refSpd >> 6) & 0x000f );      //Motorola MSB
+  Buf106[6] = ((refSpd & 0x003f) << 2);        
   Buf106[7] = (ReadyReq << 6) | (BrakeLight << 4) | ((SteerAngleReq >> 12) & 0x000f );
   Buf106[8] = (SteerAngleReq >> 4) & 0x00ff;
   Buf106[9] = ((SteerAngleReq & 0x000f) << 4) | (SteerAngleReqVD << 3) | ((TorsionBarTqReq >> 8) & 0x0007);
@@ -153,6 +158,10 @@ SendCanFrame_IPC_SCU_2 (const canbus_msgs::IPC_SCU_2_0x102 & msg)
   if (msg.IPC_SCU_VehSpdVD == 0x00 || msg.IPC_SCU_VehSpdVD == 0x01)
     VehSpdVD = msg.IPC_SCU_VehSpdVD;
 
+  uint16_t stopDist = round((msg.IPC_SCU_StopDist+2) * 100);    //-2～8
+  if(stopDist  > 1000) 
+    stopDist = 1000;
+
   static int MsgCounter = 0;
   if(MsgCounter > 0x0f){
     MsgCounter = 0;
@@ -176,8 +185,9 @@ SendCanFrame_IPC_SCU_2 (const canbus_msgs::IPC_SCU_2_0x102 & msg)
        ((ParkingReqToEPB & 0x03) << 2) | ((AccDecelReq >> 8) & 0x0003);
   Buf102[7] = AccDecelReq & 0x00ff;
   Buf102[8] = (AccDecelReqVD << 7)  | ((VehSpd  >> 6)& 0x007f);
-  Buf102[9] = (VehSpd & 0x003f << 2) | (VehSpdVD << 1);
-  Buf102[11] = MsgCounter;
+  Buf102[9] = (VehSpd & 0x003f << 2) | (VehSpdVD << 1) | ((stopDist >> 9) & 0x0001);
+  Buf102[10] = (stopDist >> 1) & 0x00ff;
+  Buf102[11] = (stopDist & 0x0001 << 7) | MsgCounter;
   MsgCounter++;
   uint8_t Checksum = CalculateCheckSum(&Buf102[5], 7);
   // uint8_t Checksum = 0xff ^ (Buf102[5] + Buf102[6] + Buf102[7] 

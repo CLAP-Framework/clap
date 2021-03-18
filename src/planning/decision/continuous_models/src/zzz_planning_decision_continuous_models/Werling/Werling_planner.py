@@ -17,7 +17,7 @@ from zzz_common.geometry import dense_polyline2d, dense_polyline2d_withvelocity
 from zzz_planning_msgs.msg import DecisionTrajectory
 
 from zzz_planning_decision_continuous_models.common import rviz_display, convert_ndarray_to_pathmsg, convert_path_to_ndarray
-from zzz_planning_decision_continuous_models.predict import predict
+from zzz_planning_decision_continuous_models.predict import predict, JunctionPredict
 from zzz_common.geometry import dist_from_point_to_polyline2d
 
 # Parameter
@@ -29,13 +29,13 @@ D_ROAD_W = 0.8  # road width sampling length [m]
 DT = 0.6  # time tick [s]
 MAXT = 8.6  # max prediction time [m]
 MINT = 8.0  # min prediction time [m]
-TARGET_SPEED = 12.0 / 3.6  # target speed [m/s]
+TARGET_SPEED = 15.0 / 3.6  # target speed [m/s]
 D_T_S = 3.0 / 3.6  # target speed sampling length [m/s]
 N_S_SAMPLE = 4  # sampling number of target speed
 
 # collision check
 OBSTACLES_CONSIDERED = 3
-ROBOT_RADIUS = 2.0  # robot radius [m]
+ROBOT_RADIUS = 4.0  # robot radius [m]
 RADIUS_SPEED_RATIO = 0.25 # higher speed, bigger circle
 MOVE_GAP = 1.0
 ONLY_SAMPLE_TO_RIGHT = False
@@ -68,6 +68,7 @@ class Werling(object):
         self.csp = None
         self.dist_to_end = [0,0,0,0,0]
         self.target_line = target_line
+        self.last_loop_obstacles = []
 
         self.rivz_element = rviz_display()
     
@@ -114,7 +115,7 @@ class Werling(object):
                 self.last_trajectory_array_rule = trajectory_array
                 self.last_trajectory_rule = generated_trajectory              
                 rospy.logdebug("Planning (continuous): ----> Werling Successful Planning")
-            
+
             elif len(self.last_trajectory_array_rule) > 5 and self.c_speed > 1:
                 trajectory_array = self.last_trajectory_array_rule
                 generated_trajectory = self.last_trajectory_rule
@@ -133,13 +134,8 @@ class Werling(object):
             msg.trajectory = convert_ndarray_to_pathmsg(trajectory)
             msg.desired_speed = self.ref_tail_speed(dynamic_map, velocity_trajectory)
 
-            print("intersection trajectory_array:")
-            print(len(trajectory))
-            print("intersection local_desired_speed:")
-            print(len(msg.desired_speed))
-
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
-            self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
+            self.rivz_element.prediciton_trajectory = self.rivz_element.draw_predicted_path(self.obs_prediction.obs_paths, 1)
             self.rivz_element.collision_circle = self.obs_prediction.rviz_collision_checking_circle
             return msg
         else:
@@ -147,24 +143,25 @@ class Werling(object):
 
     def initialize(self, dynamic_map):
         self._dynamic_map = dynamic_map
-        try:
-            # calculate dist to the end of ref path 
-            if self.ref_path is not None:
-                self.dist_to_end = dist_from_point_to_polyline2d(dynamic_map.ego_state.pose.pose.position.x, dynamic_map.ego_state.pose.pose.position.y, self.ref_path, return_end_distance=True)
-                
-            # estabilish frenet frame
-            if self.csp is None: # or self.dist_to_end[4] < 10 or self.dist_to_end[0] > 20:
-                self.build_frenet_path(dynamic_map, True)
-                
-            # initialize prediction module
-            self.obs_prediction = predict(dynamic_map, OBSTACLES_CONSIDERED, MAXT, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
-                                        get_speed(dynamic_map.ego_state))
+        # calculate dist to the end of ref path 
+        if self.ref_path is not None:
+            self.dist_to_end = dist_from_point_to_polyline2d(dynamic_map.ego_state.pose.pose.position.x, dynamic_map.ego_state.pose.pose.position.y, self.ref_path, return_end_distance=True)
             
-            return True
+        # estabilish frenet frame
+        if self.csp is None: # or self.dist_to_end[4] < 10 or self.dist_to_end[0] > 20:
+            self.build_frenet_path(dynamic_map, True)
+            
+        # initialize prediction module
+        self.obs_prediction = JunctionPredict(dynamic_map, OBSTACLES_CONSIDERED, 8, DT, ROBOT_RADIUS, RADIUS_SPEED_RATIO, MOVE_GAP,
+                                    get_speed(dynamic_map.ego_state), self.last_loop_obstacles)
+        
+        self.last_loop_obstacles = copy.deepcopy(self._dynamic_map.jmap.obstacles)
 
-        except:
-            rospy.logdebug("Planning (continuous): ------> Werling Initialize fail ")
-            return False
+        return True
+
+        # except:
+        #     rospy.logdebug("Planning (continuous): ------> Werling Initialize fail ")
+        #     return False
 
     def ref_tail_speed(self, dynamic_map, desired_speed):
 

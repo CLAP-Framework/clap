@@ -15,17 +15,17 @@ class IDM(object):
             rospy.logwarn("Planning (lanes): Xiaopeng Mode")
 
         self.T = 1.8
-        self.g0 = 7
+        self.g0 = 7 + 5
         self.a = 2.73 
         self.b = 1.65 + 5
         self.delta = 4
-        self.decision_dt = 0.75
+        self.decision_dt = 0.2
         self.dynamic_map = None
 
-        if running_mode == 'xiaopeng':
-            self.T = self.T * 2
-            self.g0 = self.g0 + 2
-            self.decision_dt = self.decision_dt - 0.55
+        # if running_mode == 'xiaopeng':
+        #     self.T = self.T * 2
+        #     self.g0 = self.g0 + 2
+        #     self.decision_dt = self.decision_dt - 0.55
     
     def update_dynamic_map(self, dynamic_map):
         self.dynamic_map = dynamic_map

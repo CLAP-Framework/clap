@@ -124,6 +124,35 @@ class rviz_display():
                 tempmarkerarray.markers.append(tempmarker)
             count = count + 1
         return tempmarkerarray
+
+    def draw_predicted_path(self, fplist, radius):
+        if fplist is None:
+            return None
+        tempmarkerarray = MarkerArray()
+        count = 0
+
+        for fp in fplist:
+            for t in range(len(fp.x)):
+                tempmarker = Marker() 
+                tempmarker.header.frame_id = "map"
+                tempmarker.header.stamp = rospy.Time.now()
+                tempmarker.ns = "zzz/decision"
+                tempmarker.id = count
+                tempmarker.type = Marker.CYLINDER
+                tempmarker.action = Marker.ADD
+                tempmarker.scale.x = radius
+                tempmarker.scale.y = radius
+                tempmarker.scale.z = radius
+                tempmarker.color.r = 1.0
+                tempmarker.color.g = 0.0
+                tempmarker.color.b = 0.5
+                tempmarker.color.a = 0.5
+                tempmarker.lifetime = rospy.Duration(1.0)
+                tempmarker.pose.position.x = fp.x[t]
+                tempmarker.pose.position.y = fp.y[t]
+                tempmarkerarray.markers.append(tempmarker)
+                count = count + 1
+        return tempmarkerarray
     
     def draw_kick_in_path(self, path):
         tempmarkerarray = MarkerArray()

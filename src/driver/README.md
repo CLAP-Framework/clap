@@ -103,3 +103,8 @@ ultrasound radar topics are below:
 /us_radar/Detections
 /us_radar/Distances
 
+### change log 2020-10-21
+
+add message for power management module
+POWER_MANAGE_0xB9.msg
+

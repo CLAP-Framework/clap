@@ -18,6 +18,7 @@ add_message_files(DIRECTORY msg FILES
   SCU_IPC_5_0x208.msg
   SCU_IPC_6_0x209.msg
   SCU_IPC_7_0x301.msg
+  POWER_MANAGE_0xB9.msg
 )
 
 ## Generate added messages and services with any dependencies listed here

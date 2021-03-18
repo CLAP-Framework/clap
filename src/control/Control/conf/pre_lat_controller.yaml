@@ -1,0 +1,51 @@
+Vehiclemodel:
+ _lf: 1.56 #the distance from mass center to front wheel 
+ _lr: 1.5 #the distance from mass center to rear wheel 
+ _L:  3   #wheel base
+ _m: 1818.2 #the mass of vehicle
+ _Ccf: 66900 # fron tire side stiffness
+ _Ccr: 62700 # rear tire side stiffness
+ _Clf: 66900 # front longitudinal stiffness of tires
+ _Clr: 62700 # rear longitudinal stiffness of tires
+ _delta_f: 0 # front Side Angle of tyre
+ _Sf: 0.2    # Slip rate
+ _Sr: 0.2    # Slip rate
+ _I: 4175    # The moment of inertia
+ _g: 9.8     # G
+ _Rmin: 6 # Minimum turning radius
+ _K: 15.7    #Tire steering wheel ratio 
+
+Controlparam:
+ preview_time: 0.3  #车辆坐标向前迭代0.7s*v
+ _delta_T: 0.01 #计算周期0.15
+ _t_preview: 1.5 #s 预瞄时间  0.72jingdugao 
+ _t_preview_turn: 3 
+ _P_post: 10 #0～3
+
+ _lat_gain : 35 # 0;35
+ _lat_angle_gain: -5
+
+ _dis_pre_max: 30
+ _dis_pre_min: 2
+ _wheel_angle_degree_max: 510 #
+ _wheel_angle_degree_sec: 400  #
+
+ _kappa: 0.7 #曲率补偿值增益
+ _smoothsteernum: 10 #方向盘输出平滑个数
+ point_distancemax: 2 #路径点间距检测
+ car_path_dis: 20 #车辆当前位置和路径起点的最大值距离
+ path_size_min: 5 #判断路径长度的最小阈值
+ _d_0: 1.957 #起始距离.Yamlparam
+ _d_dis_min: 2.5  #侧向最小预瞄距离   
+ _d_dis_max: 40   #侧向最大预瞄距离
+ _d_dis_min_k: 5  #曲率最小预瞄距离
+ _d_dis_max_k: 40 #曲率最大预瞄距离
+ _KK: -0.3 #X1系数
+ _T:  0.01 #单周期步长 sec
+
+ kappa_path_change_flag: 0.02 # 直角弯切换标志位。
+ lat_error_max: 1.5  #侧向误差最大值
+ yaw_error_max: 30   #角度误差最大值
+ PathLength_min: 6  # 轨迹最小长度
+ USE_CHASSIS_ACC_LIMIT_FLAG: 1 
+ curvature_gain: 1

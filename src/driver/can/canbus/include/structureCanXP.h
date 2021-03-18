@@ -144,6 +144,13 @@ typedef struct
    TotalOdometerVD, TotalOdometer, ACSt, ErrSt, OverrideRes);
 }CanFrame_SCU_IPC_7_0x301;  //0x301;
 
+typedef struct
+{
+ uint8 AutoModeKeepEnb; // 
+
+   MSGPACK_DEFINE(AutoModeKeepEnb);
+}CanFrame_POWER_MANAGE_0xB9;  //0xB9;
+
 ///////////timerange/////////////////////////
 //timestamptimerange
 ///////////////////////////////////////////////////
@@ -204,4 +211,11 @@ typedef struct
      MSGPACK_DEFINE(time,timerange,data);
 } TimestampedCanFrame_SCU_IPC_7_0x301;      //0x301
 
+typedef struct
+{
+   road_time_t time;
+   road_timerange_t timerange;
+   CanFrame_POWER_MANAGE_0xB9 data;
+     MSGPACK_DEFINE(time,timerange,data);
+} TimestampedCanFrame_POWER_MANAGE_0xB9;      //0xB9
 #endif 

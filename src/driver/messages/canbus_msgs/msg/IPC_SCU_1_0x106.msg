@@ -1,6 +1,7 @@
 Header header
 
 uint8 IPC_SCU_DBWReq
+float32 IPC_SCU_RefSpd
 uint8 IPC_SCU_ReadyReq
 uint8 IPC_SCU_BrakeLight
 float32 IPC_SCU_SteerAngleReq

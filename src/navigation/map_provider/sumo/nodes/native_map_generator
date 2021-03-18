@@ -13,17 +13,17 @@ from geometry_msgs.msg import Pose
 from nav_msgs.msg import Path
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import Map, MapString
-from zzz_navigation_map_provider_sumo import ShougangMap
+from zzz_navigation_map_provider_sumo import ShougangMap, TLMap
 
 class MapProvider(object):
     def __init__(self):
         params = parse_private_args(
-            map_output_topic = "local_static_map", # /zzz/navigation/local_static_map
-            pose_topic = "ego_pose", # /zzz/navigation/ego_pose
+            map_output_topic = "/zzz/navigation/local_static_map", # /zzz/navigation/local_static_map
+            pose_topic = "/zzz/navigation/ego_pose", # /zzz/navigation/ego_pose
             hz = 10
         )
         self._rate = rospy.Rate(params.hz)
-        self._map_instance = ShougangMap()
+        self._map_instance = TLMap()
 
         # Map Loading moved into init.
         self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self.pose_callback)

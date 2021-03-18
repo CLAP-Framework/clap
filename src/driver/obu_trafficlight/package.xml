@@ -1,0 +1,18 @@
+<package format="2">
+  <name>obu_trafficlight</name>
+  <version>0.1.0</version>
+  <description>
+    OBU server for Lights
+  </description>
+  <license>BSD</license>
+  <maintainer email="hongyan.pei@novauto.com.cn">Hongyan Pei</maintainer>
+  <author email="hongyan.pei@novauto.com.cn">Hongyan Pei</author>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>zzz_perception_msgs</build_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>zzz_perception_msgs</exec_depend>
+  <export><architecture_independent/></export>
+</package>

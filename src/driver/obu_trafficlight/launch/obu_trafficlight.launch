@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Start the node -->
+  <node pkg="obu_trafficlight" type="obu_trafficlight" name="obu_trafficlight">
+  </node>
+</launch>

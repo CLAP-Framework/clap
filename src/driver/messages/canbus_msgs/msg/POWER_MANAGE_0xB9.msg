@@ -1,0 +1,3 @@
+Header header
+
+uint8 POWER_MANAGE_AutoModeKeepEnb

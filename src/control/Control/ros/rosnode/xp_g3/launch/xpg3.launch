@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="xp_g3" name="xpg3_controller"  type="xpg3_controller" output="screen">
+    
+    <param name="~deadacc" type="double" value="0.1"/>   
+  </node>
+</launch>
