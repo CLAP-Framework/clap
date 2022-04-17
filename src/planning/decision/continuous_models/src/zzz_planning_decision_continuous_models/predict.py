@@ -28,17 +28,17 @@ class predict():
         self.rviz_collision_checking_circle = None
         self.rivz_element = rviz_display()
 
-        # try:
-        self.reference_path = self.dynamic_map.jmap.reference_path.map_lane.central_path_points
-        ref_path_ori = convert_path_to_ndarray(self.reference_path)
-        self.ref_path = dense_polyline2d(ref_path_ori, 2)
-        self.ref_path_tangets = np.zeros(len(self.ref_path))
+        try:
+            self.reference_path = self.dynamic_map.jmap.reference_path.map_lane.central_path_points
+            ref_path_ori = convert_path_to_ndarray(self.reference_path)
+            self.ref_path = dense_polyline2d(ref_path_ori, 2)
+            self.ref_path_tangets = np.zeros(len(self.ref_path))
 
-        self.obs = self.found_closest_obstacles()
-        self.obs_paths = self.prediction_obstacle(self.obs, self.maxt, self.dt)
-        # except:
-        #     rospy.logerror("Planning (continuous): Fail to initialize prediction")
-        #     self.obs_paths = []
+            self.obs = self.found_closest_obstacles()
+            self.obs_paths = self.prediction_obstacle(self.obs, self.maxt, self.dt)
+        except:
+            print("Planning (continuous): Fail to initialize prediction")
+            self.obs_paths = []
 
     def check_collision(self, fp):
 
@@ -50,12 +50,6 @@ class predict():
         fp_back = copy.deepcopy(fp)
         
         try:
-            # for t in range(len(fp.yaw)):
-            #     fp_front.x[t] = fp.x[t] + math.cos(fp.yaw[t]) * self.move_gap
-            #     fp_front.y[t] = fp.y[t] + math.sin(fp.yaw[t]) * self.move_gap
-            #     fp_back.x[t] = fp.x[t] - math.cos(fp.yaw[t]) * self.move_gap
-            #     fp_back.y[t] = fp.y[t] - math.sin(fp.yaw[t]) * self.move_gap
-
             fp_front.x = (np.array(fp.x)+np.cos(np.array(fp.yaw))*self.move_gap).tolist()
             fp_front.y = (np.array(fp.y)+np.sin(np.array(fp.yaw))*self.move_gap).tolist()
             fp_back.x = (np.array(fp.x)-np.cos(np.array(fp.yaw))*self.move_gap).tolist()
@@ -64,13 +58,13 @@ class predict():
             for obsp in self.obs_paths:
                 len_predict_t = min(len(fp.t), len(obsp[0].t))
                 predict_step = 2
-                start_predict = 2
+                start_predict = 0
                 for t in range(start_predict, len_predict_t, predict_step):
                     d = (obsp[0].x[t] - fp_front.x[t])**2 + (obsp[0].y[t] - fp_front.y[t])**2
-                    if d <= (self.check_radius / 2)**2 + (self.robot_radius + obsp[1] * self.radius_speed_ratio)**2: 
+                    if d <= (self.check_radius / 2)**2 + (self.robot_radius + 0.5 * obsp[1] * self.radius_speed_ratio)**2: 
                         return False
                     d = (obsp[0].x[t] - fp_back.x[t])**2 + (obsp[0].y[t] - fp_back.y[t])**2
-                    if d <= (self.check_radius / 2)**2 + (self.robot_radius + obsp[1] * self.radius_speed_ratio)**2: 
+                    if d <= (self.check_radius / 2)**2 + (self.robot_radius + 0.5 * obsp[1] * self.radius_speed_ratio)**2: 
                         return False
         except:
             pass
@@ -118,16 +112,16 @@ class predict():
                 obsp_back = Frenet_path()
                 obsp_front.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
                 obsp_back.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
-                ax = 0 #one_ob[9]
-                ay = 0 #one_ob[10]
+                ax = one_ob[9]*np.ones(len(obsp_front.t))
+                ay = one_ob[10]*np.ones(len(obsp_front.t))
 
                 vx = one_ob[2]*np.ones(len(obsp_front.t))
                 vy = one_ob[3]*np.ones(len(obsp_front.t))
                 v = math.sqrt(pow(one_ob[2], 2) + pow(one_ob[3], 2))
 
                 yaw = one_ob[11]
-                obspx = one_ob[0] + np.arange(len(obsp_front.t))*delta_t*vx
-                obspy = one_ob[1] + np.arange(len(obsp_front.t))*delta_t*vy
+                obspx = one_ob[0] + np.arange(len(obsp_front.t))*delta_t*vx + np.square(np.arange(len(obsp_front.t)))*0.5*ax*delta_t*delta_t
+                obspy = one_ob[1] + np.arange(len(obsp_front.t))*delta_t*vy + np.square(np.arange(len(obsp_front.t)))*0.5*ay*delta_t*delta_t
                 
                 obsp_front.x = (obspx + math.cos(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
                 obsp_front.y = (obspy + math.sin(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
@@ -197,27 +191,21 @@ class LanePredict():
         fp_back = copy.deepcopy(fp)
         
         try:
-            # for t in range(len(fp.yaw)):
-            #     fp_front.x[t] = fp.x[t] + math.cos(fp.yaw[t]) * self.move_gap
-            #     fp_front.y[t] = fp.y[t] + math.sin(fp.yaw[t]) * self.move_gap
-            #     fp_back.x[t] = fp.x[t] - math.cos(fp.yaw[t]) * self.move_gap
-            #     fp_back.y[t] = fp.y[t] - math.sin(fp.yaw[t]) * self.move_gap
-
             fp_front.x = (np.array(fp.x)+np.cos(np.array(fp.yaw))*self.move_gap).tolist()
             fp_front.y = (np.array(fp.y)+np.sin(np.array(fp.yaw))*self.move_gap).tolist()
             fp_back.x = (np.array(fp.x)-np.cos(np.array(fp.yaw))*self.move_gap).tolist()
             fp_back.y = (np.array(fp.y)-np.sin(np.array(fp.yaw))*self.move_gap).tolist()
 
             for obsp in self.obs_paths:
-                len_predict_t = min(len(fp.t), len(obsp.t))
+                len_predict_t = min(len(fp.t), len(obsp[0].t))
                 predict_step = 2
-                start_predict = 2
+                start_predict = 0
                 for t in range(start_predict, len_predict_t, predict_step):
-                    d = (obsp.x[t] - fp_front.x[t])**2 + (obsp.y[t] - fp_front.y[t])**2
-                    if d <= self.check_radius**2: 
+                    d = (obsp[0].x[t] - fp_front.x[t])**2 + (obsp[0].y[t] - fp_front.y[t])**2
+                    if d <= (self.check_radius / 2)**2 + (self.robot_radius + 0.5 * obsp[1] * self.radius_speed_ratio)**2: 
                         return False
-                    d = (obsp.x[t] - fp_back.x[t])**2 + (obsp.y[t] - fp_back.y[t])**2
-                    if d <= self.check_radius**2: 
+                    d = (obsp[0].x[t] - fp_back.x[t])**2 + (obsp[0].y[t] - fp_back.y[t])**2
+                    if d <= (self.check_radius / 2)**2 + (self.robot_radius + 0.5 * obsp[1] * self.radius_speed_ratio)**2: 
                         return False
         except:
             pass
@@ -255,11 +243,10 @@ class LanePredict():
                 break
         
         return np.array(closest_obs)
-
+        
     def prediction_obstacle(self, ob, max_prediction_time, delta_t): # we should do prediciton in driving space
         
         obs_paths = []
-
         for one_ob in ob:
             if one_ob[12] != 2: # vehicle
                 obsp_front = Frenet_path()
@@ -271,6 +258,8 @@ class LanePredict():
 
                 vx = one_ob[2]*np.ones(len(obsp_front.t))
                 vy = one_ob[3]*np.ones(len(obsp_front.t))
+                v = math.sqrt(pow(one_ob[2], 2) + pow(one_ob[3], 2))
+
                 yaw = one_ob[11]
                 obspx = one_ob[0] + np.arange(len(obsp_front.t))*delta_t*vx
                 obspy = one_ob[1] + np.arange(len(obsp_front.t))*delta_t*vy
@@ -280,8 +269,9 @@ class LanePredict():
                 obsp_back.x = (obspx - math.cos(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
                 obsp_back.y = (obspy - math.sin(yaw)*np.ones(len(obsp_front.t))*self.move_gap).tolist()
           
-                obs_paths.append(obsp_front)
-                obs_paths.append(obsp_back)
+                obs_paths.append([obsp_front, v])
+                obs_paths.append([obsp_back, v])
+
 
             if one_ob[12] == 2: # Pedestrian
                 obsp = Frenet_path()
@@ -291,6 +281,8 @@ class LanePredict():
 
                 vx = one_ob[2]*np.ones(len(obsp.t))
                 vy = one_ob[3]*np.ones(len(obsp.t))
+                v = math.sqrt(pow(one_ob[2], 2) + pow(one_ob[3], 2))
+
                 yaw = one_ob[11]
                 obspx = one_ob[0] + np.arange(len(obsp.t))*delta_t*vx
                 obspy = one_ob[1] + np.arange(len(obsp.t))*delta_t*vy
@@ -298,7 +290,7 @@ class LanePredict():
                 obsp.x = obspx.tolist()
                 obsp.y = obspy.tolist()
                        
-                obs_paths.append(obsp)
+                obs_paths.append([obsp_front, v])
 
         # self.rviz_collision_checking_circle = self.rivz_element.draw_obs_circles(obs_paths, self.check_radius)
 
@@ -354,7 +346,7 @@ class JunctionPredict():
             for obsp in self.obs_paths:
                 len_predict_t = min(len(fp.t), len(obsp.t))
                 predict_step = 2
-                start_predict = 2
+                start_predict = 0
                 for t in range(start_predict, len_predict_t, predict_step):
                     d = (obsp.x[t] - fp_front.x[t])**2 + (obsp.y[t] - fp_front.y[t])**2
                     if d <= self.check_radius**2: 
@@ -545,7 +537,7 @@ class __ngLanePredict():
             for obsp in self.obs_paths:
                 len_predict_t = min(len(fp.t), len(obsp.t))
                 predict_step = 2
-                start_predict = 2
+                start_predict = 0
                 for t in range(start_predict, len_predict_t, predict_step):
                     d = (obsp.x[t] - fp_front.x[t])**2 + (obsp.y[t] - fp_front.y[t])**2
                     if d <= self.check_radius**2: 

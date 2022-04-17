@@ -7,6 +7,8 @@ catkin_package()
 catkin_install_python(PROGRAMS
   nodes/convert_topic
   nodes/intersection_env
+  nodes/leftturn_env 
+  nodes/highway_env 
   scripts/spawn_agent
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

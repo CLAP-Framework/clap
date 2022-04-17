@@ -115,12 +115,12 @@ class Werling(object):
                 self.last_trajectory_rule = generated_trajectory              
                 rospy.logdebug("Planning (continuous): ----> Werling Successful Planning")
             
-            elif len(self.last_trajectory_array_rule) > 5 and self.c_speed > 1:
-                trajectory_array = self.last_trajectory_array_rule
+            elif len(self.last_trajectory_rule.s_d) > 5 and self.c_speed > 1:
                 generated_trajectory = self.last_trajectory_rule
+                trajectory_array = np.c_[generated_trajectory.x, generated_trajectory.y]
                 desired_speed =  [0] * len(generated_trajectory.s_d)
                 rospy.logdebug("Planning (continuous): ----> Werling Fail to find a solution")
-
+                
             else:
                 generated_trajectory =  self.all_trajectory[0][0]
                 trajectory_array = np.c_[generated_trajectory.x, generated_trajectory.y]
@@ -171,9 +171,9 @@ class Werling(object):
                 velocity.append(0)
                 continue
 
-            if self.dist_to_end[4] <= 15:
-                velocity.append(0)
-                continue
+            # if self.dist_to_end[4] <= 15:
+            #     velocity.append(0)
+            #     continue
 
             dec = 0.1
 

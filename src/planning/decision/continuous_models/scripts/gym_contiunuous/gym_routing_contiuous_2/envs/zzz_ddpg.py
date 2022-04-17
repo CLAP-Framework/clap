@@ -29,7 +29,7 @@ from gym.utils import seeding
 
 class ZZZCarlaEnv(gym.Env):
     metadata = {'render.modes': []}
-    def __init__(self, zzz_client="127.0.0.1", port=2333, recv_buffer=4096, socket_time_out = 1000):
+    def __init__(self, zzz_client="127.0.0.1", port=2333, recv_buffer=4096, socket_time_out = 1000000):
     
         self._restart_motivation = 0
         self.state = []
@@ -50,13 +50,13 @@ class ZZZCarlaEnv(gym.Env):
         print("ZZZ connected at {}".format(addr))
 
         # Set action space
-        self.action_space = spaces.Discrete(17) # len(fplist +1) 
+        self.action_space = spaces.Discrete(12) # len(fplist + 2) one for rule, one for brake 
         # 0: rule-based policy
 
-        self.state_dimention = 20
+        self.state_dimention = 16
 
-        low  = np.array([-100,  -100,   -20,  -20,-100,  -100,   -20,  -20,  -100, -100,  -20,   -20,   -100, -100,   -20,  -20, -100,  -100, -20, -20])
-        high = np.array([100, 100, 20, 20, 100, 100, 20, 20, 100, 100, 20, 20, 100, 100, 20, 20,100, 100, 20, 20])    
+        low  = np.array([10,  -2, 0, -2,-50, -50, -20, -20, -50, -50, -20, -20, -50, -50, -20,-20])#, -100,  -100, -20, -20])
+        high = np.array([40,   2, 10, 2, 50,  50,  20,  20,  50,  50,  20,  20,  50,  50 , 20, 20])#,100, 100, 20, 20])    
 
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
         self.seed()
@@ -77,39 +77,37 @@ class ZZZCarlaEnv(gym.Env):
                 # wait next state
                 received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
                 print("[GYM]: Received msg in step",received_msg)
-                self.state = received_msg[0:20]
-                collision = received_msg[20]
-                leave_current_mmap = received_msg[21]
-                
+                self.state = received_msg[0:16]
+                collision = received_msg[16]
+                leave_current_mmap = received_msg[17]
 
-                # calculate reward
-                reward = 0
+                # step reward
+                reward = 0#self.state[2] * 0.01
                 
                 # judge if finish
                 done = False
 
                 if collision:
                     done = True
-                    reward = -10#-1000
+                    reward = -10
                     print("[CARLA]: Vehicle received collision")
                 
-                if leave_current_mmap == 1:
+                if leave_current_mmap == 1 and collision == False:
                     done = True
-                    reward = 0#+500
+                    reward = 10
                     print("[CARLA]: Successful pass intersection")
 
-                elif leave_current_mmap == 2:
+                elif leave_current_mmap == 2 and collision == False:
                     reward = -1
                     done = True
                     print("[CARLA]: Restart by code")
                 
-                # self.record_rl_intxt(action, q_value, RLpointx, RLpointy, rule_q, collision, leave_current_mmap, ego_s, threshold)
                 return np.array(self.state), reward, done,  {}
             except:
                 print("[GYM]: Not Received msg in step")
                 reward = 0 
                 done = False
-                return np.array(self.state), reward, done,  {}
+                return None
             
 
     def reset(self, **kargs):
@@ -118,15 +116,13 @@ class ZZZCarlaEnv(gym.Env):
         # if the received information meets requirements
         while True:
             try:
-            
+                
                 received_msg = msgpack.unpackb(self.sock_conn.recv(self.sock_buffer))
                 print("[GYM]: Received msg in reset",received_msg)
 
-                self.state = received_msg[0:20]
-                collision = received_msg[20]
-                leave_current_mmap = received_msg[21]
-            
-
+                self.state = received_msg[0:16]
+                collision = received_msg[16]
+                leave_current_mmap = received_msg[17]
                 return np.array(self.state)
 
                 # if not collision and not leave_current_mmap:
@@ -134,9 +130,8 @@ class ZZZCarlaEnv(gym.Env):
                 print("[GYM]: Not received msg in reset")
                 collision = 0
                 leave_current_mmap = 0
-                return np.array(self.state)
+                return None
 
-        return np.array(self.state)
 
 
     def render(self, mode='human'):

@@ -8,9 +8,9 @@ carla:
   passive: False
   # enable/disable synchronous mode. If enabled ros-bridge waits until
   # expected data is received for all sensors
-  synchronous_mode: false
+  synchronous_mode: True
   # within synchronous mode: wait for a vehicle control command before next tick?
-  synchronous_mode_wait_for_vehicle_control_command: true
+  synchronous_mode_wait_for_vehicle_control_command: True
   # set the fixed timestep length
   fixed_delta_seconds: 0.05
   # configuration values for the ego vehicle

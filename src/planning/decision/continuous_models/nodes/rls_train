@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 
 import rospy
+import time
+from std_msgs.msg import Header, Int16
+
 from zzz_common.params import parse_private_args
 from zzz_cognition_msgs.msg import MapState
 
 from zzz_planning_decision_continuous_models.VEG_ITSC.VEG_planner import VEG_Planner_ITSC
 from zzz_planning_decision_continuous_models.VEG.VEG_planner import VEG_Planner
-from zzz_planning_decision_continuous_models.VEG_2.VEG_planner_cost import VEG_Planner_cost
+from zzz_planning_decision_continuous_models.VEG_Bootstrapped.VEG_planner_cost import VEG_Planner_cost
+from zzz_planning_decision_continuous_models.Bisimulation.Bisimulation_planner import Bisimulation_planner
 from zzz_planning_decision_continuous_models import MainDecision
 
 from visualization_msgs.msg import Marker, MarkerArray
@@ -30,14 +34,15 @@ class RLSNode(object):
             hz = 10,
         )
         self._rate = rospy.Rate(params.hz)
-        
-        model_trajectory = VEG_Planner_cost()
+
+        model_trajectory = Bisimulation_planner()
         self._decision_instance = MainDecision(trajectory_planner=model_trajectory)
 
         # ROS messages
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
         self._collision_subscriber = rospy.Subscriber("/carla/ego_vehicle/collision", CarlaCollisionEvent, self.collision_callback)
         self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
+        self._restart_subscriber = rospy.Subscriber("/carla/ego_vehicle/restart", Int16, self.restart_callback)
 
         self._rviz_decision_trajectory_publisher = rospy.Publisher(params.RVIZ_decision_trajectory_topic, Path, queue_size=1)
         self._rviz_all_trajectory_publisher = rospy.Publisher(params.RVIZ_all_trajectory_topic, MarkerArray, queue_size=1)
@@ -48,7 +53,6 @@ class RLSNode(object):
 
     def loop(self):
         while not rospy.is_shutdown():
-
             publish_msg = self._decision_instance.update_trajectory()
             if publish_msg:
                 self._decision_trajectory_publisher.publish(publish_msg)
@@ -78,6 +82,24 @@ class RLSNode(object):
         if kick_in_signal:
             self._rviz_kick_in_signal_publisher.publish(kick_in_signal)
     
+
+
+    def collision_callback(self, msg):
+        self._decision_instance._trajectory_planner._collision_signal = True
+        self._decision_instance.during_restart = True
+        print("Planning (continuous): Restart! Collision")
+        time.sleep(0.5)
+        self.decision_module_clear_buff()
+    def restart_callback(self, msg):
+        if msg.data > 0:
+            print("Planning (continuous): Restart!")
+            self._decision_instance.during_restart = True
+            self.decision_module_clear_buff()
+    
+    def decision_module_clear_buff(self):
+
+        self._decision_instance._trajectory_planner.clear_buff(self._decision_instance._dynamic_map_buffer)   
+        
 
 if __name__ == "__main__":
 

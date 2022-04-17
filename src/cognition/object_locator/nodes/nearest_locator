@@ -4,6 +4,8 @@ import os
 import rospy
 import threading
 
+from std_msgs.msg import Header, Int16
+
 from zzz_common.params import parse_private_args
 from zzz_driver_msgs.msg import RigidBodyStateStamped
 from zzz_navigation_msgs.msg import Map
@@ -29,6 +31,7 @@ class LocatorNode(object):
         self._map_instance = NearestLocator()
         self._rate = rospy.Rate(params.hz)
 
+        self._restart_subscriber = rospy.Subscriber("/carla/ego_vehicle/restart", Int16, self.restart_callback)
         self._pose_subscriber = rospy.Subscriber(params.pose_topic, RigidBodyStateStamped, self._map_instance.receive_ego_state)
         self._surrounding_vehicle_subscriber = rospy.Subscriber(params.objects_topic, TrackingBoxArray, self._map_instance.receive_object_list)
         self._static_map_subscriber = rospy.Subscriber(params.map_input_topic, Map, self._map_instance.receive_static_map)
@@ -51,6 +54,12 @@ class LocatorNode(object):
                 # TODO(lx): remove visulization part in every node to module visulization
                 self._rviz_nearest_front_vehicle.publish(self._map_instance.nearest_front_vehicle_marker)
                 self._rviz_corner_to_lane.publish(self._map_instance.corner_to_lane_marker)
+
+    def restart_callback(self, msg):
+        # return None
+        if msg.data == True:
+            print("Cognition (nearest_locator): Restart!")
+            self._map_instance.__init__()
 
 if __name__ == "__main__":
 

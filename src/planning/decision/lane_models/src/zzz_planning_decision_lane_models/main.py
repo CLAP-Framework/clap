@@ -23,7 +23,6 @@ class MainDecision(object):
         self._local_trajectory_instance = Werling_planner() # MPCTrajectory()
 
         self._dynamic_map_lock = Lock()
-        self._collision_signal = False
 
     def receive_dynamic_map(self, dynamic_map):
         assert type(dynamic_map) == MapState
@@ -42,12 +41,11 @@ class MainDecision(object):
 
         if dynamic_map.model == dynamic_map.MODEL_JUNCTION_MAP: 
 
-            if dynamic_map.jmap.distance_to_lanes < close_to_lane and self._collision_signal == False:
+            if dynamic_map.jmap.distance_to_lanes < close_to_lane:
                 self._local_trajectory_instance.build_frenet_lane(dynamic_map)
                 return None
             else:
                 self._local_trajectory_instance.clean_frenet_lane()
-                self._collision_signal = False
                 return None
 
         if len(self._local_trajectory_instance.lanes) == 0:
@@ -55,7 +53,6 @@ class MainDecision(object):
             return None
 
         changing_lane_index, desired_speed = self._lateral_model_instance.lateral_decision(dynamic_map)
-        
         ego_speed = get_speed(dynamic_map.ego_state)
 
         rospy.logdebug("Planning (lanes): target_lane = %d, target_speed = %f km/h, current_speed: %f km/h", changing_lane_index, desired_speed*3.6, ego_speed*3.6)

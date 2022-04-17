@@ -126,7 +126,7 @@ class CarlaSpawnObjects(object):
                 self.setup_sensors(vehicle["sensors"], carla_id)
             else:
                 spawn_object_request = SpawnObjectRequest()
-                spawn_object_request.type = vehicle["type"]
+                spawn_object_request.type = "vehicle.lincoln.mkz2017" # vehicle["type"] FIXME:Zwt for fix vehicle type
                 spawn_object_request.id = vehicle["id"]
                 spawn_object_request.attach_to = 0
                 spawn_object_request.random_pose = False

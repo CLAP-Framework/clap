@@ -1,0 +1,6 @@
+{"episode_reward": 0.0, "episode": 1.0, "batch_reward": -9.999000030802563e-05, "ae_transition_loss": 1.665224276483059, "duration": 8.155739784240723, "step": 57}
+{"episode_reward": -0.005699430056994304, "episode": 2.0, "batch_reward": -9.999000030802563e-05, "ae_transition_loss": 3.9249405384063722, "duration": 10.079339265823364, "step": 97}
+{"episode_reward": -0.003999600039996002, "episode": 3.0, "batch_reward": -9.999000030802563e-05, "ae_transition_loss": 2.4211338728666307, "duration": 10.645279169082642, "step": 137}
+{"episode_reward": -0.003999600039996002, "episode": 4.0, "batch_reward": -9.999000030802563e-05, "ae_transition_loss": 2.672462429319109, "duration": 11.073657035827637, "step": 179}
+{"episode_reward": -0.004199580041995802, "episode": 5.0, "batch_reward": -9.999000030802563e-05, "ae_transition_loss": 8.184478265898568, "duration": 10.706114530563354, "step": 221}
+{"episode_reward": -0.004199580041995802, "episode": 6.0, "batch_reward": -9.999000030802563e-05, "ae_transition_loss": 3.1418525998185323, "duration": 10.644160985946655, "step": 262}

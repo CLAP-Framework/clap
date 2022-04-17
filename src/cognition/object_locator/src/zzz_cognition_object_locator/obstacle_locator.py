@@ -22,16 +22,16 @@ from zzz_visualization_rviz_box_visualizer.utils import RvizVisualizer
 class NearestLocator:
     def __init__(self, lane_dist_thres=5): 
         
-        self._static_map_lock = Lock()
+        # self._static_map_lock = Lock()
         self._static_map_buffer = None
 
-        self._ego_vehicle_state_lock = Lock()
+        # self._ego_vehicle_state_lock = Lock()
         self._ego_vehicle_state_buffer = None
 
-        self._surrounding_object_list_lock = Lock()
+        # self._surrounding_object_list_lock = Lock()
         self._surrounding_object_list_buffer = None
 
-        self._traffic_light_detection_lock = Lock()
+        # self._traffic_light_detection_lock = Lock()
         self._traffic_light_detection_buffer = None
         
         self._lane_dist_thres = lane_dist_thres
@@ -47,24 +47,20 @@ class NearestLocator:
 
     def receive_static_map(self, static_map):
         assert type(static_map) == Map
-        with self._static_map_lock:
-            self._static_map_buffer = static_map
+        self._static_map_buffer = static_map
 
     def receive_object_list(self, object_list):
         assert type(object_list) == TrackingBoxArray
-        with self._surrounding_object_list_lock:
-            if self._ego_vehicle_state_buffer != None:
-                self._surrounding_object_list_buffer = convert_tracking_box(object_list, self._ego_vehicle_state_buffer)
+        if self._ego_vehicle_state_buffer != None:
+            self._surrounding_object_list_buffer = convert_tracking_box(object_list, self._ego_vehicle_state_buffer)
 
     def receive_ego_state(self, state):
         assert type(state) == RigidBodyStateStamped
-        with self._ego_vehicle_state_lock:
-            self._ego_vehicle_state_buffer = state
+        self._ego_vehicle_state_buffer = state
 
     def receive_traffic_light_detection(self, detection):
         assert type(detection) == DetectionBoxArray
-        with self._traffic_light_detection_lock:
-            self._traffic_light_detection_buffer = detection
+        self._traffic_light_detection_buffer = detection
 
     # ====== Data Updator =======
     
@@ -76,48 +72,46 @@ class NearestLocator:
         # - static_map_lane_path_array
         # - static_map_lane_tangets
         # - surrounding_object_list
+        # - traffic_light_detection
+
         tstates = edict()
         # Skip if not ready
         if not self._ego_vehicle_state_buffer:
             rospy.logwarn("Cognition: not receive ego pose")
             return None
-        with self._ego_vehicle_state_lock:
-            tstates.ego_state = copy.deepcopy(self._ego_vehicle_state_buffer) 
-
+        
         # Update buffer information
+        tstates.ego_state = copy.deepcopy(self._ego_vehicle_state_buffer) 
         tstates.surrounding_object_list = copy.deepcopy(self._surrounding_object_list_buffer or [])
-
         tstates.static_map = copy.deepcopy(self._static_map_buffer or navigation_default(Map)) 
-        static_map = tstates.static_map # for easier access
         tstates.static_map_lane_path_array = get_lane_array(tstates.static_map.lanes)
         tstates.static_map_lane_tangets = [[point.tangent for point in lane.central_path_points] for lane in tstates.static_map.lanes]
-        tstates.dynamic_map = cognition_default(MapState)
         tstates.traffic_light_detection = self._traffic_light_detection_buffer
-        dynamic_map = tstates.dynamic_map # for easier access
+        tstates.dynamic_map = cognition_default(MapState)
 
         # Create dynamic maps and add static map elements
-        dynamic_map.header.frame_id = "map"
-        dynamic_map.header.stamp = rospy.Time.now()
-        dynamic_map.ego_state = tstates.ego_state.state
+        tstates.dynamic_map.header.frame_id = "map"
+        tstates.dynamic_map.header.stamp = rospy.Time.now()
+        tstates.dynamic_map.ego_state = tstates.ego_state.state
 
-        if static_map.in_junction or len(static_map.lanes) == 0:
+        if tstates.static_map.in_junction or len(tstates.static_map.lanes) == 0:
             rospy.logdebug("Cognition: In junction due to static map report junction location")
-            dynamic_map.model = MapState.MODEL_JUNCTION_MAP
-            dynamic_map.jmap.drivable_area = static_map.drivable_area
+            tstates.dynamic_map.model = MapState.MODEL_JUNCTION_MAP
+            tstates.dynamic_map.jmap.drivable_area = tstates.static_map.drivable_area
         else:
-            dynamic_map.model = MapState.MODEL_MULTILANE_MAP
-            for lane in static_map.lanes:
+            tstates.dynamic_map.model = MapState.MODEL_MULTILANE_MAP
+            for lane in tstates.static_map.lanes:
                 dlane = cognition_default(LaneState)
                 dlane.map_lane = lane
-                dynamic_map.mmap.lanes.append(dlane)
-            dynamic_map.mmap.exit_lane_index = copy.deepcopy(static_map.exit_lane_index)
+                tstates.dynamic_map.mmap.lanes.append(dlane)
+            tstates.dynamic_map.mmap.exit_lane_index = copy.deepcopy(tstates.static_map.exit_lane_index)
 
         # Locate vehicles onto the junction map
         # TODO: Calculate frenet coordinate for objects in here or in put_buffer?
         self.locate_objects_in_junction(tstates)
 
         # Locate vehicles onto the multilane map
-        if dynamic_map.model == MapState.MODEL_MULTILANE_MAP:
+        if tstates.dynamic_map.model == MapState.MODEL_MULTILANE_MAP:
             self.locate_traffic_light_in_lanes(tstates)
             self.locate_ego_vehicle_in_lanes(tstates)
         
@@ -129,8 +123,8 @@ class NearestLocator:
         if tstates.dynamic_map.model == MapState.MODEL_JUNCTION_MAP:
             # clean traffic lights
             self._traffic_light_detection_buffer = None
-
-        return dynamic_map
+        
+        return tstates.dynamic_map
 
     # ========= For in lane =========
 
@@ -170,7 +164,7 @@ class NearestLocator:
 
     def locate_objects_in_junction(self, tstates, danger_area = 80):
         tstates.dynamic_map.jmap.obstacles = []
-               
+
         for obj in tstates.surrounding_object_list:
             dist_to_ego = math.sqrt(math.pow((obj.state.pose.pose.position.x - tstates.ego_state.state.pose.pose.position.x),2) 
                 + math.pow((obj.state.pose.pose.position.y - tstates.ego_state.state.pose.pose.position.y),2))
@@ -186,7 +180,7 @@ class NearestLocator:
 
     # TODO: adjust lane_end_dist_thres to class variable
     def locate_ego_vehicle_in_lanes(self, tstates, 
-                            lane_end_dist_thres=15,
+                            lane_end_dist_thres=5,
                             lane_head_thres = 4, 
                             lane_dist_thres = 5):
         dist_list = np.array([dist_from_point_to_polyline2d(

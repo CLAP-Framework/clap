@@ -107,7 +107,8 @@ class Werling(object):
             self.rivz_element.candidates_trajectory = self.rivz_element.put_trajectory_into_marker(self.all_trajectory)
             self.rivz_element.prediciton_trajectory = self.rivz_element.put_trajectory_into_marker(self.obs_prediction.obs_paths)
             self.rivz_element.collision_circle = self.obs_prediction.rviz_collision_checking_circle
-            return trajectory_array, local_desired_speed
+            if len(trajectory_array) > 0:
+                return trajectory_array, local_desired_speed
         else:
             return None, None
 

@@ -24,7 +24,6 @@ class rviz_display():
         try:
             tempmarkerarray = MarkerArray()
             count = 0
-
             for fp in fplist:
                 tempmarker = Marker() 
                 tempmarker.header.frame_id = "map"
@@ -33,16 +32,16 @@ class rviz_display():
                 tempmarker.id = count
                 tempmarker.type = Marker.LINE_STRIP
                 tempmarker.action = Marker.ADD
-                tempmarker.scale.x = 0.05
+                tempmarker.scale.x = 0.1
                 tempmarker.color.r = 0.0
                 tempmarker.color.g = 1.0
                 tempmarker.color.b = 0.5
                 tempmarker.color.a = 0.5
                 tempmarker.lifetime = rospy.Duration(1.0)
-                for t in range(len(fp.x)):
+                for t in range(len(fp[0].x)):
                     p = Point()
-                    p.x = fp.x[t]
-                    p.y = fp.y[t]
+                    p.x = fp[0].x[t]
+                    p.y = fp[0].y[t]
                     tempmarker.points.append(p)
                 tempmarkerarray.markers.append(tempmarker)
                 count = count + 1

@@ -1,7 +1,7 @@
 from setuptools import setup
 
-setup(name='carla_trainning',
-      version='0.0.2',
+setup(name='zzz-highway-v1',
+      version='0.0.1',
       install_requires=['gym'],  # And any other dependencies foo needs
-      packages=['gym_routing', 'gym_routing.envs']
+      packages=['gym_routing_highway', 'gym_routing_highway.envs']
 )

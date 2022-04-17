@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import rospy
+from std_msgs.msg import Header, Int16
+
 from zzz_common.params import parse_private_args
 from zzz_cognition_msgs.msg import MapState
 
@@ -37,6 +39,7 @@ class DecisionNode(object):
         self._dynamic_map_subscriber = rospy.Subscriber(params.dynamic_map_topic, MapState, self._decision_instance.receive_dynamic_map)
         self._decision_trajectory_publisher = rospy.Publisher(params.decision_trajectory_topic, DecisionTrajectory, queue_size=1)
         
+        self._restart_subscriber = rospy.Subscriber("/carla/ego_vehicle/restart", Int16, self.restart_callback)
         self._rviz_decision_trajectory_publisher = rospy.Publisher(params.RVIZ_decision_trajectory_topic, Path, queue_size=1)
         self._rviz_all_trajectory_publisher = rospy.Publisher(params.RVIZ_all_trajectory_topic, MarkerArray, queue_size=1)
         self._rviz_predi_trajectory_publisher = rospy.Publisher(params.RVIZ_predi_trajectory_topic, MarkerArray, queue_size=1)
@@ -71,7 +74,13 @@ class DecisionNode(object):
             self._rviz_predi_trajectory_publisher.publish(obs_paths)
         if collision_circle:
             self._rviz_collision_circle_publisher.publish(collision_circle)
-                
+    def restart_callback(self, msg):
+        if msg.data == True:
+            print("Planning (lanes): Restart!")
+            self.decision_module_clear_buff()
+    
+    def decision_module_clear_buff(self):
+        self._decision_instance._trajectory_planner.clear_buff(self._decision_instance._dynamic_map_buffer)   
         
 if __name__ == "__main__":
 

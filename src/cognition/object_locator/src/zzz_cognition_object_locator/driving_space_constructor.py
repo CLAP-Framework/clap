@@ -264,23 +264,24 @@ class DrivingSpaceConstructor:
                     tempmarker.scale.x = obs.dimension.length_x
                     tempmarker.scale.y = obs.dimension.length_y
                     tempmarker.scale.z = obs.dimension.length_z
-                    if obs.lane_index == -1:
-                        tempmarker.color.r = 0.5
-                        tempmarker.color.g = 0.5
-                        tempmarker.color.b = 0.5
-                    elif obs.lane_dist_left_t == 0 or obs.lane_dist_right_t == 0:
-                        # those who is on the lane boundary, warn by yellow
-                        tempmarker.color.r = 1.0
-                        tempmarker.color.g = 1.0
-                        tempmarker.color.b = 0.0
-                    else:
-                        tempmarker.color.r = 1.0
-                        tempmarker.color.g = 0.0
-                        tempmarker.color.b = 1.0
-                    if tstates.static_map.in_junction:
-                        tempmarker.color.r = 1.0
-                        tempmarker.color.g = 0.0
-                        tempmarker.color.b = 1.0
+                    # if obs.lane_index == -1:
+                    #     tempmarker.color.r = 0.5
+                    #     tempmarker.color.g = 0.5
+                    #     tempmarker.color.b = 0.5
+                    # elif obs.lane_dist_left_t == 0 or obs.lane_dist_right_t == 0:
+                    #     # those who is on the lane boundary, warn by yellow
+                    #     tempmarker.color.r = 1.0
+                    #     tempmarker.color.g = 1.0
+                    #     tempmarker.color.b = 0.0
+                    # else:
+                    #     tempmarker.color.r = 1.0
+                    #     tempmarker.color.g = 0.0
+                    #     tempmarker.color.b = 1.0
+                    # if tstates.static_map.in_junction:
+                    tempmarker.color.r = 1.0
+                    tempmarker.color.g = 0.0
+                    tempmarker.color.b = 1.0
+                    #temp
                     tempmarker.color.a = 0.5
                     tempmarker.lifetime = rospy.Duration(0.5)
 

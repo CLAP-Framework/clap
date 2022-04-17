@@ -103,6 +103,8 @@ class CarlaEgoVehicle(object):
         """
         # Get vehicle blueprint.
         blueprint = random.choice(self.world.get_blueprint_library().filter(self.actor_filter))
+        # Zwt: try to spawn a vehicle
+        blueprint = [x for x in blueprint if int(x.get_attribute('number_of_wheels')) == 4]
         blueprint.set_attribute('role_name', "{}".format(self.role_name))
         if blueprint.has_attribute('color'):
             color = random.choice(blueprint.get_attribute('color').recommended_values)

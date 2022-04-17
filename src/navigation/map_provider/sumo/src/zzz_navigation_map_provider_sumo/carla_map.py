@@ -30,22 +30,33 @@ class CarlaMap(object):
         self.load_lanes() # load lanes
 
     def load_lanes(self):
+        # G3
         # inner_path = os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/carla_data/inner_loop.dat'
         # outer_path = os.environ.get('ZZZ_ROOT') + '/zzz/src/navigation/carla_data/outer_loop.dat'
         # # inner 1, outer 0
         # self._lanes.append(self.get_lane(np.loadtxt(outer_path, delimiter=',')))
         # self._lanes.append(self.get_lane(np.loadtxt(inner_path, delimiter=',')))
 
-        
-        self._lanes_inside.append(dense_polyline2d(np.array([[23.4,-91.234],[-36.214,-91.5]]),1))
-        self._lanes_inside.append(dense_polyline2d(np.array([[-50.942,-71.59],[-51.1,-10.56]]),1))
-        self._lanes_inside.append(dense_polyline2d(np.array([[-37.62,3.11],[15.03,3.37]]),1))
-        self._lanes_inside.append(dense_polyline2d(np.array([[31.8,-14.33],[33.52,-74.71]]),1))
+        # Town05
+        # self._lanes_inside.append(dense_polyline2d(np.array([[23.4,-91.234],[-36.214,-91.5]]),1))
+        # self._lanes_inside.append(dense_polyline2d(np.array([[-50.942,-71.59],[-51.1,-10.56]]),1))
+        # self._lanes_inside.append(dense_polyline2d(np.array([[-37.62,3.11],[15.03,3.37]]),1))
+        # self._lanes_inside.append(dense_polyline2d(np.array([[31.8,-14.33],[33.52,-74.71]]),1))
 
-        self._lanes_outside.append(dense_polyline2d(np.array([[22.246,-94.584],[-37,-94.817]]),1))
-        self._lanes_outside.append(dense_polyline2d(np.array([[-55,-71.85],[-54.35,-10.114]]),1))
-        self._lanes_outside.append(dense_polyline2d(np.array([[-37.11,6.15],[15.03,6.16]]),1))
-        self._lanes_outside.append(dense_polyline2d(np.array([[34.76,-14.98],[36.53,-74.61]]),1))
+        # self._lanes_outside.append(dense_polyline2d(np.array([[22.246,-94.584],[-37,-94.817]]),1))
+        # self._lanes_outside.append(dense_polyline2d(np.array([[-55,-71.85],[-54.35,-10.114]]),1))
+        # self._lanes_outside.append(dense_polyline2d(np.array([[-37.11,6.15],[15.03,6.16]]),1))
+        # self._lanes_outside.append(dense_polyline2d(np.array([[34.76,-14.98],[36.53,-74.61]]),1))
+
+        # Town02
+        # self._lanes_inside.append(dense_polyline2d(np.array([[136.955,231.640],[137.442,205.664]]),1))
+        # self._lanes_inside.append(dense_polyline2d(np.array([[130.901,187.852],[48.866,187.852]]),1))
+
+        # Town05 highway
+        self._lanes_inside.append(dense_polyline2d(np.array([[207,0],[207,-200]]),1))
+        self._lanes_inside.append(dense_polyline2d(np.array([[210,100],[210,60]]),1))
+
+
 
     def ego_road(self):
 
@@ -106,8 +117,12 @@ class CarlaMap(object):
         # Left is 0 
         self.static_local_map.in_junction = False # lane change
         ego_road = self.ego_road()
-        self.static_local_map.lanes.append(self.get_lane(self._lanes_outside[ego_road]))
+
+        # Town 02 have only one lane
+        # self.static_local_map.lanes.append(self.get_lane(self._lanes_outside[ego_road]))
+        
         self.static_local_map.lanes.append(self.get_lane(self._lanes_inside[ego_road]))
+        
         # rospy.loginfo("### native map update lane0 - {}, lane1 - {}".format(
         #     self.static_local_map.lanes[0].central_path_points[2357], 
         #     self.static_local_map.lanes[1].central_path_points[2188]))

@@ -1,15 +1,45 @@
 # Usage
+    1. Install ROS:
+        a. Use python2 in system default
+             
+    2. Download and setup ZZZ Platform:
+        a.git clone https://gitlab.com/umvdl/zzz/zzz.git -b dev/zhcao/master
+        b.--recursive (clone dependency)
+        c.cd zzz
+        d.pip install -r requirements.txt
+        e.rosdep install --from-paths src --ignore-src --rosdistro $DISTRO -y
+        f.catin_make
+        # if use map:
+            g.apt get SUMO (check from webset)
+            h.SUMO_HOME =/usr/share/sumo
+            i.export PYTHONPATH=/usr/share/sumo/tools:PAYTHONPATH
+             
+    3. Download Carla Simulator (Recommand 0.9.11):
+        a. Download from http://carla.org/2020/12/22/release-0.9.11/
+         
+    4. Setup Python Environment with CARLA 
+        a. open zzz/export_path.sh
+        b. revise the CARLA_ROOT/CARLA_VERSION/PYTHONPATH to match the local environment
+        example:
+            export CARLA_ROOT = /home/carla/Carla/CARLA_0.9.11
+            export CARLA_VERSION = 0.9.11
+            export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla$CARLA_ROOT/PythonAPI/carla/dist/carla-$CARLA_VERSION-py2.7-linux-x86_64.egg
+             
+    5. Quick Start:
+        # Run CARLA
+        - Terminal 1
+            > ./CarlaUE4.sh -fps=20
+        - Terminal 2 (DEMO Map)
+            > python PythonAPI/utils/config.py -m Town05
 
-## Carla with ros bridge
-1. Run docker or local binary. Export port to 2000, 2001
-1. Start roscore separately
-1. Go to ros bridge repo, source `devel/setup.bash` and launch `src/driver/simulators/carla/carla_adapter/launch/server.launch`
-1. Go to this repo, source `devel/setup.bash` and launch `src/driver/simulators/carla/carla_adapter/scripts/use_bridge/main.launch`
+        # Run ROS_Bridge
+        - Terminal 3
+            > bash bridge_intersection.bash
 
-## Carla with scenario_runner
-1. Run docker or local binary. Export port to 2000, 2001
-1. Start roscore separately
-1. Set `TEAM_CODE_ROOT` to `src/driver/simulators/carla/carla_adapter/scripts/use_srunner`
-1. Run srunner command: `python ${ROOT_SCENARIO_RUNNER}/srunner/challenge/challenge_evaluator_routes.py --scenarios=${ROOT_SCENARIO_RUNNER}/srunner/challenge/all_towns_traffic_scenarios1_3_4.json --agent=${TEAM_CODE_ROOT}/ZZZAgent.py`
+        # Run ZZZ
+        - Terminal 4
+            > bash main.bash
 
-> See `zzz/src/driver/simulators/carla/carla_adapter/scripts/server.tmuxp.yaml` for details
+        # Visualization
+        - Terminal 5
+            > rviz

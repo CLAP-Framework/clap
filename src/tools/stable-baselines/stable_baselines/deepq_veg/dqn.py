@@ -220,10 +220,14 @@ class DQN(OffPolicyRLModel):
                 with self.sess.as_default():
                     action = self.act(np.array(obs)[None], update_eps=update_eps, **kwargs)[0]
 
-                env_action = self.RLS.act_train(obs, action)   #FIXME(zhcao)
+                env_action = self.RLS.act(obs, action)   #FIXME(zhcao)
                 # env_action = action
                 reset = False
-                new_obs, rew, done, info = self.env.step(env_action)
+                try:
+                    new_obs, rew, done, info = self.env.step(env_action)
+                except:
+                    print("Can not received step msg:")
+                    continue
                 # Store transition in the replay buffer.
                 self.replay_buffer.add(obs, env_action, rew, new_obs, float(done))
                 self.RLS.add_data(obs, env_action, rew, new_obs, float(done))   #FIXME(zhcao)

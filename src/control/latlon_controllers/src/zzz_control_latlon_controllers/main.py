@@ -28,7 +28,11 @@ class MainController():
     def update_decision(self, decision):
         with self._trajectory_lock:
             self.desired_trajectory = decision.trajectory
-            self.desired_speed = decision.desired_speed[-1] #FIXME: Zwt: which point to follow?
+            try:
+                self.desired_speed = decision.desired_speed[-1] #FIXME: Zwt: which point to follow?
+            except:
+                rospy.logdebug("Haven't received desired speed")
+                self.desired_speed = 0
 
     def update_pose(self, pose):
         with self._ego_state_lock:
@@ -36,7 +40,7 @@ class MainController():
            
     def ready_for_control(self, short_distance_thres = 2, less_points_thres = 3):
         if self.desired_trajectory is None or len(self.desired_trajectory.poses) == 0:
-            rospy.logdebug("Haven't recevied trajectory")
+            rospy.logdebug("Haven't received trajectory")
             return False
 
         last_loc = np.array([self.desired_trajectory.poses[-1].pose.position.x, self.desired_trajectory.poses[-1].pose.position.y]) 

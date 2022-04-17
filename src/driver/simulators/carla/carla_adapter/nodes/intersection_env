@@ -12,6 +12,7 @@ from nav_msgs.msg import Path
 
 import carla
 import tf
+from std_msgs.msg import Header, Int16
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
@@ -231,7 +232,7 @@ def record_collsion_to_txt(ego_vehicle):
         if_stuck = False
 
     if if_intersection == True and if_write_collision == False:    
-        if collision_signal:
+        if collision_signal and abs(ego_vehicle.get_velocity() > 0.02):
             collision_num = collision_num + 1
             print("Record To Txt: Collision")
             if_write_collision = True
@@ -292,7 +293,7 @@ def ego_vehicle_outside_world(ego_x, ego_y):
 
     return True
 
-def stay_too_long(ego_v, stay_thres = 50):
+def stay_too_long(ego_v, stay_thres = 30):
     # FIXME(zhcao): use ego_vehicle directly
     
     global stay
@@ -303,7 +304,6 @@ def stay_too_long(ego_v, stay_thres = 50):
 
     if stay > 0 and rospy.Time.now().to_sec() - stay > stay_thres:
         return True
-
     return False
 
 def calculate_route(start, goal):
@@ -372,14 +372,18 @@ def restart_ego_vehicle(ego_vehicle):
         restart = True
         print("----> Restart: Ego vehicle out of range")
     time.sleep(0.5)
+
     if restart is True:
-        stay = 0
+        stay = rospy.Time.now().to_sec()
         # ego_vehicle.set_velocity(carla.Vector3D())
         ego_vehicle.set_transform(first_start)
         trajectory_state = 1
 
         calculate_route(first_start, first_goal)
         print("Restarting....")
+    
+    time.sleep(0.5)
+    _restart_publisher.publish(restart)
     
     return
 
@@ -402,6 +406,7 @@ if __name__ == "__main__":
     _collision_subscriber = rospy.Subscriber("/carla/ego_vehicle/collision", CarlaCollisionEvent, collision_callback)
     role_name = rospy.get_param("~role_name", 'ego_vehicle')
     _waypoint_publisher = rospy.Publisher('carla/{}/waypoints'.format(role_name), Path, queue_size=1, latch=True)
+    _restart_publisher = rospy.Publisher("/carla/ego_vehicle/restart", Int16, queue_size=1, latch=True)
 
     # Change traffic lights
     change_traffic_lights(carla_world)

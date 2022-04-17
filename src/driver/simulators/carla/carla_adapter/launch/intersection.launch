@@ -15,7 +15,6 @@
       <param name="objects_definition_file" value="$(arg objects_definition_file)" />
       <param name="spawn_point_ego_vehicle" value="$(arg spawn_point_ego_vehicle)" />
       <param name="spawn_sensors_only" value="$(arg spawn_sensors_only)" />
-      <param name="vehicle_filter" value="vehicle.lincoln.mkz2017" />
 
     </node>
 

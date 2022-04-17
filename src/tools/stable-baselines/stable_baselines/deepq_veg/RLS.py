@@ -4,6 +4,7 @@ import random
 import numpy as np
 from rtree import index as rindex
 from collections import deque
+from scipy import stats
 
 global SAVEROOT
 SAVEROOT = "/home/icv/zwt_rls/log"
@@ -16,7 +17,7 @@ class RLS(object):
                  debug = True,
                  save_new_data = True,
                  create_new_train_file = True,
-                 create_new_record_file = True,
+                 create_new_record_file = False,
                  save_new_driving_data = True):
 
         self.visited_times_thres = visited_times_thres
@@ -27,41 +28,42 @@ class RLS(object):
         self.create_new_train_file = create_new_train_file
         self.create_new_record_file = create_new_record_file
         self.save_new_driving_data = save_new_driving_data
-        self.obs_dimension = 20  
+        self.obs_dimension = 16  
         self.gamma = 0.95
-        self._setup_data_saving()
-        
+        self._setup_data_saving()    
+        self.confidence_thres = 0.5
+    
     def _setup_data_saving(self):
 
         if self.create_new_train_file:
+
+
+            if osp.exists("visited_state_value.txt"):
+                os.remove("visited_state_value.txt")
             if osp.exists("state_index.dat"):
                 os.remove("state_index.dat")
                 os.remove("state_index.idx")
-            if osp.exists("visited_state.txt"):
-                os.remove("visited_state.txt")
-            if osp.exists("visited_value.txt"):
-                os.remove("visited_value.txt")
-
             self.visited_state_value = []
             self.visited_state_counter = 0
         else:
-            self.visited_state_value = np.loadtxt("visited_value.txt")
+            self.visited_state_value = np.loadtxt("visited_state_value.txt",usecols=(i for i in range(self.obs_dimension + 1, self.obs_dimension + 3, 1)))
+
             self.visited_state_value = self.visited_state_value.tolist()
             self.visited_state_counter = len(self.visited_state_value)
 
-        self.visited_state_outfile = open("visited_state.txt", "a")
-        self.visited_state_format = " ".join(("%f",)*(self.obs_dimension+1))+"\n"
+        self.visited_state_value_outfile = open("visited_state_value.txt", "a")
+        self.visited_state_value_format = " ".join(("%f",)*(self.obs_dimension+1 +2))+"\n"
 
-        self.visited_value_outfile = open("visited_value.txt", "a")
-        self.visited_value_format = " ".join(("%f",)*2)+"\n"
 
         visited_state_tree_prop = rindex.Property()
         visited_state_tree_prop.dimension = self.obs_dimension+1
-        # ego_x, ego_y, ego_vx, ego_vy, 0f_x, 0f_y, 0f_vx, 0f_vy, 1f_x, 1f_y, 
-        # 1f_vx, 1f_vy, 0r_x, 0r_y, 0r_vx, 0r_vy, 1r_x, 1r_y, 1r_vx, 1r_vy
-        # 0, -1~2, 
-        self.visited_state_dist = np.array([[1, 0.3, 3, 1, 10, 0.3, 3, 1,  10, 0.3, 3, 1, 10, 0.3, 3, 1, 10, 0.3, 3, 1, 0.1]])
+        self.visited_state_dist = np.array([[1, 0.3, 3, 1, 10, 0.3, 3, 1, 10, 0.3, 3, 1, 10, 0.3, 3, 1, 0.1]])#, 10, 0.3, 3, 1, 0.1]])
         self.visited_state_tree = rindex.Index('state_index',properties=visited_state_tree_prop)
+        # if not self.create_new_train_file:
+        #     self.recostruct_state_counter = 0
+        #     self.recostruct_rtree()
+
+        
 
         if self.create_new_record_file:
             if osp.exists("driving_record.txt"):
@@ -69,8 +71,21 @@ class RLS(object):
         self.driving_record_outfile = open("driving_record.txt","a")
         self.driving_record_format = " ".join(("%f",)*(self.obs_dimension+9))+"\n"
 
+    
+    # def recostruct_rtree(self):
+    #     print("[RLS]: Start Reconstruct rtree!")
+
+    #     self.all_data_visited = np.loadtxt("visited_state_value.txt")
+    #     for i in range(self.visited_state_counter - 1):
+    #         state_slice = slice(0, self.obs_dimension + 1, 1)
+    #         state_to_record = self.all_data_visited[i][state_slice]
+    #         self.visited_state_tree.insert(self.recostruct_state_counter,
+    #                 tuple((state_to_record-self.visited_state_dist[0]).tolist()+(state_to_record+self.visited_state_dist[0]).tolist()))
+    #         self.recostruct_state_counter += 1
+    #     print("[RLS]: Reconstruct rtree success!")
+    
+    
     def act(self, obs, RL_action):
-        print(obs)
         if self.is_training:
             return self.act_train(obs, RL_action)
         else:
@@ -84,7 +99,6 @@ class RLS(object):
             return RL_action
     
     def state_with_action(self,obs,action):
-        # print("--------",obs,type(obs),action,type(action))
         return np.append(obs, action)
 
     def should_use_rule(self,obs):
@@ -98,6 +112,7 @@ class RLS(object):
         mean_rule, var_rule, sigma_rule = self._calculate_statistics_index(rule_state,
                                                                     self.visited_state_value,
                                                                     self.visited_state_tree) 
+
         if self.debug:
             print("[RLS]: Rule visited times:",visited_times_rule, mean_rule, var_rule, sigma_rule)
 
@@ -114,13 +129,14 @@ class RLS(object):
 
     def act_test(self, obs, RL_action):
         if RL_action == 0:
-            return 0
-        
+            print("[RLS]: Running: Rule_action")
+            return np.array(0)
         rule_state = self.state_with_action(obs,0)
         visited_times_rule = self._calculate_visited_times(rule_state,self.visited_state_tree)
         mean_rule, var_rule, sigma_rule = self._calculate_statistics_index(rule_state,
                                                                     self.visited_state_value,
-                                                                    self.visited_state_tree) 
+                                                                    self.visited_state_tree)
+        print("[RLS]: Rule_Value:",mean_rule, var_rule, sigma_rule) 
         for candidate_action in range(1,16):
 
             RL_state = self.state_with_action(obs,candidate_action)
@@ -129,17 +145,19 @@ class RLS(object):
 
             if visited_times_rule < self.visited_times_thres or visited_times_RL < 10 or mean_rule > -0.1:
                 continue
-        
+
             var_diff = var_rule/visited_times_rule + var_RL/visited_times_RL
             sigma_diff = np.sqrt(var_diff)
             mean_diff = mean_RL - mean_rule
 
             z = mean_diff/sigma_diff
-            print(action,norm.cdf(z))
-            if norm.cdf(z)>confidence_thres:
-                return candidate_action
+            print(candidate_action, 1 - stats.norm.cdf(-z))
+            if 1 - stats.norm.cdf(-z) > self.confidence_thres:
+                print("[RLS]: RL take over! Action:",candidate_action)
+                return np.array(candidate_action)
         
-        return 0
+        print("[RLS]: Running: Rule_action")
+        return np.array(0)
 
     ############## RLS Confidence ##############
 
@@ -178,10 +196,13 @@ class RLS(object):
                 self.visited_state_value.append([action_to_record,r_to_record])
                 self.visited_state_tree.insert(self.visited_state_counter,
                     tuple((state_to_record-self.visited_state_dist[0]).tolist()+(state_to_record+self.visited_state_dist[0]).tolist()))
-                self.visited_state_outfile.write(self.visited_state_format % tuple(state_to_record))
-                self.visited_value_outfile.write(self.visited_value_format % tuple([action_to_record,r_to_record]))
+
+
+                all_to_record = np.append(state_to_record, action_to_record)
+                all_to_record = np.append(all_to_record, r_to_record)
+                self.visited_state_value_outfile.write(self.visited_state_value_format % tuple(all_to_record))
+
                 self.visited_state_counter += 1
-        
 
         if done:
             _, _, rew_right, _, _ = self.trajectory_buffer[-1]
@@ -194,8 +215,10 @@ class RLS(object):
                     self.visited_state_value.append([action_to_record,r_to_record])
                     self.visited_state_tree.insert(self.visited_state_counter,
                         tuple((state_to_record-self.visited_state_dist).tolist()[0]+(state_to_record+self.visited_state_dist).tolist()[0]))
-                    self.visited_state_outfile.write(self.visited_state_format % tuple(state_to_record))
-                    self.visited_value_outfile.write(self.visited_value_format % tuple([action_to_record,r_to_record]))
+
+                    all_to_record = np.append(state_to_record, action_to_record)
+                    all_to_record = np.append(all_to_record, r_to_record)
+                    self.visited_state_value_outfile.write(self.visited_state_value_format % tuple(all_to_record))
                     self.visited_state_counter += 1
 
         if self.save_new_driving_data:
